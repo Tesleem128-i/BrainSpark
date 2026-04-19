@@ -1,0 +1,4 @@
+rzgvixdsisaahpub
+logicraft7777@gmail.com
+pip uninstall python-docx
+pip install python-docx==0.8.11

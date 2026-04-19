@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - KnowItNow</title>
+    <link rel="icon" type="image/png" href="/static/image/KNOWITNOW.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-slate-900">
+    <div class="absolute inset-0 bg-grid-white/[0.03] dark:bg-grid-slate-700/[0.2] bg-[size:80px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_-20%,white,transparent)]"></div>
+    
+    <div class="relative z-10 flex min-h-screen items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-4xl w-full space-y-8">
+            <div>
+                <div class="mx-auto h-24 w-24 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-2xl mb-8">
+                    <img src="/static/image/KNOWITNOW.png" alt="Logo" class="h-16 w-16">
+                </div>
+                <h2 class="mt-6 text-4xl font-bold text-center text-gray-900 dark:text-white">
+                    Welcome Back
+                </h2>
+                <p class="mt-2 text-lg text-center text-gray-600 dark:text-gray-300 max-w-md mx-auto leading-relaxed">
+                    Log in to access your dashboard, quizzes, and study progress.
+                </p>
+            </div>
+
+            <form id="login-form" class="group bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl rounded-3xl p-10 shadow-2xl border border-gray-200/50 dark:border-gray-700/50 hover:shadow-3xl transition-all duration-500" novalidate>
+                <!-- Username -->
+                <div class="mb-8">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Username *</label>
+                    <input type="text" id="username" name="username" required 
+                           class="input-field w-full px-6 py-5 border-2 border-gray-200/60 dark:border-gray-600/60 rounded-2xl text-lg focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 focus:outline-none transition-all duration-300 shadow-sm hover:shadow-md" placeholder="Enter your username">
+                </div>
+
+                <!-- Password -->
+                <div class="mb-8">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Password *</label>
+                    <div class="relative">
+                        <input type="password" id="password" name="password" required minlength="8"
+                               class="input-field w-full px-6 py-5 pr-14 border-2 border-gray-200/60 dark:border-gray-600/60 rounded-2xl text-lg focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 focus:outline-none transition-all duration-300 shadow-sm hover:shadow-md" placeholder="Enter your password">
+                        <button type="button" id="toggle-password" class="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between mb-8">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="checkbox" id="remember" name="remember" class="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                        <span class="ml-2 text-sm text-gray-600 dark:text-gray-400">Remember me</span>
+                    </label>
+                    <a href="#" class="text-sm font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">Forgot password?</a>
+                </div>
+
+                <button type="submit" class="w-full py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold text-xl rounded-3xl shadow-2xl hover:shadow-3xl hover:scale-[1.02] transition-all duration-500 transform disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none">
+                    <span class="submit-text">Sign In to Dashboard</span>
+                    <span class="loading-text hidden">Signing In...</span>
+                </button>
+            </form>
+
+            <div class="text-center space-y-4">
+                <p class="text-gray-600 dark:text-gray-400">
+                    Don't have an account? <a href="/signup" class="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">Sign up here</a>
+                </p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                    By signing in, you agree to our <a href="#" class="underline">Terms</a> and <a href="#" class="underline">Privacy Policy</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <a href="/" class="fixed top-6 left-6 z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl p-4 rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 border border-gray-200/50 dark:border-gray-700/50">
+        ← Back to Home
+    </a>
+
+    <script>
+        AOS.init({ duration: 1000 });
+        
+        // Password toggle
+        document.getElementById('toggle-password').addEventListener('click', function() {
+            const passwordInput = document.getElementById('password');
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            this.classList.toggle('text-gray-600');
+        });
+
+        // Form submission
+        document.getElementById('login-form').addEventListener('submit', async e => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            
+            const btn = e.target.querySelector('button[type="submit"]');
+            const submitText = btn.querySelector('.submit-text');
+            const loadingText = btn.querySelector('.loading-text');
+            
+            submitText.classList.add('hidden');
+            loadingText.classList.remove('hidden');
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    window.location.href = '/dashboard';
+                } else {
+                    alert(result.error || 'Login failed');
+                }
+            } catch (error) {
+                alert('Network error. Please try again.');
+            } finally {
+                submitText.classList.remove('hidden');
+                loadingText.classList.add('hidden');
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
+

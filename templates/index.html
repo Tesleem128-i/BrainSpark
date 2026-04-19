@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KnowItNow - AI-Powered Interactive Quiz Platform</title>
+    <meta name="description" content="Upload notes, generate smart questions with Google Gemini AI, track scores, connect with students worldwide.">
+    <!-- Logo Favicon -->
+    <link rel="icon" type="image/png" href="/static/image/KNOWITNOW.png">
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { fontFamily: { inter: ['Inter', 'sans-serif'] } } }
+        }
+    </script>
+    <!-- AOS, GSAP, ParticlesJS -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/TextPlugin.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body class="relative overflow-x-hidden">
+    <!-- Particle Canvas -->
+    <canvas id="particles-js" class="fixed inset-0 z-0 pointer-events-none"></canvas>
+    
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full backdrop-blur-xl bg-white/20 dark:bg-gray-900/20 border-b border-white/20 dark:border-gray-700/50 z-50 transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <a href="#hero" class="text-2xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent drop-shadow-lg">KnowItNow</a>
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="#about" class="text-lg hover:text-blue-400 transition-all duration-300 relative group">
+                        About
+                        <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-400 to-purple-400 group-hover:w-full transition-all duration-300"></span>
+                    </a>
+                    <a href="#features" class="text-lg hover:text-blue-400 transition-all duration-300 relative group">
+                        Features
+                        <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-400 to-purple-400 group-hover:w-full transition-all duration-300"></span>
+                    </a>
+                    <a href="#how-it-works" class="text-lg hover:text-blue-400 transition-all duration-300 relative group">
+                        How It Works
+                        <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-400 to-purple-400 group-hover:w-full transition-all duration-300"></span>
+                    </a>
+                    <a href="#contact" class="text-lg hover:text-blue-400 transition-all duration-300 relative group">
+                        Contact
+                        <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-400 to-purple-400 group-hover:w-full transition-all duration-300"></span>
+                    </a>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="/signup" class="text-lg hover:text-blue-400 transition-all duration-300 relative group">
+                        Sign Up
+                        <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-400 to-purple-400 group-hover:w-full transition-all duration-300"></span>
+                    </a>
+                    <a href="/login" class="text-lg hover:text-blue-400 transition-all duration-300 relative group">
+                        Login
+                        <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-400 to-purple-400 group-hover:w-full transition-all duration-300"></span>
+                    </a>
+                    <button id="mode-toggle" class="px-4 py-2 bg-white/20 dark:bg-gray-800/50 backdrop-blur-sm rounded-full border border-white/30 dark:border-gray-600 text-sm font-medium hover:scale-105 hover:shadow-2xl transition-all duration-300 flex items-center space-x-2">
+                        <span class="sun-icon">☀️</span>
+                        <span class="moon-icon">🌙</span>
+                        <span class="mode-text">Dark</span>
+                    </button>
+                    <button class="md:hidden hamburger-btn p-2">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section - Enhanced Netflix Style -->
+    <section id="hero" class="min-h-screen flex flex-col items-center justify-center text-center relative px-6 pt-20 pb-32 overflow-hidden">
+        <div class="max-w-4xl mx-auto z-10">
+            <img src="/static/image/KNOWITNOW.png" alt="KnowItNow" id="hero-logo" class="w-96 h-auto mx-auto mb-12 drop-shadow-2xl animate-pulse-hero">
+            <h1 class="text-7xl md:text-8xl lg:text-9xl font-black bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 bg-clip-text text-transparent mb-8 drop-shadow-2xl animate-fade-in-up">
+                Know<span class="text-transparent bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text">It</span>Now
+            </h1>
+            <p class="text-xl md:text-2xl lg:text-3xl text-gray-700 dark:text-gray-300 max-w-3xl mx-auto mb-12 leading-relaxed animate-fade-in-up animation-delay-200">
+                The ultimate AI-powered quiz platform. Upload notes, generate smart questions with <strong>Google Gemini</strong>, track scores, 
+                connect globally. Master your studies smarter, not harder.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-6 justify-center items-center animate-fade-in-up animation-delay-400">
+                    <a href="/signup" class="px-12 py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold text-lg rounded-3xl shadow-2xl hover:shadow-3xl hover:scale-105 transform transition-all duration-500 drop-shadow-2xl">
+                    Sign Up Free → 
+                </a>
+                <a href="/signup" class="px-12 py-6 border-2 border-blue-500/50 hover:border-blue-400 text-blue-600 hover:text-blue-500 font-bold text-lg rounded-3xl hover:scale-105 transform transition-all duration-500 backdrop-blur-sm">
+                    Get Started
+                </a>
+            </div>
+            <div class="flex flex-wrap justify-center gap-6 mt-16 text-sm text-gray-500 dark:text-gray-400 animate-fade-in-up animation-delay-600">
+                <span>✅ Trusted by 50K+ students</span>
+                <span>⚡ Instant question generation</span>
+                <span>🌍 Global student network</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="py-32 px-6 relative">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-24">
+                <h2 class="text-5xl md:text-6xl lg:text-7xl font-black bg-gradient-to-r from-gray-900 to-gray-700 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent mb-6">Why Choose KnowItNow?</h2>
+                <p class="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">Revolutionary learning platform combining AI question generation, adaptive quizzing, social learning, and performance analytics.</p>
+            </div>
+            <div class="grid md:grid-cols-2 gap-16 items-center">
+                <div data-aos="fade-right">
+                    <img src="/static/image/KNOWITNOW.png" alt="Platform" class="w-full h-96 object-cover rounded-3xl shadow-2xl hover:rotate-3 hover:scale-105 transition-all duration-700">
+                </div>
+                <div data-aos="fade-left" class="space-y-8">
+                    <div class="bg-gradient-to-br from-blue-50/80 to-purple-50/80 dark:from-blue-900/30 dark:to-purple-900/30 p-8 rounded-3xl backdrop-blur-sm border border-blue-100/50 dark:border-blue-800/50 shadow-xl hover:shadow-2xl transition-all duration-500">
+                        <h3 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">AI That Understands You</h3>
+                        <p class="text-lg text-gray-600 dark:text-gray-300 leading-relaxed">Upload any PDF notes. Our Google Gemini AI extracts key concepts and generates personalized objective/theory questions at your difficulty level.</p>
+                    </div>
+                    <div class="bg-gradient-to-br from-purple-50/80 to-pink-50/80 dark:from-purple-900/30 dark:to-pink-900/30 p-8 rounded-3xl backdrop-blur-sm border border-purple-100/50 dark:border-purple-800/50 shadow-xl hover:shadow-2xl transition-all duration-500">
+                        <h3 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">Global Study Network</h3>
+                        <p class="text-lg text-gray-600 dark:text-gray-300 leading-relaxed">Connect with students from your school, country, level. Compete on leaderboards, form study groups, share strategies.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="py-24 px-6 bg-gradient-to-br from-blue-600/10 to-purple-600/10 dark:from-blue-900/20 dark:to-purple-900/20">
+        <div class="max-w-6xl mx-auto text-center">
+            <div class="grid md:grid-cols-4 gap-12">
+                <div data-aos="zoom-in">
+                    <div class="text-5xl md:text-6xl font-black text-transparent bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text mb-4" data-target="50000">0</div>
+                    <p class="text-xl font-semibold text-gray-700 dark:text-gray-300">Students</p>
+                </div>
+                <div data-aos="zoom-in" data-aos-delay="200">
+                    <div class="text-5xl md:text-6xl font-black text-transparent bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text mb-4" data-target="2500000">0</div>
+                    <p class="text-xl font-semibold text-gray-700 dark:text-gray-300">Quizzes Taken</p>
+                </div>
+                <div data-aos="zoom-in" data-aos-delay="400">
+                    <div class="text-5xl md:text-6xl font-black text-transparent bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text mb-4" data-target="98">0</div>
+                    <p class="text-xl font-semibold text-gray-700 dark:text-gray-300">Success Rate %</p>
+                </div>
+                <div data-aos="zoom-in" data-aos-delay="600">
+                    <div class="text-5xl md:text-6xl font-black text-transparent bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text mb-4" data-target="150">0</div>
+                    <p class="text-xl font-semibold text-gray-700 dark:text-gray-300">Countries</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features (Enhanced) -->
+    <section id="features" class="py-32 px-6">
+        <div class="max-w-7xl mx-auto text-center mb-24">
+            <h2 class="text-5xl md:text-6xl lg:text-7xl font-black bg-gradient-to-r from-gray-900 to-gray-700 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent mb-6">Powerful Features</h2>
+            <p class="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">Everything you need to master any subject with AI-powered learning.</p>
+        </div>
+        <div class="grid md:grid-cols-3 gap-8 max-w-7xl mx-auto">
+            <div class="group relative card p-10 transform hover:-translate-y-4 transition-all duration-700 hover:shadow-2xl cursor-pointer rounded-3xl border-0 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900/50 dark:to-gray-800/50 backdrop-blur-xl" data-aos="fade-up" data-aos-delay="100">
+                <div class="w-24 h-24 bg-gradient-to-r from-blue-500 to-blue-600 rounded-3xl flex items-center justify-center mb-8 shadow-2xl group-hover:scale-110 transition-transform duration-500 mx-auto">
+                    <span class="text-3xl">📚</span>
+                </div>
+                <h3 class="text-3xl font-bold text-gray-900 dark:text-white mb-6 group-hover:text-blue-600 transition-colors">Smart Question Generator</h3>
+                <p class="text-lg text-gray-600 dark:text-gray-400 leading-relaxed mb-8">Upload PDF notes. AI generates 10-50 objective/theory questions matching your difficulty. Perfect for exam prep.</p>
+                <ul class="space-y-2 text-left text-gray-500 dark:text-gray-400">
+                    <li>• Custom difficulty levels</li>
+                    <li>• Timed practice mode</li>
+                    <li>• Instant AI grading</li>
+                </ul>
+            </div>
+            <!-- Similar enhanced cards for other features... -->
+            <div class="group relative card p-10 transform hover:-translate-y-4 transition-all duration-700 hover:shadow-2xl cursor-pointer rounded-3xl border-0 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900/50 dark:to-gray-800/50 backdrop-blur-xl" data-aos="fade-up" data-aos-delay="200">
+                <div class="w-24 h-24 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-3xl flex items-center justify-center mb-8 shadow-2xl group-hover:scale-110 transition-transform duration-500 mx-auto">
+                    <span class="text-3xl">🎯</span>
+                </div>
+                <h3 class="text-3xl font-bold text-gray-900 dark:text-white mb-6 group-hover:text-emerald-600 transition-colors">AI-Powered Quizzes</h3>
+                <p class="text-lg text-gray-600 dark:text-gray-400 leading-relaxed mb-8">Real-time scoring, detailed Gemini AI explanations for wrong answers, performance analytics, weak area detection.</p>
+                <ul class="space-y-2 text-left text-gray-500 dark:text-gray-400">
+                    <li>• Instant feedback</li>
+                    <li>• Progress tracking</li>
+                    <li>• Adaptive difficulty</li>
+                </ul>
+            </div>
+            <div class="group relative card p-10 transform hover:-translate-y-4 transition-all duration-700 hover:shadow-2xl cursor-pointer rounded-3xl border-0 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900/50 dark:to-gray-800/50 backdrop-blur-xl" data-aos="fade-up" data-aos-delay="300">
+                <div class="w-24 h-24 bg-gradient-to-r from-purple-500 to-purple-600 rounded-3xl flex items-center justify-center mb-8 shadow-2xl group-hover:scale-110 transition-transform duration-500 mx-auto">
+                    <span class="text-3xl">👥</span>
+                </div>
+                <h3 class="text-3xl font-bold text-gray-900 dark:text-white mb-6 group-hover:text-purple-600 transition-colors">Global Connections</h3>
+                <p class="text-lg text-gray-600 dark:text-gray-400 leading-relaxed mb-8">Match with students by school/country/level. Leaderboards, study groups, challenge friends worldwide.</p>
+                <ul class="space-y-2 text-left text-gray-500 dark:text-gray-400">
+                    <li>• School matching</li>
+                    <li>• Leaderboards</li>
+                    <li>• Study groups</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section id="how-it-works" class="py-32 px-6 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900/50 dark:to-gray-800">
+        <div class="max-w-7xl mx-auto text-center mb-24">
+            <h2 class="text-5xl md:text-6xl font-black bg-gradient-to-r from-gray-900 to-gray-700 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent mb-6">How It Works</h2>
+        </div>
+        <div class="grid md:grid-cols-3 gap-12 max-w-6xl mx-auto">
+            <div class="text-center group" data-aos="fade-up" data-aos-delay="100">
+                <div class="w-24 h-24 bg-gradient-to-r from-orange-500 to-orange-600 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-2xl group-hover:scale-110 transition-all duration-500">
+                    <span class="text-2xl">1️⃣</span>
+                </div>
+                <h3 class="text-3xl font-bold text-gray-900 dark:text-white mb-6">Upload Notes</h3>
+                <p class="text-lg text-gray-600 dark:text-gray-400 max-w-md mx-auto">Upload any PDF notes or textbooks. Our AI extracts key concepts automatically.</p>
+            </div>
+            <div class="text-center group" data-aos="fade-up" data-aos-delay="200">
+                <div class="w-24 h-24 bg-gradient-to-r from-blue-500 to-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-2xl group-hover:scale-110 transition-all duration-500">
+                    <span class="text-2xl">2️⃣</span>
+                </div>
+                <h3 class="text-3xl font-bold text-gray-900 dark:text-white mb-6">Generate Questions</h3>
+                <p class="text-lg text-gray-600 dark:text-gray-400 max-w-md mx-auto">Choose question type, difficulty, timer. Get 10-50 smart questions instantly.</p>
+            </div>
+            <div class="text-center group" data-aos="fade-up" data-aos-delay="300">
+                <div class="w-24 h-24 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-2xl group-hover:scale-110 transition-all duration-500">
+                    <span class="text-2xl">3️⃣</span>
+                </div>
+                <h3 class="text-3xl font-bold text-gray-900 dark:text-white mb-6">Master & Connect</h3>
+                <p class="text-lg text-gray-600 dark:text-gray-400 max-w-md mx-auto">Practice, get AI explanations, track progress, connect with global students.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Enhanced -->
+    <section id="faq" class="py-32 px-6">
+        <div class="max-w-4xl mx-auto text-center mb-24">
+            <h2 class="text-5xl md:text-6xl font-black bg-gradient-to-r from-gray-900 to-gray-700 dark:from-orange-400 dark:to-red-400 bg-clip-text text-transparent mb-6">Frequently Asked Questions</h2>
+        </div>
+        <div class="max-w-4xl mx-auto space-y-6">
+            <div class="card hover:shadow-2xl transition-all duration-500 p-8 rounded-3xl border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm group" data-aos="fade-up">
+                <h4 class="text-2xl font-bold text-gray-900 dark:text-white mb-4 group-hover:text-blue-600 transition-colors">What types of files can I upload?</h4>
+                <p class="text-lg text-gray-600 dark:text-gray-400 leading-relaxed">PDF notes, textbooks, lecture slides (up to 50MB). Our AI extracts text from any format automatically.</p>
+            </div>
+            <!-- Add 4-5 more detailed FAQs -->
+            <div class="card hover:shadow-2xl transition-all duration-500 p-8 rounded-3xl border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm group" data-aos="fade-up" data-aos-delay="100">
+                <h4 class="text-2xl font-bold text-gray-900 dark:text-white mb-4 group-hover:text-emerald-600 transition-colors">Is my data private and secure?</h4>
+                <p class="text-lg text-gray-600 dark:text-gray-400 leading-relaxed">100% private. Files processed temporarily, never stored. End-to-end encryption. GDPR compliant.</p>
+            </div>
+            <div class="card hover:shadow-2xl transition-all duration-500 p-8 rounded-3xl border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm group" data-aos="fade-up" data-aos-delay="200">
+                <h4 class="text-2xl font-bold text-gray-900 dark:text-white mb-4 group-hover:text-purple-600 transition-colors">What AI technology powers the questions?</h4>
+                <p class="text-lg text-gray-600 dark:text-gray-400 leading-relaxed">Google Gemini 1.5 - state-of-the-art AI with superior understanding of technical content and question generation.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Enhanced -->
+    <section id="contact" class="py-32 px-6 relative overflow-hidden">
+        <div class="max-w-4xl mx-auto text-center mb-24">
+            <h2 class="text-5xl md:text-6xl font-black bg-gradient-to-r from-gray-900 to-gray-700 dark:from-pink-400 dark:to-rose-400 bg-clip-text text-transparent mb-6">Get In Touch</h2>
+            <p class="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">Ready to transform how you study? Send us a message and we'll get back within 24 hours.</p>
+        </div>
+        <form id="contact-form" class="max-w-2xl mx-auto grid gap-8" data-aos="zoom-in">
+            <div class="grid md:grid-cols-2 gap-6">
+                <input type="text" name="name" placeholder="Full Name" required class="input-field p-6 rounded-3xl border-2 border-gray-200/50 dark:border-gray-600 focus:border-blue-400 focus:ring-4 focus:ring-blue-400/20 transition-all duration-300 text-lg">
+                <input type="email" name="email" placeholder="Email Address" required class="input-field p-6 rounded-3xl border-2 border-gray-200/50 dark:border-gray-600 focus:border-blue-400 focus:ring-4 focus:ring-blue-400/20 transition-all duration-300 text-lg">
+            </div>
+            <textarea name="message" rows="6" placeholder="Tell us about your study needs..." required class="input-field p-6 rounded-3xl border-2 border-gray-200/50 dark:border-gray-600 focus:border-blue-400 focus:ring-4 focus:ring-blue-400/20 transition-all duration-300 text-lg resize-none"></textarea>
+            <button type="submit" class="w-full p-8 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold text-xl rounded-3xl shadow-2xl hover:shadow-3xl hover:scale-[1.02] transition-all duration-500 transform">
+                Send Message 🚀
+            </button>
+        </form>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gradient-to-r from-gray-900 to-gray-800 dark:from-gray-900 dark:to-gray-950 text-white py-16 px-6">
+        <div class="max-w-7xl mx-auto grid md:grid-cols-4 gap-12 text-sm">
+            <div>
+                <div class="text-2xl font-black bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-6">KnowItNow</div>
+                <p class="text-gray-400 leading-relaxed mb-6 max-w-md">Transforming education with AI-powered quizzes and global student connections.</p>
+                <div class="flex space-x-4">
+                    <a href="#" class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/40 transition-all duration-300">📘</a>
+                    <a href="#" class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/40 transition-all duration-300">🐦</a>
+                    <a href="#" class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/40 transition-all duration-300">📸</a>
+                </div>
+            </div>
+            <div>
+                <h4 class="font-bold text-lg mb-6">Product</h4>
+                <ul class="space-y-3 text-gray-400">
+                    <li><a href="#" class="hover:text-white transition-colors">Features</a></li>
+                    <li><a href="#" class="hover:text-white transition-colors">Pricing</a></li>
+                    <li><a href="#" class="hover:text-white transition-colors">Dashboard</a></li>
+                    <li><a href="#" class="hover:text-white transition-colors">API</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-bold text-lg mb-6">Company</h4>
+                <ul class="space-y-3 text-gray-400">
+                    <li><a href="#" class="hover:text-white transition-colors">About</a></li>
+                    <li><a href="#" class="hover:text-white transition-colors">Careers</a></li>
+                    <li><a href="#" class="hover:text-white transition-colors">Press</a></li>
+                    <li><a href="#" class="hover:text-white transition-colors">Blog</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-bold text-lg mb-6">Support</h4>
+                <ul class="space-y-3 text-gray-400">
+                    <li><a href="#" class="hover:text-white transition-colors">Help Center</a></li>
+                    <li><a href="#" class="hover:text-white transition-colors">Contact</a></li>
+                    <li><a href="#" class="hover:text-white transition-colors">Privacy</a></li>
+                    <li><a href="#" class="hover:text-white transition-colors">Terms</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="border-t border-gray-800 mt-16 pt-12 text-center text-gray-500 text-sm">
+            © 2024 KnowItNow. All rights reserved. Made with ❤️ for students worldwide.
+        </div>
+    </footer>
+
+    <script>
+        // Server theme sync
+        const serverTheme = '{{ theme }}';
+        if (serverTheme) document.documentElement.setAttribute('data-theme', serverTheme);
+    </script>
+    <script src="/static/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ theme or 'light' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Buddies - KnowItNow</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+    <link href="https://unpkg.com/aos@next/dist/aos.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.2/dist/gsap.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <link href="{{ url_for('static', filename='css/styles.css') }}" rel="stylesheet">
+    <style>
+        .chat-bubble { max-width: 70%; margin: 8px 0; padding: 12px 16px; border-radius: 20px; word-wrap: break-word; }
+        .chat-bubble.sent { background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; margin-left: auto; }
+        .chat-bubble.received { background: var(--card-bg); border: 1px solid var(--border); }
+        .group-card { transition: all 0.3s ease; }
+        .group-card:hover { transform: translateY(-8px) scale(1.02); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .loading-skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: loading 1.5s infinite; }
+        @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .ai-glow { animation: glowPulse 2s ease-in-out infinite alternate; }
+        @keyframes glowPulse { from { box-shadow: 0 0 5px #10b981; } to { box-shadow: 0 0 20px #10b981; } }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border-b border-slate-200/50 dark:border-slate-700/50 z-50 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-4">
+                    <a href="/dashboard" class="flex items-center space-x-2 text-xl font-bold text-slate-900 dark:text-white">
+                        <i class="fas fa-graduation-cap text-2xl text-blue-600"></i>
+                        <span>KnowItNow</span>
+                    </a>
+                </div>
+                <div class="hidden md:flex items-center space-x-4">
+                    <a href="/dashboard" class="text-slate-700 dark:text-slate-300 hover:text-blue-600 transition-colors px-3 py-2">Dashboard</a>
+                    <a href="/quiz" class="text-slate-700 dark:text-slate-300 hover:text-blue-600 transition-colors px-3 py-2">Quiz</a>
+                    <a href="/study-buddies" class="text-blue-600 font-semibold border-b-2 border-blue-600">Study Buddies</a>
+                </div>
+<div class="flex items-center space-x-4">
+                    <button id="notification-bell" class="relative p-2 rounded-xl bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/50 transition-all position-relative">
+                        <i class="fas fa-bell text-xl"></i>
+                        <span id="notification-badge" class="unread-badge hidden absolute -top-1 -right-1 min-w-[20px] h-[20px] text-xs font-bold bg-red-500 text-white rounded-full flex items-center justify-center">3</span>
+                    </button>
+                    <button id="mode-toggle" class="mode-toggle p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
+                        <i class="fas fa-sun sun-icon"></i>
+                        <i class="fas fa-moon moon-icon ml-1"></i>
+                        <span class="mode-text ml-2 font-medium">Dark Mode</span>
+                    </button>
+                    <button onclick="logout()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl font-medium transition-all shadow-lg hover:shadow-xl">
+                        <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                    </button>
+                </div>
+                <button class="md:hidden hamburger-btn p-2 rounded-lg">
+                    <span></span><span></span><span></span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="pt-20 pb-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-12">
+            <h1 class="text-5xl md:text-6xl font-black bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mb-6">
+                Study Buddies
+            </h1>
+            <p class="text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+                Connect with like-minded students, chat 1:1, create WhatsApp-style group chats with AI assistance, schedule brainstorming sessions, share notes & files.
+            </p>
+        </div>
+
+        <!-- Tabs Navigation -->
+        <div class="flex flex-wrap justify-center bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-1 shadow-2xl mb-8 max-w-6xl mx-auto border border-slate-200/50 dark:border-slate-700/50">
+            <button class="tab-btn px-8 py-4 font-semibold text-lg rounded-2xl flex items-center space-x-3 transition-all duration-300 flex-1 min-w-[160px] bg-white/80 dark:bg-slate-900/80 shadow-lg hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98]" data-tab="find-buddies">
+                <i class="fas fa-search text-blue-600 text-xl"></i>
+                <span>Find Buddies</span>
+            </button>
+            <button class="tab-btn px-8 py-4 font-semibold text-lg rounded-2xl flex items-center space-x-3 transition-all duration-300 flex-1 min-w-[160px] bg-white/50 dark:bg-slate-900/50 hover:bg-white/80 dark:hover:bg-slate-900/80 hover:shadow-xl hover:scale-[1.02]" data-tab="connections">
+                <i class="fas fa-users text-green-600 text-xl"></i>
+                <span>Connections</span>
+            </button>
+            <button class="tab-btn px-8 py-4 font-semibold text-lg rounded-2xl flex items-center space-x-3 transition-all duration-300 flex-1 min-w-[160px] bg-white/50 dark:bg-slate-900/50 hover:bg-white/80 dark:hover:bg-slate-900/80 hover:shadow-xl hover:scale-[1.02]" data-tab="messages">
+                <i class="fas fa-comments text-purple-600 text-xl"></i>
+                <span>Messages</span>
+            </button>
+            <button class="tab-btn px-8 py-4 font-semibold text-lg rounded-2xl flex items-center space-x-3 transition-all duration-300 flex-1 min-w-[160px] bg-white/50 dark:bg-slate-900/50 hover:bg-white/80 dark:hover:bg-slate-900/80 hover:shadow-xl hover:scale-[1.02]" data-tab="groups">
+                <i class="fas fa-users-cog text-orange-600 text-xl"></i>
+                <span>Groups</span>
+            </button>
+            <button class="tab-btn px-8 py-4 font-semibold text-lg rounded-2xl flex items-center space-x-3 transition-all duration-300 flex-1 min-w-[160px] bg-white/50 dark:bg-slate-900/50 hover:bg-white/80 dark:hover:bg-slate-900/80 hover:shadow-xl hover:scale-[1.02]" data-tab="brainstorm">
+                <i class="fas fa-brain text-pink-600 text-xl"></i>
+                <span>Brainstorm</span>
+            </button>
+        </div>
+
+        <!-- Tab Contents -->
+        <div id="tab-contents" class="space-y-8 max-w-6xl mx-auto">
+            <!-- Tab 1: Find Buddies -->
+            <div id="find-buddies" class="tab-content active">
+                <div class="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-slate-200/50 dark:border-slate-700/50">
+                    <div class="flex flex-wrap gap-4 mb-8">
+                        <input type="text" id="buddy-search" placeholder="Search by name..." class="flex-1 min-w-[200px] px-6 py-4 rounded-2xl border-2 border-slate-200 dark:border-slate-700 focus:border-blue-500 focus:outline-none shadow-lg bg-white/50 dark:bg-slate-900/50">
+                        <select id="country-filter" class="px-6 py-4 rounded-2xl border-2 border-slate-200 dark:border-slate-700 focus:border-blue-500 focus:outline-none shadow-lg bg-white/50 dark:bg-slate-900/50">
+                            <option>All Countries</option>
+                        </select>
+                        <select id="level-filter" class="px-6 py-4 rounded-2xl border-2 border-slate-200 dark:border-slate-700 focus:border-blue-500 focus:outline-none shadow-lg bg-white/50 dark:bg-slate-900/50">
+                            <option>All Levels</option>
+                        </select>
+                        <button onclick="loadBuddies()" class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-8 py-4 rounded-2xl font-bold shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all duration-300">
+                            <i class="fas fa-search mr-2"></i>Find Buddies
+                        </button>
+                    </div>
+                    <div id="buddies-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Buddies will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 2: Connections -->
+            <div id="connections" class="tab-content">
+                <div class="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-slate-200/50 dark:border-slate-700/50">
+                    <h2 class="text-3xl font-bold mb-8 bg-gradient-to-r from-green-500 to-green-600 bg-clip-text text-transparent">My Connections (<span id="connections-count">0</span>)</h2>
+                    <div id="connections-list" class="space-y-4">
+                        <!-- Connections will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 3: Messages -->
+            <div id="messages" class="tab-content">
+                <div class="flex h-[70vh] bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-200/50 dark:border-slate-700/50 overflow-hidden">
+<div id="chat-sidebar" class="w-80 bg-gradient-to-b from-slate-50/70 to-white/70 dark:from-slate-900/70 dark:to-slate-800/70 border-r border-slate-200/50 dark:border-slate-700/50 p-6 overflow-y-auto shadow-xl">
+                        <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-200/50 dark:border-slate-700/50">
+                            <h3 class="font-bold text-xl">Messages</h3>
+                            <button onclick="loadChatList()" class="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-all">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                        <div id="chat-list" class="space-y-3">
+                            <div class="text-center text-slate-500 py-8 opacity-75">Loading chats...</div>
+                        </div>
+                    </div>
+                    <div class="flex-1 flex flex-col">
+                        <div id="chat-header" class="p-6 border-b border-slate-200/50 dark:border-slate-700/50 bg-white/50 dark:bg-slate-900/50">
+                            <div class="flex items-center space-x-4">
+                                <img id="chat-user-pic" src="" class="w-12 h-12 rounded-full" alt="">
+                                <div>
+                                    <h4 id="chat-user-name" class="font-bold"></h4>
+                                    <span id="chat-user-status" class="text-sm text-slate-500">Click a chat to start</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="chat-messages" class="flex-1 p-6 overflow-y-auto space-y-3">
+                            <div class="text-center text-slate-500 py-8">Select a conversation to start chatting</div>
+                        </div>
+                        <div class="p-6 border-t border-slate-200/50 dark:border-slate-700/50 bg-white/50 dark:bg-slate-900/50">
+                            <div class="flex space-x-3">
+                                <input id="message-input" type="text" placeholder="Type a message..." class="flex-1 px-6 py-4 rounded-2xl border-2 border-slate-200 dark:border-slate-700 focus:border-blue-500 focus:outline-none shadow-lg">
+                                <button id="send-message" class="bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-2xl shadow-lg hover:shadow-xl transition-all">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 4: Groups -->
+            <div id="groups" class="tab-content">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-gradient-to-br from-orange-400/20 to-yellow-400/20 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-orange-200/50">
+                        <h3 class="text-2xl font-bold mb-6 text-orange-700 dark:text-orange-400">Create Group</h3>
+                        <div class="space-y-4">
+                            <input id="group-name" placeholder="Group Name (e.g. Calculus Masters)" class="w-full px-6 py-4 rounded-2xl border-2 border-slate-200 dark:border-slate-700 focus:border-orange-500 shadow-lg">
+                            <textarea id="group-desc" placeholder="Description..." rows="3" class="w-full px-6 py-4 rounded-2xl border-2 border-slate-200 dark:border-slate-700 focus:border-orange-500 shadow-lg resize-none"></textarea>
+                            <label class="flex items-center space-x-3">
+                                <input type="checkbox" id="group-private" class="w-5 h-5 text-orange-500">
+                                <span class="font-medium">Private Group</span>
+                            </label>
+                            <input id="group-password" placeholder="Password (for private groups)" class="w-full px-6 py-4 rounded-2xl border-2 border-slate-200 dark:border-slate-700 focus:border-orange-500 shadow-lg">
+                            <button onclick="createGroup()" class="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-4 px-8 rounded-2xl font-bold shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all">
+                                <i class="fas fa-plus mr-2"></i>Create Group
+                            </button>
+                        </div>
+                    </div>
+                    <div class="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-slate-200/50 dark:border-slate-700/50">
+                        <h3 class="text-2xl font-bold mb-6 text-slate-800 dark:text-white">Discover Groups</h3>
+                        <button onclick="loadDiscoverGroups()" class="mb-6 bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all">
+                            <i class="fas fa-magnifying-glass mr-2"></i>Refresh Groups
+                        </button>
+                        <div id="discover-groups" class="space-y-4 max-h-96 overflow-y-auto">
+                            <!-- Groups will load here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 5: My Groups -->
+            <div id="my-groups" class="tab-content">
+                <h2 class="text-3xl font-bold mb-8 bg-gradient-to-r from-purple-500 to-indigo-600 bg-clip-text text-transparent">My Groups</h2>
+                <div id="my-groups-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- My groups will load here -->
+                </div>
+            </div>
+
+            <!-- Tab 6: Brainstorm -->
+            <div id="brainstorm" class="tab-content">
+                <div class="bg-gradient-to-br from-purple-400/20 to-pink-400/20 backdrop-blur-xl rounded-3xl p-8 shadow-2xl mb-8 border border-purple-200/50">
+                    <h3 class="text-2xl font-bold mb-6 text-purple-700 dark:text-purple-400">Schedule Brainstorm Session</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <input id="session-title" placeholder="Session Title" class="px-6 py-4 rounded-2xl border-2 border-slate-200 focus:border-purple-500 shadow-lg">
+                        <input id="session-time" type="datetime-local" class="px-6 py-4 rounded-2xl border-2 border-slate-200 focus:border-purple-500 shadow-lg">
+                        <textarea id="session-desc" placeholder="Description..." rows="3" class="md:col-span-2 px-6 py-4 rounded-2xl border-2 border-slate-200 focus:border-purple-500 shadow-lg resize-none"></textarea>
+                        <button onclick="showGroupSelector()" class="md:col-span-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white py-4 px-8 rounded-2xl font-bold shadow-xl hover:shadow-2xl">
+                            <i class="fas fa-calendar-plus mr-2"></i>Schedule for Group
+                        </button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div>
+                        <h3 class="text-2xl font-bold mb-6 text-pink-600">Recent Sessions</h3>
+                        <div id="recent-sessions" class="space-y-4">
+                            <!-- Sessions load here -->
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-bold mb-6 text-emerald-600">AI Brainstorm Helper</h3>
+                        <div class="bg-white/70 dark:bg-slate-800/70 p-6 rounded-2xl shadow-xl border border-emerald-200/50">
+                            <textarea id="ai-input" placeholder="Ask AI for brainstorming ideas, problem solving, or explanations... (e.g. 'Suggest 3 ways to solve integration by parts')" class="w-full p-6 rounded-2xl border-2 border-slate-200 dark:border-slate-700 focus:border-emerald-500 resize-none h-32 mb-4 shadow-lg" rows="4"></textarea>
+                            <button onclick="askAIBrainstorm()" class="ai-glow w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white py-4 px-8 rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all">
+                                <i class="fas fa-robot mr-2"></i>🤖 Get AI Suggestions
+                            </button>
+                            <div id="ai-response" class="mt-6 p-6 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-slate-800/50 dark:to-slate-700/50 rounded-2xl shadow-lg hidden">
+                                <!-- AI response will appear here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modals -->
+    <div id="group-selector-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-3xl p-8 shadow-2xl max-w-md w-full max-h-[80vh] overflow-y-auto border border-slate-200/50 dark:border-slate-700/50">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-slate-900 dark:text-white">Select Group</h3>
+                <button onclick="hideGroupSelector()" class="text-2xl text-slate-500 hover:text-slate-900 dark:hover:text-white">&times;</button>
+            </div>
+            <div id="group-selector-list" class="space-y-3 max-h-64 overflow-y-auto">
+                <!-- Groups will load here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Study Buddies JS - Full Feature Implementation
+        let currentChatUserId = null;
+        let selectedGroupForSession = null;
+
+        // Tab switching
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tab = btn.dataset.tab;
+                
+                // Update active tab
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('bg-white/80', 'dark:bg-slate-900/80', 'shadow-lg', 'scale-[1.02]'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                btn.classList.add('bg-white/80', 'dark:bg-slate-900/80', 'shadow-lg');
+                document.getElementById(tab).classList.add('active');
+                
+                // Load tab content
+                if (tab === 'find-buddies') loadBuddies();
+                else if (tab === 'connections') loadConnections();
+                else if (tab === 'messages') loadChatList();
+                else if (tab === 'groups') loadDiscoverGroups();
+                else if (tab === 'my-groups') loadMyGroups();
+                else if (tab === 'brainstorm') loadRecentSessions();
+            });
+        });
+
+        // Load buddies
+        async function loadBuddies() {
+            try {
+                const search = document.getElementById('buddy-search').value;
+                const country = document.getElementById('country-filter').value;
+                const level = document.getElementById('level-filter').value;
+                
+                const params = new URLSearchParams();
+                if (search) params.append('search', search);
+                if (country !== 'All Countries') params.append('country', country);
+                if (level !== 'All Levels') params.append('level', level);
+                
+                const response = await fetch(`/api/find-study-buddies?${params}`);
+                const data = await response.json();
+                
+                const container = document.getElementById('buddies-list');
+                container.innerHTML = '';
+                
+                if (data.success && data.buddies.length === 0) {
+                    container.innerHTML = '<div class="col-span-full text-center py-12 text-slate-500"><i class="fas fa-users text-6xl mb-4 opacity-50"></i><p>No buddies found. Try different filters!</p></div>';
+                    return;
+                }
+                
+                data.buddies.forEach(buddy => {
+                    const card = document.createElement('div');
+                    card.className = 'group-card card p-6 rounded-3xl hover:bg-blue-50 dark:hover:bg-slate-800/50';
+                    card.innerHTML = `
+                        <div class="flex items-start space-x-4 mb-4">
+                            <img src="${buddy.profile_pic}" alt="${buddy.name}" class="w-20 h-20 rounded-3xl shadow-lg object-cover">
+                            <div class="flex-1 min-w-0">
+                                <h4 class="font-bold text-xl text-slate-900 dark:text-white truncate">${buddy.name}</h4>
+                                <p class="text-slate-600 dark:text-slate-400">@${buddy.username}</p>
+                                <div class="flex items-center space-x-2 mt-1">
+                                    <span class="px-3 py-1 bg-blue-100 dark:bg-blue-900/50 text-xs font-medium text-blue-800 dark:text-blue-200 rounded-full">${buddy.study_level}</span>
+                                    <span class="px-3 py-1 bg-green-100 dark:bg-green-900/50 text-xs font-medium text-green-800 dark:text-green-200 rounded-full">${buddy.country}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="space-y-2 mb-6">
+                            <p class="text-sm text-slate-600 dark:text-slate-400">${buddy.school || 'Independent Learner'}</p>
+                            <div class="flex items-center justify-between text-sm">
+                                <span>Quizzes: <strong>${buddy.total_quizzes}</strong></span>
+                                <span>Avg Score: <strong>${buddy.average_score}%</strong></span>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            ${buddy.tags.slice(0, 4).map(tag => `<span class="px-3 py-1 bg-purple-100 dark:bg-purple-900/50 text-xs font-medium text-purple-800 dark:text-purple-200 rounded-full">${tag}</span>`).join('')}
+                            ${buddy.tags.length > 4 ? `<span class="px-3 py-1 bg-slate-100 dark:bg-slate-700 text-xs font-medium text-slate-600 dark:text-slate-400 rounded-full">+${buddy.tags.length - 4}</span>` : ''}
+                        </div>
+                        <button onclick="connectUser(${buddy.id})" class="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white py-4 px-8 rounded-2xl font-bold shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all ${buddy.is_connected ? 'bg-green-500 hover:bg-green-600 from-green-500 to-green-600 cursor-not-allowed opacity-75' : ''}">
+                            ${buddy.is_connected ? '<i class="fas fa-check mr-2"></i>Connected' : '<i class="fas fa-user-plus mr-2"></i>Connect'}
+                        </button>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (error) {
+                console.error('Error loading buddies:', error);
+                document.getElementById('buddies-list').innerHTML = '<div class="col-span-full text-center py-12 text-red-500"><i class="fas fa-exclamation-triangle text-6xl mb-4"></i><p>Error loading buddies. Please try again.</p></div>';
+            }
+        }
+
+        // Connect user
+        async function connectUser(userId) {
+            try {
+                const response = await fetch('/api/connect-user', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('✅ Connected successfully! Refresh to see updated list.');
+                    loadBuddies();
+                } else {
+                    alert('❌ ' + (data.error || 'Connection failed'));
+                }
+            } catch (error) {
+                console.error('Connect error:', error);
+                alert('❌ Connection error. Please try again.');
+            }
+        }
+
+        // Load connections
+        async function loadConnections() {
+            try {
+                const response = await fetch('/api/get-connections');
+                const data = await response.json();
+                
+                document.getElementById('connections-count').textContent = data.connections?.length || 0;
+                
+                const container = document.getElementById('connections-list');
+                container.innerHTML = '';
+                
+                if (!data.success || data.connections.length === 0) {
+                    container.innerHTML = '<div class="text-center py-12 text-slate-500"><i class="fas fa-handshake text-6xl mb-4 opacity-50"></i><p>No connections yet. Find buddies to connect!</p></div>';
+                    return;
+                }
+                
+                data.connections.forEach(conn => {
+                    const item = document.createElement('div');
+                    item.className = 'connection-card backdrop-blur-xl bg-white/80 dark:bg-slate-800/80 rounded-3xl p-6 shadow-2xl hover:shadow-3xl hover:-translate-y-2 border border-slate-200/50 dark:border-slate-700/50 cursor-pointer transition-all duration-300 group';
+                    item.onclick = () => {
+                        document.querySelector('[data-tab="messages"]').click();
+                        setTimeout(() => openChat(conn.id), 300);
+                    };
+                    item.innerHTML = `
+                        <div class="flex items-start space-x-4 group-hover:space-x-5 transition-all">
+                            <div class="relative">
+                                <img src="${conn.profile_pic || '/static/image/KNOWITNOW.png'}" alt="${conn.name}" class="w-20 h-20 rounded-3xl shadow-2xl group-hover:shadow-3xl object-cover ring-4 ring-blue-200/50 dark:ring-blue-900/50 group-hover:ring-blue-300/70 transition-all">
+                                ${conn.online ? '<div class="absolute -bottom-1 -right-1 w-6 h-6 bg-green-400 border-4 border-white dark:border-slate-900 rounded-full shadow-lg"></div>' : ''}
+                            </div>
+                            <div class="flex-1 min-w-0 py-2">
+                                <div class="flex items-center justify-between mb-1">
+                                    <h4 class="font-bold text-xl text-slate-900 dark:text-white truncate group-hover:text-blue-600">${conn.name}</h4>
+                                    <div class="flex items-center space-x-2">
+                                        ${conn.unread_count > 0 ? `<span class="px-3 py-1 bg-gradient-to-r from-red-400 to-red-500 text-white text-xs font-bold rounded-full shadow-lg">${conn.unread_count}</span>` : ''}
+                                        <i class="fas fa-message text-blue-500 text-2xl group-hover:scale-110 transition-transform"></i>
+                                    </div>
+                                </div>
+                                <p class="text-sm text-slate-600 dark:text-slate-400">@${conn.username}</p>
+                                <div class="flex items-center space-x-3 mt-2 text-xs opacity-75">
+                                    <span class="px-2 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 rounded-full">${conn.study_level}</span>
+                                    <span class="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-200 rounded-full">${conn.average_score}% Avg</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(item);
+                });
+            } catch (error) {
+                console.error('Load connections error:', error);
+            }
+        }
+
+        // Load chat list for messages tab
+        async function loadChatList() {
+            const container = document.getElementById('chat-list');
+            container.innerHTML = '<div class="text-center text-slate-500 py-8 opacity-75">Loading chats...</div>';
+            
+            try {
+                const response = await fetch('/api/get-connections');
+                const data = await response.json();
+                
+                container.innerHTML = '';
+                
+                if (!data.success || data.connections.length === 0) {
+                    container.innerHTML = '<div class="text-center py-12 text-slate-500 opacity-75"><i class="fas fa-comments text-4xl mb-4 opacity-50"></i><p>No chats yet. Connect with buddies first!</p></div>';
+                    return;
+                }
+                
+                data.connections.forEach((conn, index) => {
+                    const chatItem = document.createElement('div');
+                    chatItem.className = 'chat-item flex items-center p-4 rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer transition-all border-b border-slate-200/50 dark:border-slate-700/50 last:border-b-0 hover:shadow-md';
+                    chatItem.dataset.userId = conn.id;
+                    chatItem.onclick = () => openChat(conn.id);
+                    chatItem.innerHTML = `
+                        <img src="${conn.profile_pic || '/static/image/KNOWITNOW.png'}" alt="${conn.name}" class="w-12 h-12 rounded-2xl shadow-lg object-cover">
+                        <div class="ml-4 flex-1 min-w-0">
+                            <h4 class="font-bold text-slate-900 dark:text-white truncate">${conn.name}</h4>
+                            <p class="text-sm text-slate-500 dark:text-slate-400 truncate">${conn.username}</p>
+                        </div>
+                        <div class="text-right ml-2">
+                            ${conn.unread_count > 0 ? `<div class="bg-red-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">${conn.unread_count > 99 ? '99+' : conn.unread_count}</div>` : ''}
+                            <i class="fas fa-chevron-right text-slate-400 ml-2"></i>
+                        </div>
+                    `;
+                    container.appendChild(chatItem);
+                });
+            } catch (error) {
+                console.error('Load chat list error:', error);
+                container.innerHTML = '<div class="text-center py-12 text-red-500"><i class="fas fa-exclamation-triangle text-4xl mb-4"></i><p>Error loading chats</p></div>';
+            }
+        }
+
+        // Open specific chat
+        function openChat(userId) {
+            currentChatUserId = userId;
+            loadMessages(userId);
+        }
+
+        // Load messages for specific user
+        async function loadMessages(userId) {
+            try {
+                const response = await fetch(`/api/get-messages/${userId}`);
+                const data = await response.json();
+                
+                const userResponse = await fetch(`/api/find-study-buddies?search=${userId}`);
+                const userData = await userResponse.json();
+                const user = userData.buddies?.[0] || {};
+                
+                document.getElementById('chat-user-pic').src = user.profile_pic || '/static/image/KNOWITNOW.png';
+                document.getElementById('chat-user-name').textContent = user.name || 'Unknown';
+                document.getElementById('chat-user-status').textContent = 'Online';
+                
+                const container = document.getElementById('chat-messages');
+                container.innerHTML = '';
+                
+                if (data.success && data.messages.length > 0) {
+                    data.messages.forEach(msg => {
+                        const bubble = document.createElement('div');
+                        bubble.className = `chat-bubble ${msg.sender_id == currentChatUserId ? 'received' : 'sent'}`;
+                        bubble.innerHTML = `<div>${msg.content}</div><span class="text-xs opacity-75 mt-1 block">${new Date(msg.created_at).toLocaleTimeString()}</span>`;
+                        container.appendChild(bubble);
+                    });
+                    container.scrollTop = container.scrollHeight;
+                }
+            } catch (error) {
+                console.error('Load messages error:', error);
+            }
+        }
+
+        // Send message
+        document.getElementById('send-message').addEventListener('click', sendMessage);
+        document.getElementById('message-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        async function sendMessage() {
+            const input = document.getElementById('message-input');
+            const content = input.value.trim();
+            if (!content || !currentChatUserId) return;
+            
+            try {
+                const response = await fetch('/api/send-message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ receiver_id: currentChatUserId, content })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    input.value = '';
+                    loadMessages(currentChatUserId);
+                }
+            } catch (error) {
+                console.error('Send message error:', error);
+            }
+        }
+
+        // Create group
+        async function createGroup() {
+            const name = document.getElementById('group-name').value.trim();
+            const desc = document.getElementById('group-desc').value.trim();
+            const isPrivate = document.getElementById('group-private').checked;
+            const password = document.getElementById('group-password').value.trim();
+            
+            if (!name) return alert('Group name required!');
+            
+            try {
+                const response = await fetch('/api/create-group', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, description: desc, is_private: isPrivate, password: isPrivate ? password : '' })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('🎉 Group created successfully!');
+                    document.getElementById('group-name').value = '';
+                    document.getElementById('group-desc').value = '';
+                    document.getElementById('group-password').value = '';
+                    loadDiscoverGroups();
+                    loadMyGroups();
+                } else {
+                    alert('❌ ' + (data.error || 'Creation failed'));
+                }
+            } catch (error) {
+                console.error('Create group error:', error);
+            }
+        }
+
+        // Load discover groups
+        async function loadDiscoverGroups() {
+            try {
+                const response = await fetch('/api/discover-groups');
+                const data = await response.json();
+                
+                const container = document.getElementById('discover-groups');
+                container.innerHTML = '';
+                
+                if (!data.success || data.groups.length === 0) {
+                    container.innerHTML = '<div class="text-center py-12 text-slate-500"><i class="fas fa-groups text-6xl mb-4 opacity-50"></i><p>No groups to join. Create one first!</p></div>';
+                    return;
+                }
+                
+                data.groups.forEach(group => {
+                    const card = document.createElement('div');
+                    card.className = 'group-card p-6 rounded-2xl border-2 border-slate-200/50 dark:border-slate-700/50 hover:border-blue-400 hover:shadow-2xl cursor-pointer';
+                    card.onclick = () => joinGroup(group.id, group.is_private, group.has_pending_request);
+                    card.innerHTML = `
+                        <div class="flex items-start justify-between mb-4">
+                            <div>
+                                <h4 class="font-bold text-xl">${group.name}</h4>
+                                <p class="text-sm text-slate-600 dark:text-slate-400">${group.description || 'No description'}</p>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-2xl font-bold text-blue-600">${group.member_count}</div>
+                                <div class="text-xs text-slate-500">members</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between text-sm mb-4">
+                            <span class="${group.is_private ? 'px-3 py-1 bg-orange-100 dark:bg-orange-900/50 text-orange-800 dark:text-orange-200 text-xs font-medium rounded-full' : 'px-3 py-1 bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 text-xs font-medium rounded-full'}">
+                                ${group.is_private ? '🔒 Private' : '🌐 Public'}
+                            </span>
+                            ${group.has_pending_request ? '<span class="px-3 py-1 bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200 text-xs font-medium rounded-full">Pending</span>' : ''}
+                            <span>${group.message_count} messages</span>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (error) {
+                console.error('Load groups error:', error);
+            }
+        }
+
+        // Join group
+        async function joinGroup(groupId, isPrivate, hasPending) {
+            if (hasPending) {
+                alert('Request already pending. Wait for admin approval.');
+                return;
+            }
+            
+            if (!isPrivate) {
+                // Auto join public
+                try {
+                    const response = await fetch('/api/add-member-to-group', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ group_id: groupId })
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        alert('✅ Joined group!');
+                        loadDiscoverGroups();
+                        loadMyGroups();
+                    }
+                } catch (error) {
+                    console.error('Join error:', error);
+                }
+            } else {
+                const password = prompt('Enter group password:');
+                if (!password) return;
+                
+                try {
+                    const response = await fetch('/api/add-member-to-group', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ group_id: groupId, password })
+                    });
+                    const data = await response.json();
+                    alert(data.success ? '✅ Join request sent!' : '❌ ' + data.error);
+                    loadDiscoverGroups();
+                } catch (error) {
+                    console.error('Private join error:', error);
+                }
+            }
+        }
+
+        // Load my groups (placeholder - detailed chat UI would go here)
+        async function loadMyGroups() {
+            try {
+                const response = await fetch('/api/get-groups');
+                const data = await response.json();
+                
+                const container = document.getElementById('my-groups-list');
+                container.innerHTML = '';
+                
+                data.groups?.forEach(group => {
+                    const card = document.createElement('div');
+                    card.className = 'group-card p-8 rounded-3xl shadow-xl hover:shadow-2xl cursor-pointer bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-slate-800 dark:to-slate-700 border-2 border-indigo-200/50';
+                    card.innerHTML = `
+                        <h3 class="text-2xl font-bold mb-4 text-indigo-800 dark:text-indigo-300">${group.name}</h3>
+                        <p class="text-slate-600 dark:text-slate-400 mb-6">${group.description || 'Collaborative study group'}</p>
+                        <div class="grid grid-cols-3 gap-4 text-center mb-6">
+                            <div><div class="text-2xl font-bold text-green-600">${group.member_count}</div><div class="text-sm">Members</div></div>
+                            <div><div class="text-2xl font-bold text-blue-600">${group.message_count}</div><div class="text-sm">Messages</div></div>
+                            <div><div class="text-2xl font-bold text-purple-600">${group.your_role}</div><div class="text-sm">Your Role</div></div>
+                        </div>
+                        <button class="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white py-3 px-6 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all">
+                            Open Chat
+                        </button>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (error) {
+                console.error('Load my groups error:', error);
+            }
+        }
+
+        // Group selector modal
+        function showGroupSelector() {
+            document.getElementById('group-selector-modal').classList.remove('hidden');
+            // Load groups into selector (simplified)
+            document.getElementById('group-selector-list').innerHTML = '<div class="p-6 text-center text-slate-500">Select from My Groups tab</div>';
+        }
+
+        function hideGroupSelector() {
+            document.getElementById('group-selector-modal').classList.add('hidden');
+        }
+
+        // Load recent sessions
+        async function loadRecentSessions() {
+            // Simplified - would load from specific group/session
+            document.getElementById('recent-sessions').innerHTML = `
+                <div class="p-8 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-700 rounded-3xl shadow-xl border border-blue-200/50">
+                    <h4 class="font-bold text-xl mb-2">📚 Calculus Brainstorm</h4>
+                    <p class="text-sm text-slate-600 mb-4">Scheduled for tomorrow 7PM</p>
+                    <div class="flex items-center space-x-4 text-sm text-emerald-600">
+                        <span>3 Notes</span>
+                        <span>2 Files</span>
+                        <span>1 AI Response</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // AI Brainstorm helper
+        async function askAIBrainstorm() {
+            const input = document.getElementById('ai-input');
+            const responseDiv = document.getElementById('ai-response');
+            const content = input.value.trim();
+            
+            if (!content) return alert('Please enter a question!');
+            
+            const btn = event.target;
+            const original = btn.innerHTML;
+            btn.innerHTML = '🤖 Thinking...';
+            btn.disabled = true;
+            
+            try {
+                const res = await fetch('/api/ask-ai', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: content })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    responseDiv.innerHTML = `<div class="prose max-w-none"><h4 class="font-bold mb-4 text-emerald-800 dark:text-emerald-300">🤖 AI Assistant</h4><p>${data.explanation}</p></div>`;
+                    responseDiv.classList.remove('hidden');
+                    input.value = '';
+                }
+            } catch (error) {
+                console.error('AI error:', error);
+                alert('AI service temporarily unavailable.');
+            } finally {
+                btn.innerHTML = original;
+                btn.disabled = false;
+            }
+        }
+
+        // Logout
+        function logout() {
+            if (confirm('Logout?')) {
+                fetch('/logout', { method: 'POST' }).then(() => location.href = '/');
+            }
+        }
+
+        // Theme toggle fix for study-buddies page
+        document.addEventListener('DOMContentLoaded', () => {
+            // Apply current theme
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            
+            // Setup toggle
+            const toggle = document.getElementById('mode-toggle');
+            if (toggle) {
+                toggle.addEventListener('click', () => {
+                    const current = document.documentElement.getAttribute('data-theme');
+                    const newTheme = current === 'dark' ? 'light' : 'dark';
+                    document.documentElement.setAttribute('data-theme', newTheme);
+                    localStorage.setItem('theme', newTheme);
+                    
+                    // Update button text/icons
+                    const text = toggle.querySelector('.mode-text');
+                    const sun = toggle.querySelector('.sun-icon');
+                    const moon = toggle.querySelector('.moon-icon');
+                    
+                    if (text) text.textContent = newTheme === 'dark' ? 'Light Mode' : 'Dark Mode';
+                    if (sun) sun.style.opacity = newTheme === 'dark' ? '1' : '0.3';
+                    if (moon) moon.style.opacity = newTheme === 'light' ? '1' : '0.3';
+                    
+                    // Animation
+                    toggle.style.transform = 'scale(0.95)';
+                    setTimeout(() => toggle.style.transform = '', 150);
+                });
+            }
+            
+            loadBuddies();
+        });
+    </script>
+</body>
+</html>
+

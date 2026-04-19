@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - KnowItNow</title>
+    <link rel="icon" type="image/png" href="/static/image/KNOWITNOW.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --secondary: #8b5cf6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+
+        body.dark-mode {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+        }
+
+        body:not(.dark-mode) {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8fafc;
+            --bg-tertiary: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+        }
+
+        .card {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        .card-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border: 2px solid rgba(59, 130, 246, 0.2);
+        }
+
+        body.dark-mode .stat-card {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
+            border: 2px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .mode-toggle-btn {
+            transition: all 0.3s ease;
+        }
+
+        .mode-toggle-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .upload-zone {
+            border: 2px dashed rgba(59, 130, 246, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        .upload-zone.dragover {
+            border-color: var(--primary);
+            background: rgba(59, 130, 246, 0.05);
+        }
+    </style>
+</head>
+<body class="min-h-screen transition-colors duration-300" style="background: var(--bg-secondary);">
+    
+    <!-- Top Navigation Bar -->
+    <nav class="sticky top-0 z-50 card border-b border-opacity-20 shadow-lg">
+        <div class="max-w-7xl mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <!-- Logo & Branding -->
+                <div class="flex items-center gap-3">
+                    <div class="h-12 w-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                        <img src="/static/image/KNOWITNOW.png" alt="Logo" class="h-8 w-8">
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">KnowItNow</h1>
+                        <p class="text-xs font-medium" style="color: var(--text-secondary);">Challenge. Learn. Connect.</p>
+                    </div>
+                </div>
+
+                <!-- Right Side Icons -->
+                <div class="flex items-center gap-4">
+                    <!-- Theme Toggle -->
+                    <button id="theme-toggle" class="mode-toggle-btn p-3 rounded-xl bg-opacity-20 hover:bg-opacity-30 transition-all duration-300">
+                        <svg id="sun-icon" class="w-6 h-6 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v2a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l-2.12-2.12a.5.5 0 10-.707.707L13.828 16.3a1 1 0 001.414-1.414l-.464-.465zM2.05 13.464l2.12-2.12a.5.5 0 10-.707-.707L1.343 12.828A1 1 0 102.757 14.243l-.707-.78z" clip-rule="evenodd"></path>
+                        </svg>
+                        <svg id="moon-icon" class="w-6 h-6 text-blue-400 hidden" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+                        </svg>
+                    </button>
+
+                    <!-- Notifications -->
+                    <button class="relative p-3 rounded-xl hover:bg-opacity-20 transition-all duration-300" style="background-color: rgba(59, 130, 246, 0.1); color: var(--text-primary);">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                        </svg>
+                        <span class="absolute top-2 right-2 h-3 w-3 bg-red-500 rounded-full animate-pulse"></span>
+                    </button>
+
+                    <!-- User Profile -->
+                    <div class="flex items-center gap-3 pl-4 border-l border-opacity-20" style="border-color: var(--text-secondary);">
+                        <div class="text-right hidden sm:block">
+                            <p class="font-semibold" style="color: var(--text-primary);">{{ user.name }}</p>
+                            <p class="text-xs" style="color: var(--text-secondary);">{{ user.study_level }}</p>
+                        </div>
+                        <img src="{{ user.get_profile_pic_url() }}" alt="Profile" class="h-10 w-10 rounded-xl object-cover border-2 border-blue-500">
+                    </div>
+
+                    <!-- Logout -->
+                    <button onclick="logout()" class="p-3 rounded-xl hover:bg-red-500 hover:bg-opacity-20 transition-all duration-300" title="Logout">
+                        <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-6 py-8">
+        
+        <!-- Welcome Section -->
+        <div class="mb-8" data-aos="fade-up">
+            <h2 class="text-4xl font-bold mb-2" style="color: var(--text-primary);">Welcome back, {{ user.name }}! 👋</h2>
+            <p style="color: var(--text-secondary);">Ready to challenge yourself and learn something new today?</p>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="stat-card card rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1" data-aos="fade-up" data-aos-delay="0">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium" style="color: var(--text-secondary);">Total Quizzes</p>
+                        <p class="text-4xl font-bold mt-2" style="color: var(--primary);" id="total-quizzes">0</p>
+                    </div>
+                    <div class="p-4 rounded-xl bg-blue-500 bg-opacity-20">
+                        <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-card card rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1" data-aos="fade-up" data-aos-delay="100">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium" style="color: var(--text-secondary);">Average Score</p>
+                        <p class="text-4xl font-bold mt-2" style="color: var(--success);" id="average-score">0%</p>
+                    </div>
+                    <div class="p-4 rounded-xl bg-green-500 bg-opacity-20">
+                        <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="stat-card card rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1" data-aos="fade-up" data-aos-delay="300">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium" style="color: var(--text-secondary);">Connections</p>
+                        <p class="text-4xl font-bold mt-2" style="color: var(--secondary);" id="connections">0</p>
+                    </div>
+                    <div class="p-4 rounded-xl bg-purple-500 bg-opacity-20">
+                        <svg class="w-8 h-8 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 12H9m6 0a6 6 0 11-12 0 6 6 0 0112 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Actions Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+            
+            <!-- Upload Notes Section -->
+            <div class="lg:col-span-2" data-aos="fade-up">
+                <div class="card rounded-2xl p-8 shadow-lg">
+                    <h3 class="text-2xl font-bold mb-6" style="color: var(--text-primary);">📚 Upload Your Notes</h3>
+                    
+                    <!-- Tabs for Question Type -->
+                    <div class="flex gap-2 mb-6 bg-opacity-20 rounded-xl p-1" style="background-color: rgba(59, 130, 246, 0.1);">
+                        <button class="tab-btn flex-1 py-2 rounded-lg font-medium transition-all duration-300" data-tab="objective" style="background-color: var(--primary); color: white;">
+                            <span>📋 Objective</span>
+                        </button>
+                        <button class="tab-btn flex-1 py-2 rounded-lg font-medium transition-all duration-300" data-tab="theory" style="color: var(--text-secondary);">
+                            <span>📝 Theory</span>
+                        </button>
+                    </div>
+
+                    <!-- File Upload Drag & Drop -->
+                    <div class="upload-zone rounded-2xl p-8 text-center mb-6 cursor-pointer transition-all duration-300" id="upload-zone">
+                        <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                        </svg>
+                        <p class="font-semibold" style="color: var(--text-primary);">Drag and drop your PDF notes here</p>
+                        <p class="text-sm" style="color: var(--text-secondary);">or click to browse</p>
+                        <input type="file" id="pdf-input" accept=".pdf" class="hidden" />
+                    </div>
+
+                    <!-- Difficulty & Time Settings -->
+                    <div class="grid grid-cols-3 gap-4 mb-6">
+                        <div>
+                            <label class="block text-sm font-semibold mb-2" style="color: var(--text-primary);">Number of Questions</label>
+                            <select id="question-count" class="w-full card rounded-lg p-3 font-medium" style="color: var(--text-primary);">
+                                <option value="5">5 Questions</option>
+                                <option value="10" selected>10 Questions</option>
+                                <option value="15">15 Questions</option>
+                                <option value="20">20 Questions</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-2" style="color: var(--text-primary);">Difficulty Level</label>
+                            <select id="hardness" class="w-full card rounded-lg p-3 font-medium" style="color: var(--text-primary);">
+                                <option value="easy">🟢 Easy</option>
+                                <option value="medium" selected>🟡 Medium</option>
+                                <option value="hard">🔴 Hard</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-2" style="color: var(--text-primary);">Time Per Question</label>
+                            <select id="time-limit" class="w-full card rounded-lg p-3 font-medium" style="color: var(--text-primary);">
+                                <option value="15">15 seconds</option>
+                                <option value="30" selected>30 seconds</option>
+                                <option value="60">1 minute</option>
+                                <option value="120">2 minutes</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Upload Button -->
+                    <button onclick="uploadNotes()" class="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                        <span>🚀 Generate Questions from PDF</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quick Features Sidebar -->
+            <div class="space-y-6" data-aos="fade-up" data-aos-delay="200">
+                
+                <!-- Community Connect -->
+                <div class="card-secondary rounded-2xl p-6 shadow-lg border border-opacity-20" style="border-color: var(--text-secondary);">
+                    <h4 class="text-lg font-bold mb-4 flex items-center gap-2" style="color: var(--text-primary);">
+                        <span>🌐 Community</span>
+                    </h4>
+                    <div class="space-y-3">
+                        <p class="text-sm" style="color: var(--text-secondary);">Connect with learners from</p>
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-2 p-3 card rounded-lg">
+                                <span>🏫</span>
+                                <span class="font-medium" style="color: var(--text-primary);">{{ user.school }}</span>
+                            </div>
+                            <div class="flex items-center gap-2 p-3 card rounded-lg">
+                                <span>🌍</span>
+                                <span class="font-medium" style="color: var(--text-primary);">{{ user.country }}</span>
+                            </div>
+                            <div class="flex items-center gap-2 p-3 card rounded-lg">
+                                <span>📚</span>
+                                <span class="font-medium" style="color: var(--text-primary);">{{ user.study_level }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="w-full mt-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all duration-300" onclick="findStudyBuddies()">
+                        Find Study Buddies
+                    </button>
+                </div>
+
+                <!-- Brainstorm Group -->
+                <div class="card-secondary rounded-2xl p-6 shadow-lg border border-opacity-20" style="border-color: var(--text-secondary);">
+                    <h4 class="text-lg font-bold mb-4 flex items-center gap-2" style="color: var(--text-primary);">
+                        <span>💡 Brainstorm</span>
+                    </h4>
+                    <p class="text-sm mb-3" style="color: var(--text-secondary);">Collaborate and solve problems together</p>
+                    <button class="w-full py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all duration-300" onclick="joinDiscussion()">
+                        Join Discussion
+                    </button>
+                </div>
+
+                <!-- AI Explanations -->
+                <div class="card-secondary rounded-2xl p-6 shadow-lg border border-opacity-20" style="border-color: var(--text-secondary);">
+                    <h4 class="text-lg font-bold mb-4 flex items-center gap-2" style="color: var(--text-primary);">
+                        <span>🤖 AI Assistant</span>
+                    </h4>
+                    <p class="text-sm mb-3" style="color: var(--text-secondary);">Get instant explanations powered by Google Gemini</p>
+                    <button class="w-full py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all duration-300" onclick="askAI()">
+                        Ask AI
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats & Performance Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            
+            <!-- Performance Chart -->
+            <div class="card rounded-2xl p-8 shadow-lg" data-aos="fade-up">
+                <h3 class="text-xl font-bold mb-6" style="color: var(--text-primary);">📊 Performance Trend</h3>
+                <canvas id="performanceChart"></canvas>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="card rounded-2xl p-8 shadow-lg" data-aos="fade-up" data-aos-delay="100">
+                <h3 class="text-xl font-bold mb-6" style="color: var(--text-primary);">🎯 Recent Activity</h3>
+                <div class="space-y-4" id="recent-activity-container">
+                    <div class="flex items-center justify-center p-8">
+                        <p style="color: var(--text-secondary);">Loading activity...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+
+    <script>
+        AOS.init({ duration: 1000 });
+
+        // Store for chart instance
+        let performanceChart = null;
+
+        // ==================== Load Dashboard Data ====================
+        async function loadDashboardData() {
+            try {
+                const response = await fetch('/api/dashboard-stats');
+                const data = await response.json();
+
+                if (!data.success) {
+                    console.error('Error loading dashboard data');
+                    return;
+                }
+
+                // Update stats
+                document.getElementById('total-quizzes').textContent = data.stats.total_quizzes;
+                document.getElementById('average-score').textContent = data.stats.average_score + '%';
+                document.getElementById('connections').textContent = data.stats.connection_count;
+
+                // Update recent activity
+                updateRecentActivity(data.recent_activity);
+
+                // Update performance chart
+                updatePerformanceChart(data.performance_data);
+            } catch (error) {
+                console.error('Error fetching dashboard data:', error);
+            }
+        }
+
+        function updateRecentActivity(activities) {
+            const container = document.getElementById('recent-activity-container');
+            
+            if (activities.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-secondary);" class="text-center py-8">No quiz results yet. Start taking quizzes!</p>';
+                return;
+            }
+
+            container.innerHTML = activities.map(activity => {
+                const scoreColor = activity.score >= 80 ? 'text-green-500' : activity.score >= 60 ? 'text-yellow-500' : 'text-red-500';
+                return `
+                    <div class="flex items-center justify-between p-4 card-secondary rounded-lg">
+                        <div>
+                            <p class="font-semibold" style="color: var(--text-primary);">${activity.quiz_title}</p>
+                            <p class="text-xs" style="color: var(--text-secondary);">${activity.time_ago}</p>
+                        </div>
+                        <span class="text-2xl font-bold ${scoreColor}">${activity.score}%</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updatePerformanceChart(performanceData) {
+            const ctx = document.getElementById('performanceChart');
+            if (!ctx) return;
+
+            const labels = Object.keys(performanceData);
+            const scores = Object.values(performanceData);
+
+            if (performanceChart) {
+                performanceChart.data.labels = labels;
+                performanceChart.data.datasets[0].data = scores;
+                performanceChart.update();
+            } else {
+                performanceChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Quiz Scores',
+                            data: scores,
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            pointBackgroundColor: '#3b82f6',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            pointRadius: 5
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + '%';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Load data on page load
+        window.addEventListener('load', loadDashboardData);
+
+        // ==================== Theme Toggle ====================
+        const themeToggle = document.getElementById('theme-toggle');
+        const sunIcon = document.getElementById('sun-icon');
+        const moonIcon = document.getElementById('moon-icon');
+        const html = document.documentElement;
+
+        // Load theme from localStorage
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        if (savedTheme === 'dark') {
+            document.body.classList.add('dark-mode');
+            sunIcon.classList.add('hidden');
+            moonIcon.classList.remove('hidden');
+        }
+
+        themeToggle.addEventListener('click', async () => {
+            const isDark = document.body.classList.toggle('dark-mode');
+            sunIcon.classList.toggle('hidden');
+            moonIcon.classList.toggle('hidden');
+
+            const theme = isDark ? 'dark' : 'light';
+            localStorage.setItem('theme', theme);
+
+            try {
+                await fetch('/toggle_mode', { method: 'POST' });
+            } catch (error) {
+                console.error('Error toggling theme:', error);
+            }
+        });
+
+        // ==================== Tab Switching ====================
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        let selectedQuestionType = 'objective';
+
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                tabBtns.forEach(b => {
+                    b.style.backgroundColor = 'transparent';
+                    b.style.color = 'var(--text-secondary)';
+                });
+                btn.style.backgroundColor = 'var(--primary)';
+                btn.style.color = 'white';
+                selectedQuestionType = btn.dataset.tab;
+            });
+        });
+
+        // ==================== File Upload ====================
+        const uploadZone = document.getElementById('upload-zone');
+        const pdfInput = document.getElementById('pdf-input');
+
+        uploadZone.addEventListener('click', () => pdfInput.click());
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+        uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            if (e.dataTransfer.files[0]) {
+                pdfInput.files = e.dataTransfer.files;
+            }
+        });
+
+        pdfInput.addEventListener('change', () => {
+            if (pdfInput.files[0]) {
+                uploadZone.innerHTML = `
+                    <svg class="w-12 h-12 mx-auto mb-3 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                    </svg>
+                    <p class="font-semibold" style="color: var(--text-primary);">${pdfInput.files[0].name}</p>
+                    <p class="text-sm" style="color: var(--text-secondary);">Ready to generate questions!</p>
+                `;
+            }
+        });
+
+        // ==================== Upload Notes Function ====================
+        async function uploadNotes() {
+            if (!pdfInput.files[0]) {
+                alert('Please select a PDF file first');
+                return;
+            }
+
+            // Show loading indicator
+            const uploadZoneContent = uploadZone.innerHTML;
+            uploadZone.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-8">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+                    <p style="color: var(--text-primary);" class="font-medium">Generating questions from your PDF...</p>
+                    <p style="color: var(--text-secondary);" class="text-sm mt-2">This may take a moment, please wait.</p>
+                </div>
+            `;
+
+            const formData = new FormData();
+            formData.append('file', pdfInput.files[0]);
+            formData.append('type', selectedQuestionType);
+            formData.append('question_count', document.getElementById('question-count').value);
+            formData.append('hardness', document.getElementById('hardness').value);
+            formData.append('time', document.getElementById('time-limit').value);
+
+            try {
+                const response = await fetch('/upload_notes', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    // Redirect to quiz page (questions stored in session)
+                    window.location.href = '/quiz';
+                } else {
+                    // Restore UI and show error
+                    uploadZone.innerHTML = uploadZoneContent;
+                    alert(result.error || 'Error generating questions');
+                }
+            } catch (error) {
+                // Restore UI and show error
+                uploadZone.innerHTML = uploadZoneContent;
+                alert('Error uploading file: ' + error.message);
+            }
+        }
+
+        // ==================== Logout Function ====================
+        async function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                try {
+                    await fetch('/logout', { method: 'POST' });
+                    window.location.href = '/';
+                } catch (error) {
+                    console.error('Logout error:', error);
+                }
+            }
+        }
+
+        // ==================== Find Study Buddies ====================
+        async function findStudyBuddies() {
+            window.location.href = '/study-buddies';
+        }
+
+        // ==================== Connect User ====================
+        async function connectUser(userId) {
+            try {
+                const response = await fetch('/api/connect-user', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('Connected! You can now message this user.');
+                    findStudyBuddies(); // Refresh list
+                } else {
+                    alert(data.error || 'Error connecting');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        // ==================== Join Discussion ====================
+        async function joinDiscussion() {
+            try {
+                const response = await fetch('/api/discussions');
+                const data = await response.json();
+
+                if (!data.success) {
+                    alert('Error loading discussions');
+                    return;
+                }
+
+                const discussionsHTML = data.discussions.map(disc => `
+                    <div class="p-4 card-secondary rounded-lg mb-3 cursor-pointer hover:shadow-lg transition-all" onclick="enterDiscussion(${disc.id})">
+                        <h4 class="font-bold mb-1" style="color: var(--text-primary);">${disc.title}</h4>
+                        <p class="text-sm mb-2" style="color: var(--text-secondary);">${disc.description}</p>
+                        <div class="flex gap-4 text-xs" style="color: var(--text-secondary);">
+                            <span>👥 ${disc.members} members</span>
+                            <span>💬 ${disc.messages} messages</span>
+                        </div>
+                    </div>
+                `).join('');
+
+                showModal('Brainstorm Discussions', discussionsHTML);
+            } catch (error) {
+                alert('Error loading discussions: ' + error.message);
+            }
+        }
+
+        function enterDiscussion(discussionId) {
+            alert('Opening discussion... (Full chat feature coming soon!)');
+            // In full implementation, would open discussion modal with messages
+        }
+
+        // ==================== Ask AI ====================
+        let aiConversationHistory = [];
+
+        function askAI() {
+            aiConversationHistory = [];
+            showAIModal();
+        }
+
+        function showAIModal() {
+            let conversationHTML = '';
+            if (aiConversationHistory.length > 0) {
+                conversationHTML = '<div style="margin-bottom: 20px; max-height: 350px; overflow-y: auto;">';
+                aiConversationHistory.forEach((exchange, index) => {
+                    conversationHTML += `
+                        <div style="margin-bottom: 15px; border-left: 3px solid var(--blue-500); padding-left: 12px;">
+                            <p style="font-weight: bold; color: var(--blue-500); margin: 0 0 5px 0; font-size: 0.9em;">You:</p>
+                            <p style="margin: 0 0 10px 0; color: var(--text-primary);">${exchange.question}</p>
+                            <p style="font-weight: bold; color: var(--green-500); margin: 0 0 5px 0; font-size: 0.9em;">AI:</p>
+                            <p style="margin: 0; color: var(--text-primary);">${exchange.answer.replace(/\n/g, '<br>')}</p>
+                        </div>
+                    `;
+                });
+                conversationHTML += '</div><hr style="margin: 20px 0; border: none; border-top: 1px solid var(--border-color);">';
+            }
+
+            const content = `
+                ${conversationHTML}
+                <div style="margin-top: 15px;">
+                    <textarea id="ai-question-input" placeholder="Ask your follow-up question..." style="
+                        width: 100%;
+                        padding: 12px;
+                        border: 2px solid var(--border-color);
+                        border-radius: 8px;
+                        background: var(--bg-secondary);
+                        color: var(--text-primary);
+                        font-family: inherit;
+                        font-size: 1em;
+                        resize: vertical;
+                        min-height: 60px;
+                        box-sizing: border-box;
+                    " onkeydown="if(event.key==='Enter' && event.ctrlKey) submitAIQuestion()"></textarea>
+                    <p style="font-size: 0.85em; color: var(--text-secondary); margin-top: 8px;">💡 Tip: Press Ctrl+Enter to send</p>
+                    <div style="display: flex; gap: 10px; margin-top: 15px;">
+                        <button onclick="submitAIQuestion()" style="
+                            flex: 1;
+                            padding: 10px 20px;
+                            background: linear-gradient(135deg, var(--blue-500), var(--blue-600));
+                            color: white;
+                            border: none;
+                            border-radius: 8px;
+                            font-weight: bold;
+                            cursor: pointer;
+                            transition: all 0.3s;
+                        " onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                            Ask Question
+                        </button>
+                        ${aiConversationHistory.length > 0 ? `
+                            <button onclick="resetAIConversation()" style="
+                                padding: 10px 20px;
+                                background: var(--border-color);
+                                color: var(--text-primary);
+                                border: none;
+                                border-radius: 8px;
+                                cursor: pointer;
+                                transition: all 0.3s;
+                            " title="Start a new conversation">
+                                🔄 Fresh Start
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+
+            showModal('🤖 AI Tutor', content);
+            document.getElementById('ai-question-input').focus();
+        }
+
+        function submitAIQuestion() {
+            const input = document.getElementById('ai-question-input');
+            const question = input.value.trim();
+            if (!question) return;
+
+            // Clear input
+            input.value = '';
+
+            // Show loading
+            showModal('🤖 AI Tutor', '<p style="color: var(--text-primary); text-align: center; padding: 20px;">⏳ Generating explanation...</p>');
+
+            fetch('/api/ask-ai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    aiConversationHistory.push({
+                        question: question,
+                        answer: data.explanation
+                    });
+                    showAIModal();
+                } else {
+                    alert('Error: ' + data.error);
+                    showAIModal();
+                }
+            })
+            .catch(error => {
+                alert('Error: ' + error.message);
+                showAIModal();
+            });
+        }
+
+        function resetAIConversation() {
+            aiConversationHistory = [];
+            fetch('/api/ask-ai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reset: true, question: " " })
+            });
+            showAIModal();
+        }
+
+        // ==================== Modal Helper ====================
+        function showModal(title, content) {
+            // Create modal if it doesn't exist
+            let modal = document.getElementById('custom-modal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'custom-modal';
+                modal.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0,0,0,0.7);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 9999;
+                `;
+                document.body.appendChild(modal);
+            }
+
+            modal.innerHTML = `
+                <div class="card rounded-2xl p-8 shadow-2xl max-w-2xl w-full mx-4" style="max-height: 80vh; overflow-y: auto; color: var(--text-primary); background: var(--bg-primary);">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-2xl font-bold">${title}</h3>
+                        <button onclick="closeModal()" class="text-2xl font-bold hover:opacity-70">×</button>
+                    </div>
+                    ${content}
+                </div>
+            `;
+            modal.style.display = 'flex';
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeModal();
+            });
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('custom-modal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

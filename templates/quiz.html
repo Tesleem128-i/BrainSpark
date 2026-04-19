@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz - KnowItNow</title>
+    <link rel="icon" type="image/png" href="/static/image/KNOWITNOW.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --secondary: #8b5cf6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+
+        body.dark-mode {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+        }
+
+        body:not(.dark-mode) {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8fafc;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+        }
+
+        .card {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        .option-btn {
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 2px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .option-btn:hover {
+            border-color: var(--primary);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .option-btn.selected {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .option-btn.correct {
+            background: var(--success);
+            color: white;
+            border-color: var(--success);
+        }
+
+        .option-btn.incorrect {
+            background: var(--danger);
+            color: white;
+            border-color: var(--danger);
+        }
+
+        .timer {
+            font-weight: bold;
+            font-size: 1.5rem;
+        }
+
+        .timer.warning {
+            color: var(--warning);
+        }
+
+        .timer.danger {
+            color: var(--danger);
+        }
+
+        .question-count-btn, .time-limit-btn {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .question-count-btn:hover, .time-limit-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .question-count-btn:active, .time-limit-btn:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body class="min-h-screen transition-colors duration-300" style="background: var(--bg-secondary);">
+    
+    <!-- Top Navigation -->
+    <nav class="sticky top-0 z-50 card border-b border-opacity-20 shadow-lg">
+        <div class="max-w-4xl mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="h-10 w-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
+                        <img src="/static/image/KNOWITNOW.png" alt="Logo" class="h-6 w-6">
+                    </div>
+                    <h1 class="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">KnowItNow Quiz</h1>
+                </div>
+                <a href="/dashboard" class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-semibold transition-all">
+                    Exit Quiz
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Quiz Area -->
+    <div class="max-w-4xl mx-auto px-6 py-8">
+        
+        <!-- Loading State -->
+        <div id="loading-state" class="card rounded-2xl p-12 text-center shadow-lg">
+            <div class="inline-block">
+                <div class="w-12 h-12 border-4 border-blue-500 border-t-purple-600 rounded-full animate-spin mx-auto mb-4"></div>
+            </div>
+            <p style="color: var(--text-primary);" class="text-lg font-semibold">Loading your quiz...</p>
+            <p style="color: var(--text-secondary);">Parsing questions from your PDF</p>
+        </div>
+
+        <!-- Quiz Settings Screen (Hidden initially) -->
+        <div id="settings-screen" style="display: none;">
+            <div class="card rounded-2xl p-12 shadow-lg" data-aos="fade-up">
+                <h2 style="color: var(--text-primary);" class="text-3xl font-bold mb-8 text-center">⚙️ Quiz Settings</h2>
+                
+                <!-- Number of Questions Selection -->
+                <div class="mb-12">
+                    <p style="color: var(--text-primary);" class="text-xl font-semibold mb-4">📝 How many questions?</p>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <button onclick="selectQuestionCount(5)" class="question-count-btn card rounded-lg p-6 text-center font-bold text-lg hover:scale-105 transition-transform" data-count="5">
+                            <span style="color: var(--primary);">5</span>
+                        </button>
+                        <button onclick="selectQuestionCount(10)" class="question-count-btn card rounded-lg p-6 text-center font-bold text-lg hover:scale-105 transition-transform" data-count="10">
+                            <span style="color: var(--primary);">10</span>
+                        </button>
+                        <button onclick="selectQuestionCount(15)" class="question-count-btn card rounded-lg p-6 text-center font-bold text-lg hover:scale-105 transition-transform" data-count="15">
+                            <span style="color: var(--primary);">15</span>
+                        </button>
+                        <button onclick="selectQuestionCount(20)" class="question-count-btn card rounded-lg p-6 text-center font-bold text-lg hover:scale-105 transition-transform" data-count="20">
+                            <span style="color: var(--primary);">20</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Time Selection -->
+                <div class="mb-12">
+                    <p style="color: var(--text-primary);" class="text-xl font-semibold mb-4">⏱️ Total time limit?</p>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <button onclick="selectTimeLimit(300)" class="time-limit-btn card rounded-lg p-6 text-center font-bold text-lg hover:scale-105 transition-transform" data-time="300">
+                            <span style="color: var(--primary);">5 min</span>
+                        </button>
+                        <button onclick="selectTimeLimit(600)" class="time-limit-btn card rounded-lg p-6 text-center font-bold text-lg hover:scale-105 transition-transform" data-time="600">
+                            <span style="color: var(--primary);">10 min</span>
+                        </button>
+                        <button onclick="selectTimeLimit(900)" class="time-limit-btn card rounded-lg p-6 text-center font-bold text-lg hover:scale-105 transition-transform" data-time="900">
+                            <span style="color: var(--primary);">15 min</span>
+                        </button>
+                        <button onclick="selectTimeLimit(1200)" class="time-limit-btn card rounded-lg p-6 text-center font-bold text-lg hover:scale-105 transition-transform" data-time="1200">
+                            <span style="color: var(--primary);">20 min</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex gap-4 justify-center">
+                    <a href="/dashboard" class="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-semibold transition-all">
+                        Cancel
+                    </a>
+                    <button onclick="startQuiz()" id="start-quiz-btn" disabled class="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                        Start Quiz 🚀
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quiz Container (Hidden initially) -->
+        <div id="quiz-container" style="display: none;">
+            <!-- Progress Bar -->
+            <div class="mb-8" data-aos="fade-up">
+                <div class="flex items-center justify-between mb-2">
+                    <span style="color: var(--text-primary);" class="font-semibold">Question <span id="current-question">1</span> of <span id="total-questions">0</span></span>
+                    <div class="timer" id="timer" style="color: var(--primary);">5m 0s</div>
+                </div>
+                <div class="w-full bg-opacity-20 rounded-full h-2 bg-gray-400">
+                    <div id="progress-bar" class="bg-gradient-to-r from-blue-600 to-purple-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Question Card -->
+            <div class="card rounded-2xl p-8 shadow-lg mb-8" data-aos="fade-up">
+                <h2 id="question-text" style="color: var(--text-primary);" class="text-2xl font-bold mb-6"></h2>
+                
+                <div id="options-container" class="space-y-4">
+                    <!-- Options will be inserted here -->
+                </div>
+            </div>
+
+            <!-- Navigation Buttons -->
+            <div class="flex gap-4 justify-between" data-aos="fade-up">
+                <button id="prev-btn" onclick="previousQuestion()" class="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                    ← Previous
+                </button>
+                <button id="submit-btn" onclick="submitAnswers()" style="display: none;" class="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all">
+                    Submit Quiz
+                </button>
+                <button id="next-btn" onclick="nextQuestion()" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                    Next →
+                </button>
+            </div>
+        </div>
+
+        <!-- Results Screen (Hidden) -->
+        <div id="results-screen" style="display: none;">
+            <div class="card rounded-2xl p-12 text-center shadow-lg" data-aos="fade-up">
+                <div class="mb-8">
+                    <div id="score-circle" class="w-40 h-40 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 mx-auto flex items-center justify-center shadow-xl mb-6">
+                        <div style="color: white;">
+                            <div class="text-5xl font-bold" id="final-score">0</div>
+                            <div class="text-xl">out of 100</div>
+                        </div>
+                    </div>
+                </div>
+
+                <h2 id="result-title" style="color: var(--text-primary);" class="text-3xl font-bold mb-2"></h2>
+                <p id="result-message" style="color: var(--text-secondary);" class="text-lg mb-8"></p>
+
+                <!-- Results Details -->
+                <div class="grid grid-cols-3 gap-4 mb-8">
+                    <div class="card-secondary rounded-lg p-6" style="background: var(--bg-secondary);">
+                        <p style="color: var(--text-secondary);" class="text-sm mb-1">Correct Answers</p>
+                        <p style="color: var(--success);" class="text-2xl font-bold" id="correct-count">0</p>
+                    </div>
+                    <div class="card-secondary rounded-lg p-6" style="background: var(--bg-secondary);">
+                        <p style="color: var(--text-secondary);" class="text-sm mb-1">Wrong Answers</p>
+                        <p style="color: var(--danger);" class="text-2xl font-bold" id="incorrect-count">0</p>
+                    </div>
+                    <div class="card-secondary rounded-lg p-6" style="background: var(--bg-secondary);">
+                        <p style="color: var(--text-secondary);" class="text-sm mb-1">Time Taken</p>
+                        <p style="color: var(--primary);" class="text-2xl font-bold" id="time-taken">0s</p>
+                    </div>
+                </div>
+
+                <!-- Review Answers -->
+                <div id="review-answers" class="mb-8 text-left" style="max-height: 400px; overflow-y: auto;">
+                    <!-- Review items will be inserted here -->
+                </div>
+
+                <div class="flex gap-4 justify-center">
+                    <a href="/dashboard" class="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-lg transition-all">
+                        Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        AOS.init({ duration: 1000 });
+
+        let quizData = [];
+        let currentQuestionIndex = 0;
+        let answers = {};
+        let timerInterval = null;
+        let selectedOption = null;
+        let startTime = Date.now();
+        let selectedQuestionCount = null;
+        let selectedTimeLimit = null;
+        let timeStarted = null;
+
+        // Load quiz from API
+        function loadQuiz() {
+            fetch('/api/get-quiz-questions')
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.success) {
+                        throw new Error(data.error || 'Failed to load questions');
+                    }
+                    parseQuestions(data.questions);
+                })
+                .catch(error => {
+                    console.error('Error loading quiz:', error);
+                    document.getElementById('loading-state').innerHTML = `
+                        <p style="color: var(--danger);" class="text-lg font-semibold">Error Loading Quiz</p>
+                        <p style="color: var(--text-secondary);" class="mb-4">${error.message}</p>
+                        <a href="/dashboard" class="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg">Back to Dashboard</a>
+                    `;
+                });
+        }
+
+        function parseQuestions(questionsStr) {
+            try {
+                let parsedQuestions = [];
+
+                // Extract questions from various formats
+                if (typeof questionsStr === 'string') {
+                    // Try to extract JSON from string
+                    const jsonMatch = questionsStr.match(/\[[\s\S]*\]/);
+                    if (jsonMatch) {
+                        parsedQuestions = JSON.parse(jsonMatch[0]);
+                    } else {
+                        // Try to parse as JSON directly
+                        parsedQuestions = JSON.parse(questionsStr);
+                    }
+                } else if (Array.isArray(questionsStr)) {
+                    parsedQuestions = questionsStr;
+                } else if (questionsStr.questions) {
+                    parsedQuestions = questionsStr.questions;
+                }
+
+                if (parsedQuestions.length === 0) {
+                    throw new Error('No questions found in response');
+                }
+
+                quizData = parsedQuestions;
+                showSettingsScreen();
+            } catch (error) {
+                console.error('Error parsing quiz:', error);
+                document.getElementById('loading-state').innerHTML = `
+                    <p style="color: var(--danger);" class="text-lg font-semibold">Error Parsing Questions</p>
+                    <p style="color: var(--text-secondary);" class="mb-4">${error.message}</p>
+                    <a href="/dashboard" class="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg">Back to Dashboard</a>
+                `;
+            }
+        }
+
+        function showSettingsScreen() {
+            document.getElementById('loading-state').style.display = 'none';
+            document.getElementById('settings-screen').style.display = 'block';
+        }
+
+        function selectQuestionCount(count) {
+            selectedQuestionCount = count;
+            // Update UI
+            document.querySelectorAll('.question-count-btn').forEach(btn => {
+                btn.style.border = 'none';
+                btn.style.boxShadow = 'none';
+            });
+            event.target.closest('button').style.border = '3px solid var(--primary)';
+            event.target.closest('button').style.boxShadow = '0 0 10px rgba(59, 130, 246, 0.5)';
+            enableStartButton();
+        }
+
+        function selectTimeLimit(seconds) {
+            selectedTimeLimit = seconds;
+            // Update UI
+            document.querySelectorAll('.time-limit-btn').forEach(btn => {
+                btn.style.border = 'none';
+                btn.style.boxShadow = 'none';
+            });
+            event.target.closest('button').style.border = '3px solid var(--primary)';
+            event.target.closest('button').style.boxShadow = '0 0 10px rgba(59, 130, 246, 0.5)';
+            enableStartButton();
+        }
+
+        function enableStartButton() {
+            const btn = document.getElementById('start-quiz-btn');
+            if (selectedQuestionCount && selectedTimeLimit) {
+                btn.disabled = false;
+            }
+        }
+
+        function startQuiz() {
+            // Limit questions to available questions
+            const questionCount = Math.min(selectedQuestionCount, quizData.length);
+            quizData = quizData.slice(0, questionCount);
+            
+            document.getElementById('settings-screen').style.display = 'none';
+            document.getElementById('quiz-container').style.display = 'block';
+            document.getElementById('total-questions').textContent = quizData.length;
+            
+            // Start timer
+            timeStarted = Date.now();
+            startTime = Date.now();
+            timerInterval = setInterval(updateTimer, 1000);
+            
+            loadQuestion(0);
+        }
+
+        function updateTimer() {
+            const elapsedSeconds = Math.floor((Date.now() - timeStarted) / 1000);
+            const remainingSeconds = selectedTimeLimit - elapsedSeconds;
+            
+            const timerEl = document.getElementById('timer');
+            
+            if (remainingSeconds <= 0) {
+                clearInterval(timerInterval);
+                timerEl.textContent = '0m 0s';
+                timerEl.style.color = 'var(--danger)';
+                // Auto-submit the quiz
+                setTimeout(() => submitAnswers(), 500);
+            } else {
+                timerEl.textContent = formatTime(remainingSeconds);
+                timerEl.className = 'timer';
+                
+                // Add warning colors
+                if (remainingSeconds <= 30) {
+                    timerEl.style.color = 'var(--danger)';
+                } else if (remainingSeconds <= 60) {
+                    timerEl.style.color = 'var(--warning)';
+                } else {
+                    timerEl.style.color = 'var(--primary)';
+                }
+            }
+        }
+
+        function loadQuestion(index) {
+            if (index >= quizData.length) {
+                showResults();
+                return;
+            }
+
+            currentQuestionIndex = index;
+            const question = quizData[index];
+
+            document.getElementById('current-question').textContent = index + 1;
+            document.getElementById('question-text').textContent = question.question;
+            document.getElementById('progress-bar').style.width = ((index + 1) / quizData.length * 100) + '%';
+
+            // Load options
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+
+            const options = question.options || [];
+            options.forEach((option, i) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn w-full p-4 text-left rounded-lg font-medium';
+                btn.textContent = option;
+                btn.onclick = () => selectOption(i);
+                
+                if (answers[index] === i) {
+                    btn.classList.add('selected');
+                }
+                
+                optionsContainer.appendChild(btn);
+            });
+
+            // Update button states
+            document.getElementById('prev-btn').disabled = index === 0;
+            document.getElementById('next-btn').style.display = index === quizData.length - 1 ? 'none' : 'block';
+            document.getElementById('submit-btn').style.display = index === quizData.length - 1 ? 'block' : 'none';
+        }
+
+        function selectOption(optionIndex) {
+            answers[currentQuestionIndex] = optionIndex;
+            
+            // Update UI
+            document.querySelectorAll('.option-btn').forEach((btn, i) => {
+                btn.classList.remove('selected');
+                if (i === optionIndex) {
+                    btn.classList.add('selected');
+                }
+            });
+        }
+
+        function nextQuestion() {
+            if (currentQuestionIndex < quizData.length - 1) {
+                loadQuestion(currentQuestionIndex + 1);
+            }
+        }
+
+        function previousQuestion() {
+            if (currentQuestionIndex > 0) {
+                loadQuestion(currentQuestionIndex - 1);
+            }
+        }
+
+        function submitAnswers() {
+            clearInterval(timerInterval);
+            calculateScore();
+        }
+
+        function calculateScore() {
+            let correctCount = 0;
+            const totalTime = Math.floor((Date.now() - startTime) / 1000);
+
+            quizData.forEach((question, index) => {
+                if (answers[index] !== undefined) {
+                    // Compare answer with correct option
+                    const selectedOptionIndex = answers[index];
+                    const selectedOption = question.options[selectedOptionIndex];
+                    const correctAnswer = question.answer;
+
+                    // Only compare the selected option text with correct answer text
+                    if (selectedOption === correctAnswer) {
+                        correctCount++;
+                    }
+                }
+            });
+
+            const score = Math.round((correctCount / quizData.length) * 100);
+
+            // Display results
+            document.getElementById('final-score').textContent = score;
+            document.getElementById('correct-count').textContent = correctCount;
+            document.getElementById('incorrect-count').textContent = quizData.length - correctCount;
+            document.getElementById('time-taken').textContent = formatTime(totalTime);
+
+            // Set message based on score
+            if (score >= 80) {
+                document.getElementById('result-title').textContent = '🎉 Excellent!';
+                document.getElementById('result-message').textContent = 'You\'ve mastered this topic!';
+            } else if (score >= 60) {
+                document.getElementById('result-title').textContent = '👍 Good Job!';
+                document.getElementById('result-message').textContent = 'Keep practicing to improve further!';
+            } else {
+                document.getElementById('result-title').textContent = '💪 Keep Learning!';
+                document.getElementById('result-message').textContent = 'Review the topic and try again!';
+            }
+
+            // Generate review
+            generateReview(correctCount);
+
+            // Save result to database
+            saveQuizResult(score, totalTime);
+
+            document.getElementById('quiz-container').style.display = 'none';
+            document.getElementById('results-screen').style.display = 'block';
+        }
+
+        async function saveQuizResult(score, timeTaken) {
+            console.log('Attempting to save quiz result:', {score, timeTaken, answersCount: Object.keys(answers).length});
+            
+            try {
+                const payload = {
+                    score: score,
+                    time_taken: timeTaken,
+                    answers: answers
+                };
+                
+                console.log('Payload to send:', payload);
+                
+                const response = await fetch('/api/save-quiz-result', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                console.log('Response status:', response.status);
+                
+                const data = await response.json();
+                console.log('Response data:', data);
+                
+                if (!response.ok || !data.success) {
+                    console.error('Error saving result:', data.error || 'Unknown error');
+                    alert('Warning: Quiz result may not have been saved. Score: ' + score + '%');
+                } else {
+                    console.log('Quiz result saved successfully:', data.result_id);
+                    const successMsg = document.createElement('div');
+                    successMsg.textContent = '✓ Quiz saved';
+                    successMsg.style.position = 'fixed';
+                    successMsg.style.top = '20px';
+                    successMsg.style.right = '20px';
+                    successMsg.style.backgroundColor = '#10b981';
+                    successMsg.style.color = 'white';
+                    successMsg.style.padding = '10px 20px';
+                    successMsg.style.borderRadius = '6px';
+                    successMsg.style.zIndex = '9999';
+                    document.body.appendChild(successMsg);
+                    setTimeout(() => successMsg.remove(), 3000);
+                }
+            } catch (error) {
+                console.error('Error saving quiz result:', error);
+                alert('Error saving quiz result: ' + error.message);
+            }
+        }
+
+        function generateReview(correctCount) {
+            const reviewContainer = document.getElementById('review-answers');
+            let reviewHTML = '<h3 style="color: var(--text-primary);" class="text-lg font-bold mb-4">Review Your Answers</h3>';
+
+            quizData.forEach((question, index) => {
+                const selectedIndex = answers[index];
+                const selectedOption = selectedIndex !== undefined ? question.options[selectedIndex] : 'Not answered';
+                const correctAnswer = question.answer;
+
+                const isCorrect = selectedOption === correctAnswer || selectedIndex === correctAnswer;
+                const statusColor = isCorrect ? 'text-green-500' : 'text-red-500';
+
+                reviewHTML += `
+                    <div class="card-secondary rounded-lg p-4 mb-3">
+                        <div class="flex items-start justify-between">
+                            <div style="flex: 1; color: var(--text-primary);">
+                                <p class="font-semibold mb-2">${question.question}</p>
+                                <p style="color: var(--text-secondary);" class="text-sm">Your answer: ${selectedOption}</p>
+                                <p class="text-sm"><strong>Correct answer:</strong> ${correctAnswer}</p>
+                                ${question.explanation ? `<p style="color: var(--text-secondary);" class="text-sm mt-2"><em>${question.explanation}</em></p>` : ''}
+                            </div>
+                            <span class="${statusColor} ml-4 font-bold">${isCorrect ? '✓' : '✗'}</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            reviewContainer.innerHTML = reviewHTML;
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}m ${secs}s`;
+        }
+
+        function showResults() {
+            clearInterval(timerInterval);
+            calculateScore();
+        }
+
+        // Load quiz on page load
+        window.addEventListener('load', loadQuiz);
+    </script>
+</body>
+</html>

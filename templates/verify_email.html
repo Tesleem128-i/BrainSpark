@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Email - KnowItNow</title>
+    <link rel="icon" type="image/png" href="/static/image/KNOWITNOW.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-slate-900">
+    <div class="absolute inset-0 bg-grid-white/[0.03] dark:bg-grid-slate-700/[0.2] bg-[size:80px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_-20%,white,transparent)]"></div>
+    
+    <div class="relative z-10 flex min-h-screen items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-4xl w-full space-y-8">
+            <div>
+                <div class="mx-auto h-24 w-24 bg-gradient-to-r from-emerald-600 to-green-600 rounded-2xl flex items-center justify-center shadow-2xl mb-8">
+                    <svg class="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <h2 class="mt-6 text-4xl font-bold text-center text-gray-900 dark:text-white">
+                    Verify Your Email
+                </h2>
+                <p class="mt-2 text-lg text-center text-gray-600 dark:text-gray-300 max-w-md mx-auto leading-relaxed">
+                    Check your inbox! We've sent a <strong>6-digit code</strong> to <span id="verify-email-display" class="font-semibold text-blue-600">{{ email }}</span>
+                </p>
+                <p class="mt-1 text-sm text-center text-gray-500 dark:text-gray-400">Didn't receive? Check spam folder or <button id="resend-btn" class="text-blue-600 hover:text-blue-700 font-semibold">resend code</button></p>
+            </div>
+
+            <form id="verify-form" class="group bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl rounded-3xl p-10 shadow-2xl border border-gray-200/50 dark:border-gray-700/50 hover:shadow-3xl transition-all duration-500" novalidate>
+                <div class="grid grid-cols-6 gap-4 mb-12">
+                    {% for i in range(6) %}
+                    <input type="text" maxlength="1" class="verify-input w-20 h-20 text-3xl font-bold text-center border-2 border-gray-200 dark:border-gray-600 rounded-2xl focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 focus:outline-none transition-all duration-300 shadow-lg text-gray-900 dark:text-white mx-auto" data-index="{{ i }}">
+                    {% endfor %}
+                </div>
+                <button type="submit" id="verify-submit" class="w-full py-6 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-bold text-xl rounded-3xl shadow-2xl hover:shadow-3xl hover:scale-[1.02] transition-all duration-500 transform disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none">
+                    <span class="submit-text">Verify & Continue to Login</span>
+                    <span class="loading-text hidden">Verifying...</span>
+                </button>
+            </form>
+
+            <div class="text-center">
+                <p class="text-gray-600 dark:text-gray-400 text-sm">
+                    Back to <a href="/signup" class="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">Sign Up</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        AOS.init({ duration: 1000 });
+        
+        // Auto-focus next input
+        document.querySelectorAll('.verify-input').forEach((input, index, arr) => {
+            input.addEventListener('input', e => {
+                if (e.target.value.length === 1 && index < 5) {
+                    arr[index + 1].focus();
+                }
+            });
+            input.addEventListener('keydown', e => {
+                if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                    arr[index - 1].focus();
+                }
+            });
+        });
+
+        // Form submit
+        document.getElementById('verify-form').addEventListener('submit', async e => {
+            e.preventDefault();
+            const code = Array.from(document.querySelectorAll('.verify-input')).map(i => i.value).join('');
+            
+            const btn = document.getElementById('verify-submit');
+            const submitText = btn.querySelector('.submit-text');
+            const loadingText = btn.querySelector('.loading-text');
+            
+            submitText.classList.add('hidden');
+            loadingText.classList.remove('hidden');
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch('/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code })
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    window.location.href = '/login';
+                } else {
+                    alert(result.error || 'Invalid code');
+                    // Shake animation
+                    document.querySelectorAll('.verify-input').forEach(input => {
+                        input.style.animation = 'shake 0.5s';
+                        setTimeout(() => input.style.animation = '', 500);
+                    });
+                }
+            } catch (error) {
+                alert('Network error. Please try again.');
+            } finally {
+                submitText.classList.remove('hidden');
+                loadingText.classList.add('hidden');
+                btn.disabled = false;
+            }
+        });
+
+        // Resend code
+        document.getElementById('resend-btn').addEventListener('click', async () => {
+            // Trigger resend logic via API if needed
+            alert('Code resent! Check your inbox.');
+        });
+    </script>
+
+    <style>
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+    </style>
+</body>
+</html>
+

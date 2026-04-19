@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - KnowItNow</title>
+    <link rel="icon" type="image/png" href="/static/image/KNOWITNOW.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <style>
+        /* Fix select highlighting - Add this inline to override issues */
+        select {
+            outline: none !important;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 1rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            padding-right: 2.5rem;
+        }
+        
+        select:focus {
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+            outline: 2px solid transparent !important;
+        }
+        
+        /* Ensure consistent input focus */
+        input:focus, select:focus {
+            outline: none !important;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-slate-900">
+    <!-- Background Pattern -->
+    <div class="absolute inset-0 bg-grid-white/[0.03] dark:bg-grid-slate-700/[0.2] bg-[size:80px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_-20%,white,transparent)]"></div>
+    
+    <div class="relative z-10 flex min-h-screen items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-4xl w-full space-y-8">
+            <div>
+                <div class="mx-auto h-24 w-24 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-2xl mb-8">
+                    <img src="/static/image/KNOWITNOW.png" alt="Logo" class="h-16 w-16">
+                </div>
+                <h2 class="mt-6 text-4xl font-bold text-center text-gray-900 dark:text-white">
+                    Create KnowItNow Account
+                </h2>
+                <p class="mt-2 text-lg text-center text-gray-600 dark:text-gray-300 max-w-md mx-auto leading-relaxed">
+                    Join 50K+ students mastering their studies with AI-powered quizzes.
+                </p>
+            </div>
+
+            <form id="signup-form" class="group bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl rounded-3xl p-10 shadow-2xl border border-gray-200/50 dark:border-gray-700/50 hover:shadow-3xl transition-all duration-500" novalidate>
+                <!-- Row 1: Name & Username -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Full Name *</label>
+                        <input type="text" id="name" name="name" required minlength="2" maxlength="100" 
+                               class="input-field w-full px-5 py-4 border-2 border-gray-200/60 dark:border-gray-600/60 rounded-2xl text-lg focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 focus:outline-none transition-all duration-300 shadow-sm hover:shadow-md">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Username *</label>
+                        <input type="text" id="username" name="username" required minlength="3" maxlength="50" 
+                               class="input-field w-full px-5 py-4 border-2 border-gray-200/60 dark:border-gray-600/60 rounded-2xl text-lg focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 focus:outline-none transition-all duration-300 shadow-sm hover:shadow-md">
+                    </div>
+                </div>
+
+                <!-- Row 2: Email & School -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Email Address *</label>
+                        <input type="email" id="email" name="email" required 
+                               class="input-field w-full px-5 py-4 border-2 border-gray-200/60 dark:border-gray-600/60 rounded-2xl text-lg focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 focus:outline-none transition-all duration-300 shadow-sm hover:shadow-md">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">School/University *</label>
+                        <input type="text" id="school" name="school" required maxlength="100" 
+                               class="input-field w-full px-5 py-4 border-2 border-gray-200/60 dark:border-gray-600/60 rounded-2xl text-lg focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 focus:outline-none transition-all duration-300 shadow-sm hover:shadow-md">
+                    </div>
+                </div>
+
+                <!-- Row 3: Profession & Study Level -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Profession/Field</label>
+                        <input type="text" id="profession" name="profession" maxlength="100" 
+                               class="input-field w-full px-5 py-4 border-2 border-gray-200/60 dark:border-gray-600/60 rounded-2xl text-lg focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 focus:outline-none transition-all duration-300 shadow-sm hover:shadow-md">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Level of Study *</label>
+                        <select id="study_level" name="study_level" required 
+                                class="w-full px-5 py-4 border-2 border-gray-200/60 dark:border-gray-600/60 rounded-2xl text-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+                            <option value="">Select Level</option>
+                            <option value="High School">High School</option>
+                            <option value="Undergraduate">Undergraduate</option>
+                            <option value="Graduate">Graduate</option>
+                            <option value="PhD">PhD</option>
+                            <option value="Professional">Professional</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Row 4: Country & Profile Pic -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Country *</label>
+                        <select id="country" name="country" required 
+                                class="w-full px-5 py-4 border-2 border-gray-200/60 dark:border-gray-600/60 rounded-2xl text-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+                            <option value="">Select Country</option>
+                            <option value="Nigeria">Nigeria</option>
+                            <option value="United States">United States</option>
+                            <option value="United Kingdom">United Kingdom</option>
+                            <option value="Canada">Canada</option>
+                            <option value="India">India</option>
+                            <option value="Ghana">Ghana</option>
+                            <option value="South Africa">South Africa</option>
+                            <option value="Kenya">Kenya</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Profile Picture</label>
+                        <div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-2xl p-8 text-center hover:border-blue-400 transition-all duration-300 cursor-pointer group hover:bg-blue-50/50 dark:hover:bg-blue-900/20">
+                            <input type="file" id="profile_pic" name="profile_pic" accept="image/*" class="hidden">
+                            <div class="space-y-2">
+                                <svg class="w-16 h-16 mx-auto text-gray-400 group-hover:text-blue-500 transition-all duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 16l2.5-1 3 1.5L12 15l3 1.5 2.5-1L21 16m0 0l-3 1.5-3-1.5-3 1.5L9 17l-3-1.5L3 18m3-6a6 6 0 11-12 0 6 6 0 0112 0z"/>
+                                </svg>
+                                <p class="text-lg font-medium text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors">Click to upload or drag & drop</p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">PNG, JPG up to 2MB</p>
+                            </div>
+                            <div id="preview" class="mt-4 hidden">
+                                <img id="preview-img" class="w-24 h-24 rounded-full object-cover mx-auto shadow-2xl border-4 border-white dark:border-gray-800">
+                                <button type="button" id="remove-pic" class="mt-2 text-red-500 hover:text-red-700 text-sm font-medium transition-colors">Remove</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Password -->
+                <div class="mb-8">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Password *</label>
+                    <div class="relative">
+                        <input type="password" id="password" name="password" required minlength="8" 
+                               class="input-field w-full px-5 py-4 pr-14 border-2 border-gray-200/60 dark:border-gray-600/60 rounded-2xl text-lg focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 focus:outline-none transition-all duration-300 shadow-sm hover:shadow-md">
+                        <button type="button" id="toggle-password" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="mt-2 text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                        <label class="flex items-center">
+                            <input type="checkbox" id="password-strength" class="mr-2 w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                            <span>8+ characters with uppercase, number, special char</span>
+                        </label>
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold text-xl rounded-3xl shadow-2xl hover:shadow-3xl hover:scale-[1.02] transition-all duration-500 transform disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none">
+                    <span class="submit-text">Create Account & Send Verification</span>
+                    <span class="loading-text hidden">Sending Verification Code...</span>
+                </button>
+            </form>
+
+            <!-- Verification Modal -->
+            <div id="verification-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+                <div class="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-3xl p-10 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-200/50 dark:border-gray-700/50">
+                    <div class="flex items-center justify-between mb-8">
+                        <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Verify Email</h3>
+                        <button id="close-modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl font-bold transition-colors">&times;</button>
+                    </div>
+                    <p class="text-gray-600 dark:text-gray-300 mb-8 text-center">We sent 6-digit verification code to <span id="verify-email" class="font-semibold"></span></p>
+                    <form id="verify-form">
+                        <div class="grid grid-cols-6 gap-3 mb-8">
+                            <input type="text" maxlength="1" class="verify-input w-16 h-16 text-2xl font-bold text-center border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 focus:outline-none transition-all duration-300 shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800" autocomplete="one-time-code">
+                            <input type="text" maxlength="1" class="verify-input w-16 h-16 text-2xl font-bold text-center border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 focus:outline-none transition-all duration-300 shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800" autocomplete="one-time-code">
+                            <input type="text" maxlength="1" class="verify-input w-16 h-16 text-2xl font-bold text-center border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 focus:outline-none transition-all duration-300 shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800" autocomplete="one-time-code">
+                            <input type="text" maxlength="1" class="verify-input w-16 h-16 text-2xl font-bold text-center border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 focus:outline-none transition-all duration-300 shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800" autocomplete="one-time-code">
+                            <input type="text" maxlength="1" class="verify-input w-16 h-16 text-2xl font-bold text-center border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 focus:outline-none transition-all duration-300 shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800" autocomplete="one-time-code">
+                            <input type="text" maxlength="1" class="verify-input w-16 h-16 text-2xl font-bold text-center border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 focus:outline-none transition-all duration-300 shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800" autocomplete="one-time-code">
+                        </div>
+                        <button type="submit" class="w-full py-4 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-bold text-lg rounded-2xl shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all duration-500 transform">
+                            Verify & Continue to Dashboard
+                        </button>
+                    </form>
+                    <div class="mt-6 text-center space-y-2">
+                        <button id="resend-code" class="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium text-sm transition-colors">Resend Code</button>                        <button id="change-email" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 font-medium text-sm transition-colors">Change Email</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center">
+                <p class="text-gray-600 dark:text-gray-400">
+                    Already have an account? <a href="/" class="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">Sign in here</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Nav controls -->
+    <div class="fixed top-6 left-6 z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl p-4 rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 border border-gray-200/50 dark:border-gray-700/50">
+        <a href="/" class="block text-gray-900 dark:text-white font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors">← Back to Home</a>
+    </div>
+    
+    <!-- Theme Toggle -->
+    <button id="theme-toggle" class="fixed top-6 right-6 z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl p-4 rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 border border-gray-200/50 dark:border-gray-700/50 flex items-center justify-center group">
+        <!-- Sun icon -->
+        <svg id="sun-icon" class="w-6 h-6 text-yellow-500 group-hover:rotate-12 transition-transform duration-300 hidden" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 3v1m0 16v1m9-9h-1m-16 0H1m15.364 1.636l.707.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+        </svg>
+        <!-- Moon icon -->
+        <svg id="moon-icon" class="w-6 h-6 text-blue-400 group-hover:rotate-12 transition-transform duration-300" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+    </button>
+
+    <script>
+        const serverTheme = '{{ theme }}';
+        if (serverTheme) document.documentElement.setAttribute('data-theme', serverTheme);
+        
+        AOS.init({ duration: 1000 });
+        
+        // Profile pic upload trigger & preview
+        const uploadDiv = document.querySelector('#profile_pic').parentElement;
+        const preview = document.getElementById('preview');
+        const previewImg = document.getElementById('preview-img');
+        const removePic = document.getElementById('remove-pic');
+        const profilePicInput = document.getElementById('profile_pic');
+
+        // Click to upload
+        uploadDiv.addEventListener('click', () => profilePicInput.click());
+
+        // Drag & drop
+        uploadDiv.addEventListener('dragover', e => {
+            e.preventDefault();
+            uploadDiv.classList.add('border-blue-400', 'bg-blue-50/80', 'dark:bg-blue-900/30');
+        });
+        uploadDiv.addEventListener('dragleave', () => {
+            uploadDiv.classList.remove('border-blue-400', 'bg-blue-50/80', 'dark:bg-blue-900/30');
+        });
+        uploadDiv.addEventListener('drop', e => {
+            e.preventDefault();
+            uploadDiv.classList.remove('border-blue-400', 'bg-blue-50/80', 'dark:bg-blue-900/30');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/') && file.size <= 2 * 1024 * 1024) {
+                profilePicInput.files = e.dataTransfer.files;
+                const reader = new FileReader();
+                reader.onload = e => {
+                    previewImg.src = e.target.result;
+                    preview.classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            } else if (file && file.size > 2 * 1024 * 1024) {
+                alert('File too large. Please select an image under 2MB.');
+            }
+        });
+
+        // Preview on change
+        profilePicInput.addEventListener('change', e => {
+            const file = e.target.files[0];
+            if (file && file.type.startsWith('image/') && file.size <= 2 * 1024 * 1024) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    previewImg.src = e.target.result;
+                    preview.classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            } else if (file && file.size > 2 * 1024 * 1024) {
+                alert('File too large. Please select an image under 2MB.');
+                e.target.value = '';
+            }
+        });
+
+        removePic.onclick = () => {
+            profilePicInput.value = '';
+            preview.classList.add('hidden');
+        };
+
+        // Password toggle functionality
+        const passwordInput = document.getElementById('password');
+        const togglePasswordBtn = document.getElementById('toggle-password');
+        togglePasswordBtn.addEventListener('click', () => {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+        });
+
+        // OTP inputs - Enhanced
+        document.queryQuerySelectorAll('.verify-input').forEach((input, index, arr) => {
+            input.addEventListener('input', e => {
+                if (e.target.value.length === 1) {
+                    arr[index + 1]?.focus();
+                }
+                // Auto-submit if all fields filled
+                if (index === arr.length - 1 && e.target.value.length === 1) {
+                    document.getElementById('verify-form').dispatchEvent(new Event('submit'));
+                }
+            });
+            input.addEventListener('keydown', e => {
+                if (e.key === 'Backspace' && !e.target.value) {
+                    arr[index - 1]?.focus();
+                }
+                if (e.key === 'ArrowLeft' && index > 0) {
+                    arr[index - 1]?.focus();
+                }
+                if (e.key === 'ArrowRight' && index < arr.length - 1) {
+                    arr[index + 1]?.focus();
+                }
+            });
+            input.addEventListener('paste', e => {
+                e.preventDefault();
+                const paste = (e.clipboardData || window.clipboardData).getData('text');
+                const code = paste.replace(/\D/g, '').slice(0, 6);
+                Array.from(code).forEach((digit, i) => {
+                    if (arr[i]) arr[i].value = digit;
+                });
+                if (code.length === 6) {
+                    document.getElementById('verify-form').dispatchEvent(new Event('submit'));
+                }
+            });
+        });
+
+        // Form submission
+        document.getElementById('signup-form').addEventListener('submit', async e => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const btn = e.target.querySelector('button[type="submit"]');
+            const submitText = btn.querySelector('.submit-text');
+            const loadingText = btn.querySelector('.loading-text');
+            
+            // Basic client-side validation
+            const password = document.getElementById('password').value;
+            const hasUpperCase = /[A-Z]/.test(password);
+            const hasNumber = /\d/.test(password);
+            const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+            
+            if (password.length < 8 || !hasUpperCase || !hasNumber || !hasSpecial) {
+                alert('Password must be 8+ characters with uppercase, number, and special character');
+                return;
+            }
+            
+            submitText.classList.add('hidden');
+            loadingText.classList.remove('hidden');
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch('/signup', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('verify-email').textContent = result.email;
+                    document.getElementById('verification-modal').classList.remove('hidden');
+                    document.getElementById('verification-modal').scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    alert(result.error || 'Signup failed');
+                }
+            } catch (error) {
+                alert('Network error. Please try again.');
+            } finally {
+                submitText.classList.remove('hidden');
+                loadingText.classList.add('hidden');
+                btn.disabled = false;
+            }
+        });
+
+        // Modal controls
+        document.getElementById('close-modal').onclick = () => {
+            document.getElementById('verification-modal').classList.add('hidden');
+        };
+
+        // Close modal on outside click
+        document.getElementById('verification-modal').addEventListener('click', e => {
+            if (e.target.id === 'verification-modal') {
+                e.target.classList.add('hidden');
+            }
+        });
+        
+        document.getElementById('verify-form').addEventListener('submit', async e => {
+            e.preventDefault();
+            const code = Array.from(document.querySelectorAll('.verify-input')).map(i => i.value).join('').trim();
+            
+            if (code.length !== 6) {
+                alert('Please enter the full 6-digit code');
+                return;
+            }
+            
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Verifying...';
+            submitBtn.disabled = true;
+            
+            try {
+                const response = await fetch('/verify', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({code})
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    // Success animation
+                    submitBtn.textContent = 'Success!';
+                    submitBtn.classList.add('bg-green-600');
+                    setTimeout(() => {
+                        if (result.redirect) {
+                            window.location.href = result.redirect;
+                        } else {
+                            window.location.href = '/dashboard';
+                        }
+                    }, 800);
+                } else {
+                    alert(result.error || 'Invalid code');
+                    // Shake animation for OTP inputs
+                    document.querySelectorAll('.verify-input').forEach(input => {
+                        input.style.animation = 'shake 0.5s';
+                        setTimeout(() => input.style.animation = '', 500);
+                    });
+                }
+            } catch (error) {
+                alert('Network error. Please try again.');
+            } finally {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('bg-green-600');
+            }
+        });
+
+        // Resend code functionality
+        document.getElementById('resend-code').addEventListener('click', async () => {
+            const email = document.getElementById('verify-email').textContent;
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = 'Sending...';
+            btn.style.opacity = '0.6';
+            
+            try {
+                const response = await fetch('/resend-verification', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({email})
+                });
+                const result = await response.json();
+                if (result.success) {
+                    alert('Verification code resent successfully!');
+                } else {
+                    alert(result.error || 'Failed to resend code');
+                }
+            } catch (error) {
+                alert('Network error. Please try again.');
+            } finally {
+                btn.textContent = originalText;
+                btn.style.opacity = '1';
+            }
+        });
+
+        // Theme Toggle - Dark/Light Mode
+        const themeToggle = document.getElementById('theme-toggle');
+        const sunIcon = document.getElementById('sun-icon');
+        const moonIcon = document.getElementById('moon-icon');
+        
+        // Load saved theme preference
+        const savedTheme = localStorage.getItem('theme') || serverTheme || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        document.documentElement.classList.toggle('dark', savedTheme === 'dark');
+        updateThemeIcons(savedTheme);
+        
+        function updateThemeIcons(theme) {
+            if (theme === 'dark') {
+                sunIcon.classList.remove('hidden');
+                moonIcon.classList.add('hidden');
+            } else {
+                sunIcon.classList.add('hidden');
+                moonIcon.classList.remove('hidden');
+            }
+        }
+        
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            document.documentElement.classList.toggle('dark', newTheme === 'dark');
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcons(newTheme);
+            
+            // Animate theme switch
+            document.body.style.transition = 'all 0.3s ease';
+            setTimeout(() => document.body.style.transition = '', 300);
+            
+            // Send theme preference to server
+            fetch('/toggle_mode', {method: 'POST'})
+                .catch(e => console.log('Theme sync error:', e));
+        });
+
+        // Add shake animation for invalid OTP
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                25% { transform: translateX(-5px); }
+                75% { transform: translateX(5px); }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
