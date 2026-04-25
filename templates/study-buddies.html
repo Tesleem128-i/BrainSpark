@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Study Buddies - KnowItNow</title>
+    <title>Study Buddies - Brainspark</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -493,7 +493,7 @@
     <nav class="navbar">
         <a href="/dashboard" class="nav-logo">
             <div class="logo-icon"><i class="fas fa-graduation-cap"></i></div>
-            <span>KnowItNow</span>
+            <span>Brainspark</span>
         </a>
 
         <!-- Desktop links -->
@@ -816,13 +816,35 @@
                 <div id="my-group-ai-panel" class="ai-panel" style="display:none;">
                     <div>
                         <span class="ai-badge"><i class="fas fa-brain"></i> AI Helper</span>
-                        <p style="font-size:.78rem;color:var(--text-3);margin-top:8px;">Ask for brainstorming, explanations or study help.</p>
+                        <p style="font-size:.78rem;color:var(--text-3);margin-top:8px;">Ask for brainstorming, explanations or study help. You can also attach an image!</p>
                     </div>
-                    <textarea id="my-group-ai-input" placeholder="e.g. 'Suggest 3 ways to solve integration by parts'" class="input" rows="4"></textarea>
+                    
+                    <!-- My Group AI Image Preview -->
+                    <div id="my-group-ai-image-preview-container" style="display:none;padding:12px;background:var(--surface-2);border:1.5px solid var(--border);border-radius:10px;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                            <div style="display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--text-2);">
+                                <i class="fas fa-image" style="color:var(--primary);"></i>
+                                <span id="my-group-ai-image-preview-name"></span>
+                            </div>
+                            <button onclick="clearMyGroupAIImagePreview()" style="background:none;border:none;cursor:pointer;color:var(--accent);"><i class="fas fa-times"></i></button>
+                        </div>
+                        <img id="my-group-ai-image-preview" style="max-height:120px;border-radius:8px;cursor:pointer;" onclick="window.open(this.src, '_blank')">
+                    </div>
+                    
+                    <div style="display:flex;gap:8px;">
+                        <textarea id="my-group-ai-input" placeholder="e.g. 'Suggest 3 ways to solve integration by parts'" class="input" rows="4" style="flex:1;"></textarea>
+                        <button onclick="document.getElementById('my-group-ai-image-input').click()" class="nav-icon-btn" title="Attach image" style="flex-shrink:0;height:100%;border-radius:10px;">
+                            <i class="fas fa-image"></i>
+                        </button>
+                        <input type="file" id="my-group-ai-image-input" accept="image/*" style="display:none;" onchange="handleMyGroupAIImageSelect(event)">
+                    </div>
                     <button onclick="askMyGroupAI()" class="btn btn-green btn-full ai-glow-btn">
                         <i class="fas fa-robot"></i> Get AI Suggestions
                     </button>
-                    <div id="my-group-ai-response" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;font-size:.83rem;line-height:1.6;color:var(--text-1);"></div>
+                    <div id="my-group-ai-response" style="display:none;background:var(--surface-2);border:1.5px solid var(--border);border-radius:12px;padding:16px;font-size:.83rem;line-height:1.65;max-height:300px;overflow-y:auto;margin-top:12px;">
+                        <div style="font-weight:700;font-size:.8rem;color:var(--green);margin-bottom:10px;"><i class="fas fa-robot"></i> AI Response</div>
+                        <div id="my-group-ai-response-content"></div>
+                    </div>
                 </div>
             </div>
 
@@ -956,17 +978,42 @@
                 </div>
             </div>
 
-            <div style="display:flex;flex:1;overflow:hidden;">
+            <div style="display:flex;flex:1;overflow:hidden;position:relative;">
+                <!-- Chat Messages View -->
                 <div id="group-chat-messages" style="flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:10px;"></div>
-                <!-- AI panel -->
-                <div id="ai-helper-panel" class="ai-panel" style="display:none;">
-                    <div>
+                
+                <!-- AI Helper View (toggles with messages) -->
+                <div id="ai-helper-panel" style="display:none;flex:1;overflow-y:auto;padding:20px;flex-direction:column;gap:12px;background:var(--surface);">
+                    <div style="text-align:center;margin-bottom:20px;">
                         <span class="ai-badge"><i class="fas fa-brain"></i> AI Helper</span>
-                        <p style="font-size:.78rem;color:var(--text-3);margin-top:8px;">Ask for ideas or explanations.</p>
+                        <p style="font-size:.78rem;color:var(--text-3);margin-top:8px;">Ask for ideas, explanations, or brainstorming help</p>
                     </div>
-                    <textarea id="ai-group-input" placeholder="e.g. 'Suggest 3 ways to solve integration by parts'" class="input" rows="4"></textarea>
-                    <button onclick="askAIGroup()" class="btn btn-green btn-full ai-glow-btn"><i class="fas fa-robot"></i> Ask AI</button>
-                    <div id="ai-group-response" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:.83rem;line-height:1.6;"></div>
+                    
+                    <!-- AI Image Preview -->
+                    <div id="ai-image-preview-container" style="display:none;padding:12px;background:var(--surface-2);border:1.5px solid var(--border);border-radius:10px;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                            <div style="display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--text-2);">
+                                <i class="fas fa-image" style="color:var(--primary);"></i>
+                                <span id="ai-image-preview-name"></span>
+                            </div>
+                            <button onclick="clearAIImagePreview()" style="background:none;border:none;cursor:pointer;color:var(--accent);"><i class="fas fa-times"></i></button>
+                        </div>
+                        <img id="ai-image-preview" style="max-height:120px;border-radius:8px;cursor:pointer;" onclick="window.open(this.src, '_blank')">
+                    </div>
+                    
+                    <div style="display:flex;gap:8px;">
+                        <textarea id="ai-group-input" placeholder="Ask AI for ideas, explanations, or brainstorming help… (e.g. 'Suggest 3 ways to solve integration by parts')" class="input" rows="4" style="flex:1;"></textarea>
+                        <button onclick="document.getElementById('ai-group-image-input').click()" class="nav-icon-btn" title="Attach image" style="flex-shrink:0;height:100%;border-radius:10px;">
+                            <i class="fas fa-image"></i>
+                        </button>
+                        <input type="file" id="ai-group-image-input" accept="image/*" style="display:none;" onchange="handleAIImageSelect(event)">
+                    </div>
+                    <button onclick="askAIGroup()" class="btn btn-green btn-full btn-lg ai-glow-btn"><i class="fas fa-robot"></i> Get AI Response</button>
+                    
+                    <div id="ai-group-response" style="display:none;background:var(--surface-2);border:1.5px solid var(--border);border-radius:12px;padding:16px;font-size:.83rem;line-height:1.65;max-height:300px;overflow-y:auto;margin-top:12px;">
+                        <div style="font-weight:700;font-size:.8rem;color:var(--green);margin-bottom:10px;"><i class="fas fa-robot"></i> AI Response</div>
+                        <div id="ai-response-content"></div>
+                    </div>
                 </div>
             </div>
 
@@ -1620,31 +1667,85 @@
 
         function toggleMyGroupAIHelper() {
             if (!myCurrentGroupId) { alert('Please select a group first'); return; }
-            const panel = document.getElementById('my-group-ai-panel');
-            panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
+            const messagesView = document.getElementById('my-group-chat-messages');
+            const aiPanel = document.getElementById('my-group-ai-panel');
+            const isAIVisible = aiPanel.style.display !== 'none' && aiPanel.style.display !== '';
+            
+            if (isAIVisible) {
+                // Show messages, hide AI
+                messagesView.style.display = 'flex';
+                aiPanel.style.display = 'none';
+            } else {
+                // Show AI, hide messages
+                messagesView.style.display = 'none';
+                aiPanel.style.display = 'flex';
+            }
+        }
+
+        let selectedMyGroupAIImage = null;
+
+        function handleMyGroupAIImageSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            selectedMyGroupAIImage = file;
+            document.getElementById('my-group-ai-image-preview-name').textContent = file.name;
+            document.getElementById('my-group-ai-image-preview-container').style.display = '';
+            const reader = new FileReader();
+            reader.onload = e => {
+                document.getElementById('my-group-ai-image-preview').src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clearMyGroupAIImagePreview() {
+            selectedMyGroupAIImage = null;
+            document.getElementById('my-group-ai-image-preview-container').style.display = 'none';
+            document.getElementById('my-group-ai-image-input').value = '';
         }
 
         async function askMyGroupAI() {
             const input = document.getElementById('my-group-ai-input');
             const responseDiv = document.getElementById('my-group-ai-response');
+            const responseContent = document.getElementById('my-group-ai-response-content');
             const question = input.value.trim();
-            if (!question || !myCurrentGroupId) return;
+            if (!question && !selectedMyGroupAIImage) { alert('Please enter a question or select an image'); return; }
+            if (!myCurrentGroupId) return;
             const btn = event.target;
             const orig = btn.innerHTML;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Thinking…';
             btn.disabled = true;
             try {
-                const res = await fetch('/api/ask-ai-group', {
-                    method: 'POST', headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify({ question, group_id: myCurrentGroupId, context: `Study group: ${myCurrentGroupName}` })
-                });
+                let res;
+                if (selectedMyGroupAIImage) {
+                    // Send image with FormData
+                    const fd = new FormData();
+                    fd.append('question', question);
+                    fd.append('group_id', myCurrentGroupId);
+                    fd.append('context', `Study group: ${myCurrentGroupName}`);
+                    fd.append('image', selectedMyGroupAIImage);
+                    res = await fetch('/api/ask-ai-group', {
+                        method: 'POST',
+                        body: fd
+                    });
+                } else {
+                    // Send text only
+                    res = await fetch('/api/ask-ai-group', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ question, group_id: myCurrentGroupId, context: `Study group: ${myCurrentGroupName}` })
+                    });
+                }
                 const data = await res.json();
                 if (data.success) {
-                    responseDiv.innerHTML = `<div style="font-weight:700;font-size:.8rem;color:var(--green);margin-bottom:6px;"><i class="fas fa-robot"></i> AI Response</div><div style="font-size:.83rem;line-height:1.65;white-space:pre-wrap;">${data.explanation}</div>`;
+                    responseContent.innerHTML = data.explanation.replace(/\n/g, '<br>');
                     responseDiv.style.display = '';
                     input.value = '';
+                    clearMyGroupAIImagePreview();
                 } else alert('❌ ' + (data.error || 'AI request failed'));
-            } catch { alert('AI service temporarily unavailable.'); }
+            } catch (e) { 
+                alert('AI service temporarily unavailable.');
+                console.error(e);
+            }
             finally { btn.innerHTML = orig; btn.disabled = false; }
         }
 
@@ -2125,29 +2226,94 @@
         }
 
         function toggleAIHelper() {
-            const panel = document.getElementById('ai-helper-panel');
-            panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
+            const messagesView = document.getElementById('group-chat-messages');
+            const aiView = document.getElementById('ai-helper-panel');
+            const isAIVisible = aiView.style.display !== 'none';
+            
+            if (isAIVisible) {
+                // Show messages, hide AI
+                messagesView.style.display = 'flex';
+                aiView.style.display = 'none';
+            } else {
+                // Show AI, hide messages
+                messagesView.style.display = 'none';
+                aiView.style.display = 'flex';
+            }
+        }
+
+        let selectedAIImage = null;
+
+        function handleAIImageSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            selectedAIImage = file;
+            document.getElementById('ai-image-preview-name').textContent = file.name;
+            document.getElementById('ai-image-preview-container').style.display = '';
+            const reader = new FileReader();
+            reader.onload = e => {
+                document.getElementById('ai-image-preview').src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clearAIImagePreview() {
+            selectedAIImage = null;
+            document.getElementById('ai-image-preview-container').style.display = 'none';
+            document.getElementById('ai-group-image-input').value = '';
         }
 
         async function askAIGroup() {
             const input = document.getElementById('ai-group-input');
             const responseDiv = document.getElementById('ai-group-response');
+            const responseContent = document.getElementById('ai-response-content');
             const question = input.value.trim();
-            if (!question) return;
-            const btn = event.target; const orig = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Thinking…'; btn.disabled = true;
+            if (!question && !selectedAIImage) { alert('Please enter a question or select an image'); return; }
+            const btn = event.target;
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Thinking…';
+            btn.disabled = true;
             try {
-                const res = await fetch('/api/ask-ai-group', {
-                    method: 'POST', headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify({ question, group_id: currentGroupId, context: `Study group: ${currentGroupName}` })
-                });
+                let res;
+                if (selectedAIImage) {
+                    // Send image with FormData
+                    const fd = new FormData();
+                    fd.append('question', question);
+                    fd.append('group_id', currentGroupId);
+                    fd.append('context', `Study group: ${currentGroupName}`);
+                    fd.append('image', selectedAIImage);
+                    res = await fetch('/api/ask-ai-group', {
+                        method: 'POST',
+                        body: fd
+                    });
+                } else {
+                    // Send text only
+                    res = await fetch('/api/ask-ai-group', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            question,
+                            group_id: currentGroupId,
+                            context: `Study group: ${currentGroupName}`
+                        })
+                    });
+                }
                 const data = await res.json();
                 if (data.success) {
-                    responseDiv.innerHTML = `<div style="font-weight:700;font-size:.8rem;color:var(--green);margin-bottom:6px;"><i class="fas fa-robot"></i> AI Response</div><div style="font-size:.83rem;line-height:1.65;white-space:pre-wrap;">${data.explanation}</div>`;
-                    responseDiv.style.display = ''; input.value = '';
-                } else alert('❌ ' + (data.error || 'AI failed'));
-            } catch { alert('AI service unavailable.'); }
-            finally { btn.innerHTML = orig; btn.disabled = false; }
+                    responseContent.innerHTML = data.explanation.replace(/\n/g, '<br>');
+                    responseDiv.style.display = '';
+                    input.value = '';
+                    clearAIImagePreview();
+                } else {
+                    alert('❌ ' + (data.error || 'AI failed'));
+                }
+            } catch (e) {
+                alert('AI service unavailable.');
+                console.error(e);
+            }
+            finally {
+                btn.innerHTML = orig;
+                btn.disabled = false;
+            }
         }
 
         document.addEventListener('DOMContentLoaded', () => {

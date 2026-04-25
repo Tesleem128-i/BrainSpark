@@ -11,6 +11,10 @@ def column_exists(cursor, table, column):
     cursor.execute(f"PRAGMA table_info({table})")
     return any(col[1] == column for col in cursor.fetchall())
 
+def table_exists(cursor, table):
+    cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table}'")
+    return cursor.fetchone() is not None
+
 def migrate():
     if not os.path.exists(DB_PATH):
         print(f"Database not found at {DB_PATH}")
@@ -18,6 +22,27 @@ def migrate():
 
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
+
+    # Create new generated_question table if it doesn't exist
+    if not table_exists(cursor, 'generated_question'):
+        cursor.execute("""
+            CREATE TABLE generated_question (
+                id INTEGER PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                question_text TEXT NOT NULL,
+                options TEXT NOT NULL,
+                correct_answer TEXT NOT NULL,
+                explanation TEXT,
+                source_hash VARCHAR(64),
+                difficulty VARCHAR(20),
+                question_type VARCHAR(20),
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES user (id)
+            )
+        """)
+        print("✅ Created table 'generated_question'")
+    else:
+        print("⏭️  Table 'generated_question' already exists")
 
     migrations = [
         # group_message table

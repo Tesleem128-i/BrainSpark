@@ -28,6 +28,7 @@ class User(UserMixin, db.Model):
     tags = db.relationship('UserTag', backref='user', lazy=True, cascade='all, delete-orphan')
     messages_sent = db.relationship('Message', foreign_keys='Message.sender_id', backref='sender', lazy=True, cascade='all, delete-orphan')
     messages_received = db.relationship('Message', foreign_keys='Message.receiver_id', backref='receiver', lazy=True, cascade='all, delete-orphan')
+    generated_questions = db.relationship('GeneratedQuestion', backref='user', lazy=True, cascade='all, delete-orphan')
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -292,4 +293,21 @@ class GroupJoinRequest(db.Model):
     
     def __repr__(self):
         return f'<GroupJoinRequest {self.user.username} -> {self.group.name}>'
+
+
+class GeneratedQuestion(db.Model):
+    """Stores AI-generated questions per user for deduplication"""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    question_text = db.Column(db.Text, nullable=False)
+    options = db.Column(db.Text, nullable=False)          # JSON array
+    correct_answer = db.Column(db.Text, nullable=False)
+    explanation = db.Column(db.Text)
+    source_hash = db.Column(db.String(64))                # hash of PDF text
+    difficulty = db.Column(db.String(20))
+    question_type = db.Column(db.String(20))              # objective or theory
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<GeneratedQuestion {self.question_text[:50]}...>'
 

@@ -2,7 +2,8 @@ from flask import Flask, render_template, request, jsonify, session, redirect, u
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
-from models import db, User, Quiz, QuizResult, Connection, UserTag, Message, ChatGroup, ChatGroupMember, GroupMessage, BrainstormSession, BrainstormNote, GroupJoinRequest, Poll, PollOption, PollVote
+from models import db, User, Quiz, QuizResult, Connection, UserTag, Message, ChatGroup, ChatGroupMember, GroupMessage, BrainstormSession, BrainstormNote, GroupJoinRequest, Poll, PollOption, PollVote, GeneratedQuestion
+import hashlib
 import os
 from dotenv import load_dotenv
 import google.generativeai as genai
@@ -109,18 +110,18 @@ def signup():
         
         db.session.commit()
         
-        msg = MailMessage('KnowItNow - Verify Your Email', recipients=[email])
+        msg = MailMessage('Brainspark - Verify Your Email', recipients=[email])
         msg.body = f"""
-Your KnowItNow verification code is:
+Your Brainspark verification code is:
 
 {code}
 
 Enter this code on the signup page to verify your account. Code expires in 15 minutes.
 
-Questions? Contact support@knowitnow.com
+Questions? Contact support@Brainspark.com
 
 Best,
-KnowItNow Team
+Brainspark Team
         """
         try:
             mail.send(msg)
@@ -199,18 +200,18 @@ def resend_verification():
     code = ''.join(random.choices('0123456789', k=6))
     user.verification_code = code
     db.session.commit()
-    msg = MailMessage('KnowItNow - Verify Your Email', recipients=[email])
+    msg = MailMessage('Brainspark - Verify Your Email', recipients=[email])
     msg.body = f"""
-Your new KnowItNow verification code is:
+Your new Brainspark verification code is:
 
 {code}
 
 Enter this code on the verification page to verify your account. Code expires in 15 minutes.
 
-Questions? Contact support@knowitnow.com
+Questions? Contact support@Brainspark.com
 
 Best,
-KnowItNow Team
+Brainspark Team
     """
     try:
         mail.send(msg)
@@ -254,7 +255,7 @@ def send_email():
     try:
         data = request.json
         msg = MailMessage(
-            subject=f"KnowItNow Contact: {data.get('name', 'No Name')}",
+            subject=f"Brainspark Contact: {data.get('name', 'No Name')}",
             recipients=[os.getenv('MAIL_USERNAME')],
             body=f"""
             New contact form submission:
@@ -264,7 +265,7 @@ def send_email():
             Message: {data.get('message', 'N/A')}
             
             ---
-            KnowItNow Team
+            Brainspark Team
             """,
             sender=os.getenv('MAIL_USERNAME')
         )
@@ -273,9 +274,33 @@ def send_email():
     except Exception as e:
         return jsonify({'message': f'Error: {str(e)}'}), 500
 
+def parse_generated_questions(questions_str):
+    """Parse AI-generated questions from various string formats"""
+    try:
+        if isinstance(questions_str, dict):
+            return questions_str
+        if isinstance(questions_str, list):
+            return {"questions": questions_str}
+        
+        text = questions_str.strip()
+        start_idx = text.find('{')
+        end_idx = text.rfind('}')
+        if start_idx != -1 and end_idx != -1:
+            json_str = text[start_idx:end_idx+1]
+            return json.loads(json_str)
+        
+        return json.loads(text)
+    except Exception as e:
+        logger.error(f'Error parsing generated questions: {str(e)}')
+        return {"questions": []}
+
+
 @app.route('/upload_notes', methods=['POST'])
 def upload_notes():
-    """Future: PDF upload -> Gemini questions"""
+    """PDF upload -> Gemini questions with deduplication via DB storage"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Please login first'}), 401
+    
     if 'file' not in request.files:
         return jsonify({'error': 'No file'}), 400
     
@@ -330,6 +355,35 @@ def upload_notes():
             hardness = request.form.get('hardness', 'medium')
             time_limit = request.form.get('time', '30')
             
+            # Validate question count (max 100)
+            try:
+                question_count_int = int(question_count)
+            except ValueError:
+                question_count_int = 10
+            
+            if question_count_int > 100:
+                question_count_int = 100
+                question_count = '100'
+            elif question_count_int < 1:
+                question_count_int = 1
+                question_count = '1'
+            
+            user_id = session['user_id']
+            source_hash = hashlib.md5(text.encode()).hexdigest()
+            
+            # Fetch existing questions for this user to avoid duplicates
+            existing_questions = GeneratedQuestion.query.filter_by(user_id=user_id).all()
+            existing_question_texts = [q.question_text for q in existing_questions]
+            
+            # Build deduplication context for prompt
+            dedup_context = ""
+            if existing_question_texts:
+                recent_existing = existing_question_texts[-50:]
+                dedup_context = "\n\nCRITICAL: The following questions have ALREADY been generated for this user. You MUST NOT generate any question that is identical or very similar to these:\n"
+                for i, q_text in enumerate(recent_existing, 1):
+                    dedup_context += f"{i}. {q_text[:200]}\n"
+                dedup_context += "\nGenerate completely NEW and DIFFERENT questions only."
+            
             # Create appropriate prompt based on question type
             if question_type == 'theory':
                 prompt = f"""
@@ -346,6 +400,7 @@ def upload_notes():
                 Format: {{"questions": [{{"question": "", "options": ["option1", "option2", "option3", "option4"], "answer": "", "explanation": ""}}]}}
                 The "answer" field MUST be exactly one of the options.
                 Time limit: {time_limit}s per question.
+                {dedup_context}
                 """
             else:  # objective
                 prompt = f"""
@@ -362,11 +417,43 @@ def upload_notes():
                 Format: {{"questions": [{{"question": "", "options": ["option1", "option2", "option3", "option4"], "answer": "", "explanation": ""}}]}}
                 The "answer" field MUST be exactly one of the options.
                 Time limit: {time_limit}s per question.
+                {dedup_context}
                 """
             
             try:
                 response = model.generate_content(prompt)
-                questions = response.text
+                questions_text = response.text
+                
+                # Parse and deduplicate
+                parsed_data = parse_generated_questions(questions_text)
+                new_questions = parsed_data.get('questions', [])
+                
+                # Filter out exact duplicates already in DB
+                unique_questions = []
+                for q in new_questions:
+                    q_text = q.get('question', '').strip()
+                    if q_text and q_text not in existing_question_texts:
+                        unique_questions.append(q)
+                        existing_question_texts.append(q_text)
+                
+                # Store new unique questions in DB
+                for q in unique_questions:
+                    gq = GeneratedQuestion(
+                        user_id=user_id,
+                        question_text=q.get('question', '').strip(),
+                        options=json.dumps(q.get('options', [])),
+                        correct_answer=q.get('answer', '').strip(),
+                        explanation=q.get('explanation', '').strip(),
+                        source_hash=source_hash,
+                        difficulty=hardness,
+                        question_type=question_type
+                    )
+                    db.session.add(gq)
+                db.session.commit()
+                
+                # Re-serialize the deduplicated questions for session storage
+                final_questions = json.dumps({"questions": unique_questions})
+                
                 # Cleanup - safely remove file
                 try:
                     if os.path.exists(filepath):
@@ -375,10 +462,10 @@ def upload_notes():
                     pass
                 
                 # Store questions in session to avoid URL length issues
-                session['quiz_questions'] = questions
+                session['quiz_questions'] = final_questions
                 session.modified = True
                 
-                return jsonify({'questions': questions, 'success': True})
+                return jsonify({'questions': final_questions, 'success': True, 'generated_count': len(unique_questions)})
             except Exception as e:
                 # Cleanup on error too
                 try:
@@ -1549,25 +1636,32 @@ def vote_poll():
 
 @app.route('/api/ask-ai-group', methods=['POST'])
 def ask_ai_group():
-    """Ask AI for brainstorming ideas, problem solving, or explanations in group context"""
+    """Ask AI for brainstorming ideas, problem solving, or explanations in group context - supports images"""
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     
-    data = request.json
-    question = data.get('question', '')
-    group_id = data.get('group_id')
-    context = data.get('context', '')
+    # Handle both JSON and multipart form data
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        question = request.form.get('question', '')
+        group_id = request.form.get('group_id')
+        context = request.form.get('context', '')
+    else:
+        data = request.json or {}
+        question = data.get('question', '')
+        group_id = data.get('group_id')
+        context = data.get('context', '')
     
     if not question:
         return jsonify({'error': 'Please provide a question'}), 400
     
-    # Optional: check group membership if group_id provided
+    # Check group membership if group_id provided
     if group_id:
         member = ChatGroupMember.query.filter_by(group_id=group_id, user_id=session['user_id']).first()
         if not member:
             return jsonify({'error': 'You are not a member of this group'}), 403
     
     try:
+        # Build base prompt
         prompt = f"""You are an AI Brainstorm Helper for a study group.
 
 Group Context: {context if context else 'General study group discussion'}
@@ -1576,7 +1670,29 @@ User Question: {question}
 
 Provide a helpful, clear, and actionable response. Keep it concise but thorough."""
         
-        response = model.generate_content(prompt)
+        # Handle image if provided
+        if 'image' in request.files:
+            file = request.files['image']
+            if file and file.filename and allowed_file(file.filename):
+                try:
+                    import io
+                    from PIL import Image
+                    
+                    # Read and process image
+                    image_data = file.read()
+                    image = Image.open(io.BytesIO(image_data))
+                    
+                    # Send to Gemini with image
+                    response = model.generate_content([prompt, image])
+                    logger.info(f'AI group request with image processed for user {session["user_id"]}')
+                except Exception as img_error:
+                    logger.warning(f'Error processing image: {str(img_error)}, falling back to text-only')
+                    response = model.generate_content(prompt)
+            else:
+                response = model.generate_content(prompt)
+        else:
+            response = model.generate_content(prompt)
+        
         explanation = response.text
         
         return jsonify({

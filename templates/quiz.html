@@ -3,7 +3,7 @@ Devv AI<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiz - KnowItNow</title>
+    <title>Quiz - Brainspark</title>
     <link rel="icon" type="image/png" href="/static/image/KNOWITNOW.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
@@ -104,7 +104,7 @@ Devv AI<!DOCTYPE html>
                     <div class="h-10 w-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
                         <img src="/static/image/KNOWITNOW.png" alt="Logo" class="h-6 w-6">
                     </div>
-                    <h1 class="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">KnowItNow Quiz</h1>
+                    <h1 class="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Brainspark Quiz</h1>
                 </div>
                 <a href="/dashboard" class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-semibold transition-all">
                     Exit Quiz
@@ -133,19 +133,12 @@ Devv AI<!DOCTYPE html>
                 <!-- Number of Questions Selection -->
                 <div class="mb-12">
                     <p style="color: var(--text-primary);" class="text-xl font-semibold mb-4">📝 How many questions?</p>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <button onclick="selectQuestionCount(5)" class="question-count-btn card rounded-lg p-6 text-center font-bold text-lg hover:scale-105 transition-transform" data-count="5">
-                            <span style="color: var(--primary);">5</span>
-                        </button>
-                        <button onclick="selectQuestionCount(10)" class="question-count-btn card rounded-lg p-6 text-center font-bold text-lg hover:scale-105 transition-transform" data-count="10">
-                            <span style="color: var(--primary);">10</span>
-                        </button>
-                        <button onclick="selectQuestionCount(15)" class="question-count-btn card rounded-lg p-6 text-center font-bold text-lg hover:scale-105 transition-transform" data-count="15">
-                            <span style="color: var(--primary);">15</span>
-                        </button>
-                        <button onclick="selectQuestionCount(20)" class="question-count-btn card rounded-lg p-6 text-center font-bold text-lg hover:scale-105 transition-transform" data-count="20">
-                            <span style="color: var(--primary);">20</span>
-                        </button>
+                    <div class="flex items-center gap-4">
+                        <input type="number" id="question-count-input" min="1" max="100" value="10" 
+                            class="card rounded-lg p-4 text-center font-bold text-lg w-32" 
+                            style="color: var(--primary); border: 2px solid var(--primary);"
+                            onchange="selectQuestionCount(this.value)" onkeyup="selectQuestionCount(this.value)">
+                        <span style="color: var(--text-secondary);" class="text-lg">(max 100)</span>
                     </div>
                 </div>
 
@@ -335,14 +328,12 @@ Devv AI<!DOCTYPE html>
         }
 
         function selectQuestionCount(count) {
-            selectedQuestionCount = count;
-            // Update UI
-            document.querySelectorAll('.question-count-btn').forEach(btn => {
-                btn.style.border = 'none';
-                btn.style.boxShadow = 'none';
-            });
-            event.target.closest('button').style.border = '3px solid var(--primary)';
-            event.target.closest('button').style.boxShadow = '0 0 10px rgba(59, 130, 246, 0.5)';
+            let parsed = parseInt(count);
+            if (isNaN(parsed) || parsed < 1) parsed = 1;
+            if (parsed > 100) parsed = 100;
+            selectedQuestionCount = parsed;
+            const input = document.getElementById('question-count-input');
+            if (input && input.value != parsed) input.value = parsed;
             enableStartButton();
         }
 
