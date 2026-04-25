@@ -1,8 +1,8 @@
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
-from models import db, User, Quiz, QuizResult, Connection, UserTag, Message, ChatGroup, ChatGroupMember, GroupMessage, BrainstormSession, BrainstormNote, GroupJoinRequest
+from models import db, User, Quiz, QuizResult, Connection, UserTag, Message, ChatGroup, ChatGroupMember, GroupMessage, BrainstormSession, BrainstormNote, GroupJoinRequest, Poll, PollOption, PollVote
 import os
 from dotenv import load_dotenv
 import google.generativeai as genai
@@ -26,7 +26,7 @@ app.secret_key = 'knowitnow_super_secret_key_change_in_production'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///knowitnow.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'uploads'  # For PDF uploads
-app.config['PROFILE_UPLOAD_FOLDER'] = 'static/uploads/profiles'  # For profile pictures
+app.config['PROFILE_UPLOAD_FOLDER'] = 'uploads/profiles'  # For profile pictures
 app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024  # 2MB
 
 # Email config BEFORE Mail initialization
@@ -67,7 +67,7 @@ def signup():
     if request.method == 'POST':
         name = request.form['name']
         username = request.form['username']
-        email = request.form['email']
+        email = request.form['email'].strip().lower()
         school = request.form.get('school', '')
         profession = request.form.get('profession', '')
         study_level = request.form['study_level']
@@ -138,17 +138,87 @@ KnowItNow Team
 @app.route('/verify', methods=['POST'])
 def verify():
     data = request.json
-    code = data['code'].strip()
+    code = data.get('code', '').strip()
+    email = data.get('email', '').strip().lower()
     
-    user = User.query.filter_by(verification_code=code, is_verified=False).first()
+    logger.info(f"Verify attempt - email: {email}, code: {code}")
+    
+    if not code or not email:
+        return jsonify({'error': 'Code and email are required.'}), 400
+    
+    # Look up by email and code for accuracy (case-insensitive email)
+    user = User.query.filter(
+        db.func.lower(User.email) == email,
+        User.verification_code == code,
+        User.is_verified == False
+    ).first()
+    
     if not user:
+        # Check if user exists but is already verified
+        existing_verified = User.query.filter(
+            db.func.lower(User.email) == email,
+            User.is_verified == True
+        ).first()
+        if existing_verified:
+            return jsonify({'error': 'This email is already verified. Please log in.'})
+        
+        # Check if user exists with different code
+        existing_user = User.query.filter(
+            db.func.lower(User.email) == email,
+            User.is_verified == False
+        ).first()
+        if existing_user:
+            logger.warning(f"Wrong code for {email}. Expected: {existing_user.verification_code}, Got: {code}")
+            return jsonify({'error': 'Invalid code. Please check your email and try again, or request a new code.'})
+        
+        logger.warning(f"No unverified user found for email: {email}, code: {code}")
         return jsonify({'error': 'Invalid or expired code. Please request new one.'})
     
     user.is_verified = True
     user.verification_code = None
     db.session.commit()
+    logger.info(f"User {email} verified successfully")
     
     return jsonify({'success': True, 'message': 'Account verified! Redirecting to login...', 'redirect': '/login'})
+
+@app.route('/verify-email')
+def verify_email_page():
+    email = request.args.get('email', '')
+    theme = session.get('theme', 'light')
+    return render_template('verify_email.html', email=email, theme=theme)
+
+@app.route('/resend-verification', methods=['POST'])
+def resend_verification():
+    data = request.json
+    email = data.get('email')
+    if not email:
+        return jsonify({'error': 'Email required'}), 400
+    user = User.query.filter_by(email=email, is_verified=False).first()
+    if not user:
+        return jsonify({'error': 'User not found or already verified'}), 404
+    code = ''.join(random.choices('0123456789', k=6))
+    user.verification_code = code
+    db.session.commit()
+    msg = MailMessage('KnowItNow - Verify Your Email', recipients=[email])
+    msg.body = f"""
+Your new KnowItNow verification code is:
+
+{code}
+
+Enter this code on the verification page to verify your account. Code expires in 15 minutes.
+
+Questions? Contact support@knowitnow.com
+
+Best,
+KnowItNow Team
+    """
+    try:
+        mail.send(msg)
+        logger.info(f"Verification email resent to {email}")
+        return jsonify({'success': True, 'message': 'Code resent successfully'})
+    except Exception as e:
+        logger.error(f"Email resend failed: {str(e)}", exc_info=True)
+        return jsonify({'error': f'Email send failed: {str(e)}'}), 500
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -737,11 +807,17 @@ def get_connections():
                 (Message.is_read == False)
             ).count()
             
+            # Get tags
+            tags = [t.tag for t in conn.connected_user.tags]
+            
             connections_data.append({
                 'id': conn.connected_user.id,
                 'name': conn.connected_user.name,
                 'username': conn.connected_user.username,
                 'profile_pic': conn.connected_user.get_profile_pic_url(),
+                'study_level': conn.connected_user.study_level,
+                'average_score': conn.connected_user.get_average_score(),
+                'tags': tags,
                 'unread_count': unread_count,
                 'connected_at': conn.created_at.isoformat()
             })
@@ -757,11 +833,17 @@ def get_connections():
                 (Message.is_read == False)
             ).count()
             
+            # Get tags
+            tags = [t.tag for t in conn.user.tags]
+            
             connections_data.append({
                 'id': conn.user.id,
                 'name': conn.user.name,
                 'username': conn.user.username,
                 'profile_pic': conn.user.get_profile_pic_url(),
+                'study_level': conn.user.study_level,
+                'average_score': conn.user.get_average_score(),
+                'tags': tags,
                 'unread_count': unread_count,
                 'connected_at': conn.created_at.isoformat()
             })
@@ -1010,6 +1092,59 @@ def discover_groups():
     
     return jsonify({'success': True, 'groups': groups_data})
 
+@app.route('/api/search-groups', methods=['GET'])
+def search_groups():
+    """Search for groups by name or description"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    user_id = session['user_id']
+    query = request.args.get('q', '').strip()
+    
+    if not query or len(query) < 2:
+        return jsonify({'error': 'Search query must be at least 2 characters'}), 400
+    
+    # Get all groups
+    all_groups = ChatGroup.query.all()
+    
+    # Get groups user is already member of
+    user_group_ids = [m.group_id for m in ChatGroupMember.query.filter_by(user_id=user_id).all()]
+    
+    groups_data = []
+    for group in all_groups:
+        # Skip groups user is already member of
+        if group.id in user_group_ids:
+            continue
+        
+        # Search in name and description
+        if query.lower() not in group.name.lower() and query.lower() not in (group.description or '').lower():
+            continue
+        
+        member_count = ChatGroupMember.query.filter_by(group_id=group.id).count()
+        message_count = GroupMessage.query.filter_by(group_id=group.id).count()
+        
+        # Check if user has pending request
+        pending_request = GroupJoinRequest.query.filter_by(
+            group_id=group.id,
+            user_id=user_id,
+            status='pending'
+        ).first()
+        
+        groups_data.append({
+            'id': group.id,
+            'name': group.name,
+            'description': group.description,
+            'is_private': group.is_private,
+            'created_by': group.created_by,
+            'creator_name': group.creator.name,
+            'member_count': member_count,
+            'message_count': message_count,
+            'has_pending_request': pending_request is not None,
+            'created_at': group.created_at.isoformat()
+        })
+    
+    return jsonify({'success': True, 'groups': groups_data})
+
 @app.route('/api/add-member-to-group', methods=['POST'])
 def add_member_to_group():
     """Add a member to a group (admin only or join request)"""
@@ -1141,18 +1276,28 @@ def get_group_members(group_id):
 
 @app.route('/api/send-group-message', methods=['POST'])
 def send_group_message():
-    """Send message to group"""
+    """Send message to group - supports text, image, poll, and AI message types"""
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     
     user_id = session['user_id']
-    data = request.json
     
-    group_id = data.get('group_id')
-    content = data.get('content', '').strip()
+    # Support both JSON and multipart form data
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        group_id = request.form.get('group_id')
+        content = request.form.get('content', '').strip()
+        message_type = request.form.get('message_type', 'text')
+    else:
+        data = request.json or {}
+        group_id = data.get('group_id')
+        content = data.get('content', '').strip()
+        message_type = data.get('message_type', 'text')
     
-    if not group_id or not content:
-        return jsonify({'error': 'Group ID and content required'}), 400
+    if not group_id:
+        return jsonify({'error': 'Group ID required'}), 400
+    
+    if not content and message_type == 'text':
+        return jsonify({'error': 'Content required for text messages'}), 400
     
     if len(content) > 5000:
         return jsonify({'error': 'Message too long'}), 400
@@ -1163,7 +1308,27 @@ def send_group_message():
         return jsonify({'error': 'You are not a member of this group'}), 403
     
     try:
-        msg = GroupMessage(group_id=group_id, sender_id=user_id, content=content)
+        image_path = None
+        
+        # Handle image upload
+        if message_type == 'image' and 'image' in request.files:
+            file = request.files['image']
+            if file and file.filename and allowed_file(file.filename):
+                os.makedirs('uploads/group_chat', exist_ok=True)
+                timestamp = datetime.utcnow().timestamp()
+                ext = file.filename.rsplit('.', 1)[1].lower()
+                image_path = f"group_{group_id}_{user_id}_{timestamp}.{ext}"
+                filepath = os.path.join('uploads/group_chat', image_path)
+                file.save(filepath)
+                logger.info(f'Group chat image uploaded: {image_path}')
+        
+        msg = GroupMessage(
+            group_id=group_id, 
+            sender_id=user_id, 
+            content=content,
+            message_type=message_type,
+            image_path=image_path
+        )
         db.session.add(msg)
         db.session.commit()
         
@@ -1174,16 +1339,19 @@ def send_group_message():
                 'sender_id': user_id,
                 'sender_name': msg.sender.name,
                 'content': content,
+                'message_type': message_type,
+                'image_url': f'/uploads/group_chat/{image_path}' if image_path else None,
                 'created_at': msg.created_at.isoformat()
             }
         })
     except Exception as e:
         db.session.rollback()
+        logger.error(f'Error sending group message: {str(e)}', exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/get-group-messages/<int:group_id>')
 def get_group_messages(group_id):
-    """Get messages from a group"""
+    """Get messages from a group - includes text, image, poll, and AI message types"""
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     
@@ -1198,16 +1366,226 @@ def get_group_messages(group_id):
     
     messages_data = []
     for msg in messages:
-        messages_data.append({
+        msg_data = {
             'id': msg.id,
             'sender_id': msg.sender_id,
             'sender_name': msg.sender.name,
             'sender_pic': msg.sender.get_profile_pic_url(),
             'content': msg.content,
-            'created_at': msg.created_at.isoformat()
+            'message_type': msg.message_type,
+            'image_url': f'/uploads/group_chat/{msg.image_path}' if msg.image_path else None,
+            'created_at': msg.created_at.isoformat(),
+            'is_sent': msg.sender_id == user_id
+        }
+        
+        # Include poll data if this is a poll message
+        if msg.message_type == 'poll' and msg.poll_id:
+            poll = Poll.query.get(msg.poll_id)
+            if poll:
+                options_data = []
+                for opt in poll.options:
+                    vote_count = len(opt.votes)
+                    has_voted = PollVote.query.filter_by(option_id=opt.id, user_id=user_id).first() is not None
+                    options_data.append({
+                        'id': opt.id,
+                        'text': opt.option_text,
+                        'votes': vote_count,
+                        'has_voted': has_voted
+                    })
+                total_votes = sum(opt['votes'] for opt in options_data)
+                msg_data['poll'] = {
+                    'id': poll.id,
+                    'question': poll.question,
+                    'is_active': poll.is_active,
+                    'options': options_data,
+                    'total_votes': total_votes
+                }
+        
+        messages_data.append(msg_data)
+    
+    return jsonify({'success': True, 'messages': messages_data, 'current_user_id': user_id})
+
+@app.route('/api/create-poll', methods=['POST'])
+def create_poll():
+    """Create a poll in a group"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    user_id = session['user_id']
+    data = request.json
+    
+    group_id = data.get('group_id')
+    question = data.get('question', '').strip()
+    options = data.get('options', [])
+    
+    if not group_id or not question:
+        return jsonify({'error': 'Group ID and question required'}), 400
+    
+    if len(options) < 2 or len(options) > 6:
+        return jsonify({'error': 'Poll must have 2-6 options'}), 400
+    
+    # Check if user is member
+    member = ChatGroupMember.query.filter_by(group_id=group_id, user_id=user_id).first()
+    if not member:
+        return jsonify({'error': 'You are not a member of this group'}), 403
+    
+    try:
+        # Create poll
+        poll = Poll(
+            group_id=group_id,
+            creator_id=user_id,
+            question=question
+        )
+        db.session.add(poll)
+        db.session.flush()
+        
+        # Create options
+        for opt_text in options:
+            if opt_text.strip():
+                option = PollOption(poll_id=poll.id, option_text=opt_text.strip())
+                db.session.add(option)
+        
+        # Create poll message in group chat
+        poll_msg = GroupMessage(
+            group_id=group_id,
+            sender_id=user_id,
+            content=f"📊 Poll: {question}",
+            message_type='poll',
+            poll_id=poll.id
+        )
+        db.session.add(poll_msg)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'poll_id': poll.id,
+            'message_id': poll_msg.id,
+            'message': 'Poll created successfully!'
+        })
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Error creating poll: {str(e)}', exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/get-polls/<int:group_id>')
+def get_polls(group_id):
+    """Get active polls for a group"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    user_id = session['user_id']
+    
+    # Check if user is member
+    member = ChatGroupMember.query.filter_by(group_id=group_id, user_id=user_id).first()
+    if not member:
+        return jsonify({'error': 'You are not a member of this group'}), 403
+    
+    polls = Poll.query.filter_by(group_id=group_id, is_active=True).order_by(Poll.created_at.desc()).all()
+    
+    polls_data = []
+    for poll in polls:
+        options_data = []
+        for opt in poll.options:
+            vote_count = len(opt.votes)
+            has_voted = PollVote.query.filter_by(option_id=opt.id, user_id=user_id).first() is not None
+            options_data.append({
+                'id': opt.id,
+                'text': opt.option_text,
+                'votes': vote_count,
+                'has_voted': has_voted
+            })
+        total_votes = sum(opt['votes'] for opt in options_data)
+        polls_data.append({
+            'id': poll.id,
+            'question': poll.question,
+            'creator_name': poll.creator.name,
+            'options': options_data,
+            'total_votes': total_votes,
+            'created_at': poll.created_at.isoformat()
         })
     
-    return jsonify({'success': True, 'messages': messages_data})
+    return jsonify({'success': True, 'polls': polls_data})
+
+@app.route('/api/vote-poll', methods=['POST'])
+def vote_poll():
+    """Vote on a poll option"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    user_id = session['user_id']
+    data = request.json
+    
+    poll_id = data.get('poll_id')
+    option_id = data.get('option_id')
+    
+    if not poll_id or not option_id:
+        return jsonify({'error': 'Poll ID and option ID required'}), 400
+    
+    poll = Poll.query.get(poll_id)
+    if not poll or not poll.is_active:
+        return jsonify({'error': 'Poll not found or inactive'}), 404
+    
+    # Check if user is member of group
+    member = ChatGroupMember.query.filter_by(group_id=poll.group_id, user_id=user_id).first()
+    if not member:
+        return jsonify({'error': 'You are not a member of this group'}), 403
+    
+    # Check if user already voted
+    existing_vote = PollVote.query.filter_by(poll_id=poll_id, user_id=user_id).first()
+    if existing_vote:
+        # Change vote
+        existing_vote.option_id = option_id
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Vote updated!'})
+    
+    try:
+        vote = PollVote(poll_id=poll_id, option_id=option_id, user_id=user_id)
+        db.session.add(vote)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Vote cast!'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/ask-ai-group', methods=['POST'])
+def ask_ai_group():
+    """Ask AI for brainstorming ideas, problem solving, or explanations in group context"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    data = request.json
+    question = data.get('question', '')
+    group_id = data.get('group_id')
+    context = data.get('context', '')
+    
+    if not question:
+        return jsonify({'error': 'Please provide a question'}), 400
+    
+    # Optional: check group membership if group_id provided
+    if group_id:
+        member = ChatGroupMember.query.filter_by(group_id=group_id, user_id=session['user_id']).first()
+        if not member:
+            return jsonify({'error': 'You are not a member of this group'}), 403
+    
+    try:
+        prompt = f"""You are an AI Brainstorm Helper for a study group.
+
+Group Context: {context if context else 'General study group discussion'}
+
+User Question: {question}
+
+Provide a helpful, clear, and actionable response. Keep it concise but thorough."""
+        
+        response = model.generate_content(prompt)
+        explanation = response.text
+        
+        return jsonify({
+            'success': True,
+            'explanation': explanation
+        })
+    except Exception as e:
+        logger.error(f'Error generating AI group response: {str(e)}', exc_info=True)
+        return jsonify({'error': f'Error: {str(e)}'}), 500
 
 @app.route('/api/schedule-brainstorm', methods=['POST'])
 def schedule_brainstorm():
@@ -1682,6 +2060,31 @@ def get_pending_join_requests():
     
     return jsonify({'success': True, 'requests': requests_data})
 
+@app.route('/api/get-my-join-requests')
+def get_my_join_requests():
+    """Get all join requests sent by the current user"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    user_id = session['user_id']
+    
+    requests = GroupJoinRequest.query.filter_by(
+        user_id=user_id
+    ).order_by(GroupJoinRequest.created_at.desc()).all()
+    
+    requests_data = []
+    for req in requests:
+        requests_data.append({
+            'id': req.id,
+            'group_id': req.group_id,
+            'group_name': req.group.name,
+            'status': req.status,
+            'created_at': req.created_at.isoformat(),
+            'responded_at': req.responded_at.isoformat() if req.responded_at else None
+        })
+    
+    return jsonify({'success': True, 'requests': requests_data})
+
 @app.route('/api/get-unread-notifications')
 def get_unread_notifications():
     """Get all unread notifications (messages + join requests)"""
@@ -1883,6 +2286,11 @@ def debug_db_status():
         logger.error(f'Error in debug endpoint: {str(e)}', exc_info=True)
         return jsonify({'error': str(e)}), 500
 
+@app.route('/uploads/<path:filename>')
+def uploaded_file(filename):
+    """Serve uploaded files (group chat images, brainstorm images, etc.)"""
+    return send_from_directory('uploads', filename)
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
 

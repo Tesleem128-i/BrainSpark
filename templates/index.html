@@ -5,9 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KnowItNow - AI-Powered Interactive Quiz Platform</title>
     <meta name="description" content="Upload notes, generate smart questions with Google Gemini AI, track scores, connect with students worldwide.">
-    <!-- Logo Favicon -->
     <link rel="icon" type="image/png" href="/static/image/KNOWITNOW.png">
-    <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -15,19 +13,16 @@
             theme: { extend: { fontFamily: { inter: ['Inter', 'sans-serif'] } } }
         }
     </script>
-    <!-- AOS, GSAP, ParticlesJS -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/TextPlugin.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
-    <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body class="relative overflow-x-hidden">
-    <!-- Particle Canvas -->
     <canvas id="particles-js" class="fixed inset-0 z-0 pointer-events-none"></canvas>
     
     <!-- Navigation -->
@@ -36,32 +31,14 @@
             <div class="flex items-center justify-between">
                 <a href="#hero" class="text-2xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent drop-shadow-lg">KnowItNow</a>
                 <div class="hidden md:flex items-center space-x-8">
-                    <a href="#about" class="text-lg hover:text-blue-400 transition-all duration-300 relative group">
-                        About
-                        <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-400 to-purple-400 group-hover:w-full transition-all duration-300"></span>
-                    </a>
-                    <a href="#features" class="text-lg hover:text-blue-400 transition-all duration-300 relative group">
-                        Features
-                        <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-400 to-purple-400 group-hover:w-full transition-all duration-300"></span>
-                    </a>
-                    <a href="#how-it-works" class="text-lg hover:text-blue-400 transition-all duration-300 relative group">
-                        How It Works
-                        <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-400 to-purple-400 group-hover:w-full transition-all duration-300"></span>
-                    </a>
-                    <a href="#contact" class="text-lg hover:text-blue-400 transition-all duration-300 relative group">
-                        Contact
-                        <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-400 to-purple-400 group-hover:w-full transition-all duration-300"></span>
-                    </a>
+                    <a href="#about" class="text-lg hover:text-blue-400 transition-all duration-300 relative group">About</a>
+                    <a href="#features" class="text-lg hover:text-blue-400 transition-all duration-300 relative group">Features</a>
+                    <a href="#how-it-works" class="text-lg hover:text-blue-400 transition-all duration-300 relative group">How It Works</a>
+                    <a href="#contact" class="text-lg hover:text-blue-400 transition-all duration-300 relative group">Contact</a>
                 </div>
                 <div class="flex items-center space-x-4">
-                    <a href="/signup" class="text-lg hover:text-blue-400 transition-all duration-300 relative group">
-                        Sign Up
-                        <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-400 to-purple-400 group-hover:w-full transition-all duration-300"></span>
-                    </a>
-                    <a href="/login" class="text-lg hover:text-blue-400 transition-all duration-300 relative group">
-                        Login
-                        <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-400 to-purple-400 group-hover:w-full transition-all duration-300"></span>
-                    </a>
+                    <a href="/signup" class="text-lg hover:text-blue-400 transition-all duration-300 relative group">Sign Up</a>
+                    <a href="/login" class="text-lg hover:text-blue-400 transition-all duration-300 relative group">Login</a>
                     <button id="mode-toggle" class="px-4 py-2 bg-white/20 dark:bg-gray-800/50 backdrop-blur-sm rounded-full border border-white/30 dark:border-gray-600 text-sm font-medium hover:scale-105 hover:shadow-2xl transition-all duration-300 flex items-center space-x-2">
                         <span class="sun-icon">☀️</span>
                         <span class="moon-icon">🌙</span>
@@ -77,11 +54,25 @@
         </div>
     </nav>
 
-    <!-- Hero Section - Enhanced Netflix Style -->
+    <!-- Mobile Navigation -->
+    <div class="md:hidden">
+        <div class="mobile-menu hidden">
+            <div class="flex flex-col items-center space-y-4 py-6">
+                <a href="#about" class="text-lg hover:text-blue-400">About</a>
+                <a href="#features" class="text-lg hover:text-blue-400">Features</a>
+                <a href="#how-it-works" class="text-lg hover:text-blue-400">How It Works</a>
+                <a href="#contact" class="text-lg hover:text-blue-400">Contact</a>
+                <a href="/signup" class="text-lg hover:text-blue-400">Sign Up</a>
+                <a href="/login" class="text-lg hover:text-blue-400">Login</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hero Section -->
     <section id="hero" class="min-h-screen flex flex-col items-center justify-center text-center relative px-6 pt-20 pb-32 overflow-hidden">
         <div class="max-w-4xl mx-auto z-10">
             <img src="/static/image/KNOWITNOW.png" alt="KnowItNow" id="hero-logo" class="w-96 h-auto mx-auto mb-12 drop-shadow-2xl animate-pulse-hero">
-            <h1 class="text-7xl md:text-8xl lg:text-9xl font-black bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 bg-clip-text text-transparent mb-8 drop-shadow-2xl animate-fade-in-up">
+            <h1 class="text-6xl md:text-7xl lg:text-8xl font-black bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 bg-clip-text text-transparent mb-8 drop-shadow-2xl animate-fade-in-up">
                 Know<span class="text-transparent bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text">It</span>Now
             </h1>
             <p class="text-xl md:text-2xl lg:text-3xl text-gray-700 dark:text-gray-300 max-w-3xl mx-auto mb-12 leading-relaxed animate-fade-in-up animation-delay-200">
@@ -89,12 +80,8 @@
                 connect globally. Master your studies smarter, not harder.
             </p>
             <div class="flex flex-col sm:flex-row gap-6 justify-center items-center animate-fade-in-up animation-delay-400">
-                    <a href="/signup" class="px-12 py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold text-lg rounded-3xl shadow-2xl hover:shadow-3xl hover:scale-105 transform transition-all duration-500 drop-shadow-2xl">
-                    Sign Up Free → 
-                </a>
-                <a href="/signup" class="px-12 py-6 border-2 border-blue-500/50 hover:border-blue-400 text-blue-600 hover:text-blue-500 font-bold text-lg rounded-3xl hover:scale-105 transform transition-all duration-500 backdrop-blur-sm">
-                    Get Started
-                </a>
+                <a href="/signup" class="px-12 py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold text-lg rounded-3xl shadow-2xl hover:shadow-3xl hover:scale-105 transform transition-all duration-500 drop-shadow-2xl">Sign Up Free →</a>
+                <a href="/signup" class="px-12 py-6 border-2 border-blue-500/50 hover:border-blue-400 text-blue-600 hover:text-blue-500 font-bold text-lg rounded-3xl hover:scale-105 transform transition-all duration-500 backdrop-blur-sm">Get Started</a>
             </div>
             <div class="flex flex-wrap justify-center gap-6 mt-16 text-sm text-gray-500 dark:text-gray-400 animate-fade-in-up animation-delay-600">
                 <span>✅ Trusted by 50K+ students</span>
@@ -172,7 +159,6 @@
                     <li>• Instant AI grading</li>
                 </ul>
             </div>
-            <!-- Similar enhanced cards for other features... -->
             <div class="group relative card p-10 transform hover:-translate-y-4 transition-all duration-700 hover:shadow-2xl cursor-pointer rounded-3xl border-0 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900/50 dark:to-gray-800/50 backdrop-blur-xl" data-aos="fade-up" data-aos-delay="200">
                 <div class="w-24 h-24 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-3xl flex items-center justify-center mb-8 shadow-2xl group-hover:scale-110 transition-transform duration-500 mx-auto">
                     <span class="text-3xl">🎯</span>
@@ -240,7 +226,6 @@
                 <h4 class="text-2xl font-bold text-gray-900 dark:text-white mb-4 group-hover:text-blue-600 transition-colors">What types of files can I upload?</h4>
                 <p class="text-lg text-gray-600 dark:text-gray-400 leading-relaxed">PDF notes, textbooks, lecture slides (up to 50MB). Our AI extracts text from any format automatically.</p>
             </div>
-            <!-- Add 4-5 more detailed FAQs -->
             <div class="card hover:shadow-2xl transition-all duration-500 p-8 rounded-3xl border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm group" data-aos="fade-up" data-aos-delay="100">
                 <h4 class="text-2xl font-bold text-gray-900 dark:text-white mb-4 group-hover:text-emerald-600 transition-colors">Is my data private and secure?</h4>
                 <p class="text-lg text-gray-600 dark:text-gray-400 leading-relaxed">100% private. Files processed temporarily, never stored. End-to-end encryption. GDPR compliant.</p>
@@ -264,9 +249,7 @@
                 <input type="email" name="email" placeholder="Email Address" required class="input-field p-6 rounded-3xl border-2 border-gray-200/50 dark:border-gray-600 focus:border-blue-400 focus:ring-4 focus:ring-blue-400/20 transition-all duration-300 text-lg">
             </div>
             <textarea name="message" rows="6" placeholder="Tell us about your study needs..." required class="input-field p-6 rounded-3xl border-2 border-gray-200/50 dark:border-gray-600 focus:border-blue-400 focus:ring-4 focus:ring-blue-400/20 transition-all duration-300 text-lg resize-none"></textarea>
-            <button type="submit" class="w-full p-8 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold text-xl rounded-3xl shadow-2xl hover:shadow-3xl hover:scale-[1.02] transition-all duration-500 transform">
-                Send Message 🚀
-            </button>
+            <button type="submit" class="w-full p-8 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold text-xl rounded-3xl shadow-2xl hover:shadow-3xl hover:scale-[1.02] transition-all duration-500 transform">Send Message 🚀</button>
         </form>
     </section>
 
@@ -319,6 +302,13 @@
         // Server theme sync
         const serverTheme = '{{ theme }}';
         if (serverTheme) document.documentElement.setAttribute('data-theme', serverTheme);
+
+        const hamburger = document.querySelector('.hamburger-btn');
+        const mobileMenu = document.querySelector('.mobile-menu');
+
+        hamburger.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
     </script>
     <script src="/static/js/main.js"></script>
 </body>

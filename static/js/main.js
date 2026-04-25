@@ -221,10 +221,10 @@ async function checkNotifications() {
   try {
     const response = await fetch('/api/get-unread-notifications');
     const data = await response.json();
-    const bell = document.querySelector('#notification-bell');
-    if (bell && data.total_notifications > 0) {
-      bell.querySelector('.badge').textContent = data.total_notifications;
-      bell.querySelector('.badge').classList.remove('hidden');
+    const badge = document.querySelector('#notification-badge');
+    if (badge && data.total_notifications > 0) {
+      badge.textContent = data.total_notifications;
+      badge.classList.remove('hidden');
     }
   } catch (e) {
     console.log('Notification check failed:', e);

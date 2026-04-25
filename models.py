@@ -37,7 +37,7 @@ class User(UserMixin, db.Model):
 
     def get_profile_pic_url(self):
         if self.profile_pic != 'default.jpg':
-            return f'/static/uploads/profiles/{self.profile_pic}'
+            return f'/uploads/profiles/{self.profile_pic}'
         return '/static/image/KNOWITNOW.png'
 
     def get_average_score(self):
@@ -176,17 +176,68 @@ class ChatGroupMember(db.Model):
 
 
 class GroupMessage(db.Model):
-    """Messages in a chat group"""
+    """Messages in a chat group - supports text, images, polls, and AI responses"""
     id = db.Column(db.Integer, primary_key=True)
     group_id = db.Column(db.Integer, db.ForeignKey('chat_group.id'), nullable=False)
     sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     content = db.Column(db.Text, nullable=False)
+    message_type = db.Column(db.String(20), default='text')  # text, image, poll, ai
+    image_path = db.Column(db.String(500))  # Path to uploaded image
+    poll_id = db.Column(db.Integer, db.ForeignKey('poll.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     sender = db.relationship('User', backref='group_messages')
+    poll = db.relationship('Poll', backref='group_message', uselist=False)
     
     def __repr__(self):
         return f'<GroupMessage from {self.sender.username} in {self.group.name}>'
+
+
+class Poll(db.Model):
+    """Polls created in groups"""
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('chat_group.id'), nullable=False)
+    creator_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    question = db.Column(db.String(500), nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    group = db.relationship('ChatGroup', backref='polls')
+    creator = db.relationship('User', backref='created_polls')
+    options = db.relationship('PollOption', backref='poll', lazy=True, cascade='all, delete-orphan')
+    
+    def __repr__(self):
+        return f'<Poll {self.question[:50]}>'
+
+
+class PollOption(db.Model):
+    """Options for a poll"""
+    id = db.Column(db.Integer, primary_key=True)
+    poll_id = db.Column(db.Integer, db.ForeignKey('poll.id'), nullable=False)
+    option_text = db.Column(db.String(200), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    votes = db.relationship('PollVote', backref='option', lazy=True, cascade='all, delete-orphan')
+    
+    def get_vote_count(self):
+        return len(self.votes)
+    
+    def __repr__(self):
+        return f'<PollOption {self.option_text[:50]}>'
+
+
+class PollVote(db.Model):
+    """Votes cast on poll options"""
+    id = db.Column(db.Integer, primary_key=True)
+    poll_id = db.Column(db.Integer, db.ForeignKey('poll.id'), nullable=False)
+    option_id = db.Column(db.Integer, db.ForeignKey('poll_option.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    __table_args__ = (db.UniqueConstraint('poll_id', 'user_id', name='unique_user_poll_vote'),)
+    
+    def __repr__(self):
+        return f'<PollVote by user {self.user_id} on option {self.option_id}>'
 
 
 class BrainstormSession(db.Model):
