@@ -25,7 +25,8 @@ load_dotenv()
 app = Flask(__name__)
 
 # Database configuration: PostgreSQL on Render, SQLite locally
-if os.getenv('DATABASE_URL'):
+# Render sets RENDER=true automatically; locally we use SQLite
+if os.getenv('RENDER') and os.getenv('DATABASE_URL'):
     # Render PostgreSQL - CRITICAL: Remove query params for connection pooling
     db_url = os.getenv('DATABASE_URL')
     if db_url.startswith('postgres://'):
@@ -42,8 +43,11 @@ if os.getenv('DATABASE_URL'):
     print(f"Using PostgreSQL: {db_url.split('@')[1].split('/')[0]}")  # Don't log full URL
 else:
     # Local SQLite
-    os.makedirs('instance', exist_ok=True)
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///instance/knowitnow.db'
+    instance_path = os.path.join(os.getcwd(), 'instance')
+    os.makedirs(instance_path, exist_ok=True)
+    db_path = os.path.join(instance_path, 'knowitnow.db').replace('\\', '/')
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+    print("🏠 Using SQLite (local development)")
 
 
 # Secure secret key from environment
