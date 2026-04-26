@@ -800,12 +800,29 @@
                         <img id="my-group-image-preview" style="margin-top:8px;max-height:96px;border-radius:8px;display:none;">
                     </div>
 
+                    <!-- PDF preview -->
+                    <div id="my-group-pdf-preview-container" style="display:none;padding:8px 18px;background:var(--surface-2);border-top:1px solid var(--border);">
+                        <div style="display:flex;align-items:center;justify-content:space-between;">
+                            <div style="display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--text-2);">
+                                <i class="fas fa-file-pdf" style="color:#f97316;"></i>
+                                <span id="my-group-pdf-preview-name"></span>
+                            </div>
+                            <button onclick="clearMyGroupPDFPreview()" style="background:none;border:none;cursor:pointer;color:var(--accent);"><i class="fas fa-times"></i></button>
+                        </div>
+                    </div>
+
                     <div class="chat-input-area">
                         <button onclick="document.getElementById('my-group-image-input').click()" class="nav-icon-btn" title="Send image">
                             <i class="fas fa-image"></i>
                         </button>
+
                         <input type="file" id="my-group-image-input" accept="image/*" style="display:none;" onchange="handleMyGroupImageSelect(event)">
+                        <button onclick="document.getElementById('my-group-pdf-input').click()" class="nav-icon-btn" title="Send PDF" style="color:#f97316;">
+                            <i class="fas fa-file-pdf"></i>
+                        </button>
+                        <input type="file" id="my-group-pdf-input" accept=".pdf" style="display:none;" onchange="handleMyGroupPDFSelect(event)">
                         <input id="my-group-message-input" type="text" placeholder="Type a message…" class="input" style="flex:1;">
+
                         <button onclick="sendMyGroupMessage()" class="btn btn-primary" style="padding:9px 14px;border-radius:10px;">
                             <i class="fas fa-paper-plane"></i>
                         </button>
@@ -1029,12 +1046,29 @@
                 <img id="image-preview" style="margin-top:8px;max-height:96px;border-radius:8px;display:none;">
             </div>
 
+            <!-- PDF preview -->
+            <div id="pdf-preview-container" style="display:none;padding:10px 18px;border-top:1px solid var(--border);background:var(--surface-2);">
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <div style="display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--text-2);">
+                        <i class="fas fa-file-pdf" style="color:#f97316;"></i>
+                        <span id="pdf-preview-name"></span>
+                    </div>
+                    <button onclick="clearPDFPreview()" style="background:none;border:none;cursor:pointer;color:var(--accent);"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+
             <div class="chat-input-area">
                 <button onclick="document.getElementById('group-image-input').click()" class="nav-icon-btn" title="Image">
                     <i class="fas fa-image"></i>
                 </button>
+
                 <input type="file" id="group-image-input" accept="image/*" style="display:none;" onchange="handleGroupImageSelect(event)">
+                <button onclick="document.getElementById('group-pdf-input').click()" class="nav-icon-btn" title="Send PDF" style="color:#f97316;">
+                    <i class="fas fa-file-pdf"></i>
+                </button>
+                <input type="file" id="group-pdf-input" accept=".pdf" style="display:none;" onchange="handleGroupPDFSelect(event)">
                 <input id="group-message-input" type="text" placeholder="Type a message…" class="input" style="flex:1;">
+
                 <button onclick="sendGroupMessage()" class="btn btn-primary" style="padding:9px 14px;border-radius:10px;">
                     <i class="fas fa-paper-plane"></i>
                 </button>
@@ -1309,25 +1343,24 @@
 
         function openChat(userId) {
             currentChatUserId = userId;
+            const chatItem = document.querySelector(`.chat-item[data-user-id="${userId}"]`);
             document.querySelectorAll('.chat-item').forEach(el => {
                 el.classList.toggle('active', el.dataset.userId == userId);
             });
+            if (chatItem) {
+                const userName = chatItem.querySelector('div:nth-child(2) div:first-child')?.textContent || 'Unknown';
+                const userPic = chatItem.querySelector('img')?.src || '/static/image/KNOWITNOW.png';
+                document.getElementById('chat-user-pic').src = userPic;
+                document.getElementById('chat-user-name').textContent = userName;
+                document.getElementById('chat-user-status').textContent = '';
+            }
             loadMessages(userId);
         }
 
         async function loadMessages(userId) {
             try {
-                const [msgRes, userRes] = await Promise.all([
-                    fetch(`/api/get-messages/${userId}`),
-                    fetch(`/api/find-study-buddies?search=${userId}`)
-                ]);
+                const msgRes = await fetch(`/api/get-messages/${userId}`);
                 const msgData = await msgRes.json();
-                const userData = await userRes.json();
-                const user = userData.buddies?.[0] || {};
-
-                document.getElementById('chat-user-pic').src = user.profile_pic || '/static/image/KNOWITNOW.png';
-                document.getElementById('chat-user-name').textContent = user.name || 'Unknown';
-                document.getElementById('chat-user-status').textContent = 'Online';
 
                 const container = document.getElementById('chat-messages');
                 container.innerHTML = '';
@@ -1517,6 +1550,8 @@
         let myCurrentGroupId = null;
         let myCurrentGroupName = null;
         let mySelectedImage = null;
+        let mySelectedPDF = null;
+
 
         async function loadMyGroups() {
             const container = document.getElementById('my-groups-chat-list');
@@ -1581,11 +1616,22 @@
 
         function renderGroupMessage(container, msg) {
             const wrap = document.createElement('div');
-            wrap.style.cssText = `display:flex;justify-content:${msg.is_sent ? 'flex-end' : 'flex-start'}`;
+            wrap.style.cssText = `display:flex;justify-content:${msg.is_sent ? 'flex-end' : 'flex-start'};gap:8px;align-items:flex-end;margin-bottom:8px;`;
+            
             let contentHtml = '';
             if (msg.message_type === 'image' && msg.image_url) {
                 contentHtml = `<img src="${msg.image_url}" style="max-width:100%;border-radius:10px;cursor:pointer;" onclick="window.open('${msg.image_url}','_blank')" alt="Shared image">`;
+            } else if (msg.message_type === 'pdf' && msg.pdf_url) {
+                contentHtml = `<a href="${msg.pdf_url}" target="_blank" style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:rgba(249,115,22,0.1);border:1.5px solid rgba(249,115,22,0.3);border-radius:12px;text-decoration:none;color:var(--text-1);">
+                    <i class="fas fa-file-pdf" style="font-size:1.5rem;color:#f97316;"></i>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-weight:600;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${msg.content || 'Shared PDF'}</div>
+                        <div style="font-size:.75rem;color:var(--text-3);">Click to download/view</div>
+                    </div>
+                    <i class="fas fa-external-link-alt" style="color:var(--text-3);font-size:.8rem;"></i>
+                </a>`;
             } else if (msg.message_type === 'poll' && msg.poll) {
+
                 const poll = msg.poll;
                 const total = poll.total_votes || 0;
                 contentHtml = `
@@ -1612,12 +1658,24 @@
                 contentHtml = `<div>${msg.content}</div>`;
             }
             const isAI = msg.message_type === 'ai';
-            wrap.innerHTML = `
+            
+            // Add profile picture and message bubble
+            const profilePic = msg.sender_pic ? `<img src="${msg.sender_pic}" alt="${msg.sender_name}" style="width:32px;height:32px;border-radius:8px;object-fit:cover;flex-shrink:0;" title="${msg.sender_name}">` : '';
+            
+            const messageContent = `
                 <div class="chat-bubble ${msg.is_sent ? 'sent' : 'received'}" ${isAI ? 'style="background:linear-gradient(135deg,#087f5b,#099268);color:#fff;"' : ''}>
                     <div style="font-size:.72rem;font-weight:700;opacity:.7;margin-bottom:4px;">${msg.sender_name || 'Unknown'}</div>
                     ${contentHtml}
                     <div style="font-size:.7rem;opacity:.65;margin-top:4px;">${new Date(msg.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
                 </div>`;
+            
+            // Build the layout with profile pic
+            if (msg.is_sent) {
+                wrap.innerHTML = messageContent + profilePic;
+            } else {
+                wrap.innerHTML = profilePic + messageContent;
+            }
+            
             container.appendChild(wrap);
         }
 
@@ -1641,10 +1699,36 @@
             document.getElementById('my-group-image-input').value = '';
         }
 
+        function handleMyGroupPDFSelect(event) {
+            const file = event.target.files[0]; if (!file) return;
+            mySelectedPDF = file;
+            document.getElementById('my-group-pdf-preview-name').textContent = file.name;
+            document.getElementById('my-group-pdf-preview-container').style.display = '';
+        }
+
+        function clearMyGroupPDFPreview() {
+            mySelectedPDF = null;
+            document.getElementById('my-group-pdf-preview-container').style.display = 'none';
+            document.getElementById('my-group-pdf-input').value = '';
+        }
+
         async function sendMyGroupMessage() {
             if (!myCurrentGroupId) { alert('Please select a group first'); return; }
             const input = document.getElementById('my-group-message-input');
             const content = input.value.trim();
+
+            if (mySelectedPDF) {
+                const fd = new FormData();
+                fd.append('group_id', myCurrentGroupId);
+                fd.append('content', content || '📄 PDF Document');
+                fd.append('message_type', 'pdf');
+                fd.append('pdf', mySelectedPDF);
+                const res = await fetch('/api/send-group-message', { method: 'POST', body: fd });
+                const data = await res.json();
+                if (data.success) { input.value = ''; clearMyGroupPDFPreview(); loadMyGroupMessages(myCurrentGroupId); }
+                return;
+            }
+
             if (mySelectedImage) {
                 const fd = new FormData();
                 fd.append('group_id', myCurrentGroupId);
@@ -1664,6 +1748,7 @@
             const data = await res.json();
             if (data.success) { input.value = ''; loadMyGroupMessages(myCurrentGroupId); }
         }
+
 
         function toggleMyGroupAIHelper() {
             if (!myCurrentGroupId) { alert('Please select a group first'); return; }
@@ -2101,7 +2186,8 @@
         //  GROUP CHAT MODAL (LEGACY MODAL-BASED)
         // ═══════════════════════════════════════════════════════
 
-        let currentGroupId = null, currentGroupName = null, currentUserId = null, selectedGroupImage = null;
+        let currentGroupId = null, currentGroupName = null, currentUserId = null, selectedGroupImage = null, selectedGroupPDF = null;
+
 
         async function openGroupChat(groupId, groupName) {
             currentGroupId = groupId; currentGroupName = groupName;
@@ -2153,10 +2239,36 @@
             document.getElementById('group-image-input').value = '';
         }
 
+        function handleGroupPDFSelect(event) {
+            const file = event.target.files[0]; if (!file) return;
+            selectedGroupPDF = file;
+            document.getElementById('pdf-preview-name').textContent = file.name;
+            document.getElementById('pdf-preview-container').style.display = '';
+        }
+
+        function clearPDFPreview() {
+            selectedGroupPDF = null;
+            document.getElementById('pdf-preview-container').style.display = 'none';
+            document.getElementById('group-pdf-input').value = '';
+        }
+
         async function sendGroupMessage() {
             if (!currentGroupId) return;
             const input = document.getElementById('group-message-input');
             const content = input.value.trim();
+
+            if (selectedGroupPDF) {
+                const fd = new FormData();
+                fd.append('group_id', currentGroupId);
+                fd.append('content', content || '📄 PDF Document');
+                fd.append('message_type', 'pdf');
+                fd.append('pdf', selectedGroupPDF);
+                const res = await fetch('/api/send-group-message', { method: 'POST', body: fd });
+                const data = await res.json();
+                if (data.success) { input.value = ''; clearPDFPreview(); await loadGroupMessages(currentGroupId); }
+                return;
+            }
+
             if (selectedGroupImage) {
                 const fd = new FormData();
                 fd.append('group_id', currentGroupId); fd.append('content', content || '📷 Image');
@@ -2174,6 +2286,7 @@
             const data = await res.json();
             if (data.success) { input.value = ''; await loadGroupMessages(currentGroupId); }
         }
+
 
         function showCreatePollModal() {
             if (!currentGroupId) return;

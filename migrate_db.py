@@ -48,7 +48,9 @@ def migrate():
         # group_message table
         ("group_message", "message_type", "ALTER TABLE group_message ADD COLUMN message_type VARCHAR(20) DEFAULT 'text'"),
         ("group_message", "image_path", "ALTER TABLE group_message ADD COLUMN image_path VARCHAR(500)"),
+        ("group_message", "pdf_path", "ALTER TABLE group_message ADD COLUMN pdf_path VARCHAR(500)"),
         ("group_message", "poll_id", "ALTER TABLE group_message ADD COLUMN poll_id INTEGER"),
+
 
         # poll table
         ("poll", "is_active", "ALTER TABLE poll ADD COLUMN is_active BOOLEAN DEFAULT 1"),
@@ -87,4 +89,3 @@ def migrate():
 
 if __name__ == '__main__':
     migrate()
-

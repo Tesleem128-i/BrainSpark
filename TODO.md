@@ -1,21 +1,37 @@
-# Task: Support up to 100 Questions + Deduplication via Database Storage
+# Render Deployment TODO
 
-## Plan Steps
+## Steps
+- [x] Step 1: Update requirements.txt (add psycopg2-binary)
+- [x] Step 2: Update app.py (PostgreSQL config, env vars, production settings)
+- [x] Step 3: Create render.yaml
+- [x] Step 4: Create Procfile
+- [x] Step 5: Create .env.example
+- [x] Step 6: Create runtime.txt
 
-- [x] **Step 1**: Add `GeneratedQuestion` model to `models.py` (new table for storing questions)
-- [x] **Step 2**: Update `app.py`:
-  - Import `hashlib` and `GeneratedQuestion`
-  - In `/upload_notes` endpoint: validate max 100 questions, compute `source_hash`, query existing user questions, inject
-    them into the Gemini prompt to avoid duplicates, filter AI response against DB, store new unique questions in DB
-- [x] **Step 3**: Update `templates/dashboard.html` — expand `#question-count` dropdown to include 25,30,40,50,75,100
-- [x] **Step 4**: Update `templates/quiz.html` — replace 4 fixed question-count buttons with a number input (1–100)
-- [x] **Step 5**: Update `templates/index.html` — update marketing text from "10-50" to "up to 100"
-- [x] **Step 6**: Update `migrate_db.py` — add migration to create the `generated_question` table for existing DBs
-- [ ] **Step 7**: Run migration, restart app, test end-to-end
+## Deployment Ready!
 
-## Notes
-- All generated questions are stored per-user so the same question is never repeated across uploads.
-- Deduplication is done both via the AI prompt (`Do NOT generate these existing questions`) and a post-generation DB
-  exact-match filter on `question_text`.
+### Files Modified
+- `requirements.txt` - Added `psycopg2-binary==2.9.9`
+- `app.py` - Auto-detects PostgreSQL via DATABASE_URL, env-based SECRET_KEY, PORT binding
 
+### Files Created
+- `render.yaml` - Render blueprint configuration
+- `Procfile` - Gunicorn start command
+- `.env.example` - Environment variable documentation
+- `runtime.txt` - Python 3.11.6
 
+### Render Dashboard Environment Variables to Set
+```
+DATABASE_URL      (auto-provided by Render PostgreSQL)
+SECRET_KEY        (auto-generate or set manually)
+GOOGLE_AI_API_KEY (your Gemini API key)
+MAIL_USERNAME     (Gmail address)
+MAIL_PASSWORD     (Gmail app password)
+```
+
+### Next Steps
+1. Push code to GitHub
+2. Connect Render to your GitHub repo
+3. Add your PostgreSQL database (already have the URL)
+4. Set environment variables in Render dashboard
+5. Deploy!

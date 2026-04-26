@@ -177,15 +177,17 @@ class ChatGroupMember(db.Model):
 
 
 class GroupMessage(db.Model):
-    """Messages in a chat group - supports text, images, polls, and AI responses"""
+    """Messages in a chat group - supports text, images, PDFs, polls, and AI responses"""
     id = db.Column(db.Integer, primary_key=True)
     group_id = db.Column(db.Integer, db.ForeignKey('chat_group.id'), nullable=False)
     sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     content = db.Column(db.Text, nullable=False)
-    message_type = db.Column(db.String(20), default='text')  # text, image, poll, ai
+    message_type = db.Column(db.String(20), default='text')  # text, image, pdf, poll, ai
     image_path = db.Column(db.String(500))  # Path to uploaded image
+    pdf_path = db.Column(db.String(500))  # Path to uploaded PDF
     poll_id = db.Column(db.Integer, db.ForeignKey('poll.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
     
     sender = db.relationship('User', backref='group_messages')
     poll = db.relationship('Poll', backref='group_message', uselist=False)
@@ -310,4 +312,3 @@ class GeneratedQuestion(db.Model):
 
     def __repr__(self):
         return f'<GeneratedQuestion {self.question_text[:50]}...>'
-

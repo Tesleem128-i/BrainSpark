@@ -646,6 +646,7 @@
             const content = `
                 ${conversationHTML}
                 <div style="margin-top: 15px;">
+                    <input type="file" id="ai-pdf-input" accept=".pdf" style="display:none" onchange="handleAIPDFSelect()">
                     <textarea id="ai-question-input" placeholder="Ask your follow-up question..." style="
                         width: 100%;
                         padding: 12px;
@@ -659,8 +660,22 @@
                         min-height: 60px;
                         box-sizing: border-box;
                     " onkeydown="if(event.key==='Enter' && event.ctrlKey) submitAIQuestion()"></textarea>
+                    <div id="ai-pdf-preview" style="margin-top: 8px;"></div>
                     <p style="font-size: 0.85em; color: var(--text-secondary); margin-top: 8px;">💡 Tip: Press Ctrl+Enter to send</p>
                     <div style="display: flex; gap: 10px; margin-top: 15px;">
+                        <button onclick="document.getElementById('ai-pdf-input').click()" style="
+                            padding: 10px 16px;
+                            background: linear-gradient(135deg, #f97316, #ea580c);
+                            color: white;
+                            border: none;
+                            border-radius: 8px;
+                            font-weight: bold;
+                            cursor: pointer;
+                            transition: all 0.3s;
+                        " onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'" title="Upload a PDF to ask questions about it">
+                            📄 PDF
+                        </button>
+
                         <button onclick="submitAIQuestion()" style="
                             flex: 1;
                             padding: 10px 20px;
@@ -698,7 +713,10 @@
         function submitAIQuestion() {
             const input = document.getElementById('ai-question-input');
             const question = input.value.trim();
-            if (!question) return;
+            const pdfInput = document.getElementById('ai-pdf-input');
+            const hasPDF = pdfInput.files && pdfInput.files[0];
+
+            if (!question && !hasPDF) return;
 
             // Clear input
             input.value = '';
@@ -706,18 +724,32 @@
             // Show loading
             showModal('🤖 AI Tutor', '<p style="color: var(--text-primary); text-align: center; padding: 20px;">⏳ Generating explanation...</p>');
 
-            fetch('/api/ask-ai', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ question })
-            })
+            let requestOptions;
+            if (hasPDF) {
+                const formData = new FormData();
+                formData.append('question', question);
+                formData.append('pdf', pdfInput.files[0]);
+                requestOptions = {
+                    method: 'POST',
+                    body: formData
+                };
+            } else {
+                requestOptions = {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question })
+                };
+            }
+
+            fetch('/api/ask-ai', requestOptions)
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
                     aiConversationHistory.push({
-                        question: question,
+                        question: hasPDF ? '📄 ' + question : question,
                         answer: data.explanation
                     });
+                    clearAIPDFPreview();
                     showAIModal();
                 } else {
                     alert('Error: ' + data.error);
@@ -729,6 +761,29 @@
                 showAIModal();
             });
         }
+
+        function handleAIPDFSelect() {
+            const pdfInput = document.getElementById('ai-pdf-input');
+            const preview = document.getElementById('ai-pdf-preview');
+            if (pdfInput.files && pdfInput.files[0]) {
+                const file = pdfInput.files[0];
+                preview.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: rgba(249, 115, 22, 0.1); border: 1px solid rgba(249, 115, 22, 0.3); border-radius: 8px;">
+                        <span style="font-size: 1.2em;">📄</span>
+                        <span style="font-weight: 500; color: var(--text-primary); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${file.name}</span>
+                        <button onclick="clearAIPDFPreview()" style="background: none; border: none; cursor: pointer; font-size: 1.1em; padding: 0 4px;" title="Remove PDF">✕</button>
+                    </div>
+                `;
+            }
+        }
+
+        function clearAIPDFPreview() {
+            const pdfInput = document.getElementById('ai-pdf-input');
+            const preview = document.getElementById('ai-pdf-preview');
+            if (pdfInput) pdfInput.value = '';
+            if (preview) preview.innerHTML = '';
+        }
+
 
         function resetAIConversation() {
             aiConversationHistory = [];

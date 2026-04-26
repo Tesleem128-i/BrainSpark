@@ -23,12 +23,37 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = 'knowitnow_super_secret_key_change_in_production'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///knowitnow.db'
+
+# Database configuration: PostgreSQL on Render, SQLite locally
+if os.getenv('DATABASE_URL'):
+    # Render PostgreSQL - CRITICAL: Remove query params for connection pooling
+    db_url = os.getenv('DATABASE_URL')
+    if db_url.startswith('postgres://'):
+        db_url = db_url.replace('postgres://', 'postgresql://', 1)
+    
+    # Remove ?sslmode=require if present (Render handles SSL automatically)
+    if '?' in db_url:
+        db_url = db_url.split('?')[0]
+    
+    # IMPORTANT: For Render, add SSL settings
+    db_url += '?sslmode=require'
+    
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+    print(f"Using PostgreSQL: {db_url.split('@')[1].split('/')[0]}")  # Don't log full URL
+else:
+    # Local SQLite
+    os.makedirs('instance', exist_ok=True)
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///instance/knowitnow.db'
+
+
+# Secure secret key from environment
+app.secret_key = os.getenv('SECRET_KEY', 'knowitnow_super_secret_key_change_in_production')
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'uploads'  # For PDF uploads
 app.config['PROFILE_UPLOAD_FOLDER'] = 'uploads/profiles'  # For profile pictures
-app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024  # 2MB
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB
+
 
 # Email config BEFORE Mail initialization
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
@@ -57,6 +82,33 @@ os.makedirs('uploads', exist_ok=True)
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'pdf', 'png', 'jpg', 'jpeg', 'gif'}
+
+
+def extract_pdf_text(file_storage):
+    """Extract text from a PDF file (FileStorage object). Returns text or None."""
+    try:
+        pdf_bytes = file_storage.read()
+        pdf_stream = io.BytesIO(pdf_bytes)
+        pdf_reader = PyPDF2.PdfReader(pdf_stream)
+        
+        if not pdf_reader.pages:
+            return None
+        
+        text = ''
+        for page in pdf_reader.pages:
+            try:
+                extracted = page.extract_text()
+                if extracted:
+                    text += extracted + '\n'
+            except Exception:
+                continue
+        
+        file_storage.seek(0)  # Reset for potential re-read
+        return text.strip() if text.strip() else None
+    except Exception as e:
+        logger.error(f'Error extracting PDF text: {str(e)}', exc_info=True)
+        return None
+
 
 @app.route('/')
 def index():
@@ -972,13 +1024,18 @@ def get_discussions():
 
 @app.route('/api/ask-ai', methods=['POST'])
 def ask_ai():
-    """Ask AI for explanations on topics - supports multi-turn conversations"""
+    """Ask AI for explanations on topics - supports multi-turn conversations and PDF uploads"""
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     
-    data = request.json
-    question = data.get('question', '')
-    reset_conversation = data.get('reset', False)
+    # Support both JSON and multipart form data
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        question = request.form.get('question', '')
+        reset_conversation = request.form.get('reset', False)
+    else:
+        data = request.json or {}
+        question = data.get('question', '')
+        reset_conversation = data.get('reset', False)
     
     if not question:
         return jsonify({'error': 'Please provide a question'}), 400
@@ -999,8 +1056,29 @@ def ask_ai():
                 context += f"\nQ{i}: {exchange['question']}\nA{i}: {exchange['answer']}\n"
             context += "\n---\n\n"
         
-        # Create prompt with conversation context
-        prompt = f"""{context}Answer this question concisely and accurately:
+        # Handle PDF upload if provided
+        pdf_text = None
+        if 'pdf' in request.files:
+            pdf_file = request.files['pdf']
+            if pdf_file and pdf_file.filename and allowed_file(pdf_file.filename):
+                pdf_text = extract_pdf_text(pdf_file)
+                logger.info(f'PDF uploaded for AI chat by user {session["user_id"]}, extracted {len(pdf_text) if pdf_text else 0} chars')
+        
+        # Build prompt with PDF content if available
+        if pdf_text:
+            prompt = f"""{context}The user has uploaded a PDF document. Here is the extracted text from the PDF:
+
+--- PDF CONTENT START ---
+{pdf_text[:4000]}
+--- PDF CONTENT END ---
+
+Based on the PDF content above, answer this question concisely and accurately:
+
+{question}
+
+If the question cannot be answered from the PDF content, say so clearly. Keep the response focused on what's asked."""
+        else:
+            prompt = f"""{context}Answer this question concisely and accurately:
 
 {question}
 
@@ -1020,14 +1098,17 @@ Keep the response brief and focused on what's asked."""
         return jsonify({
             'success': True,
             'explanation': explanation,
-            'conversation_count': len(conversation_history)
+            'conversation_count': len(conversation_history),
+            'pdf_processed': pdf_text is not None
         })
     except Exception as e:
+        logger.error(f'Error in ask-ai: {str(e)}', exc_info=True)
         return jsonify({'error': f'Error generating explanation: {str(e)}'}), 500
+
 
 @app.route('/api/connect-user', methods=['POST'])
 def connect_user():
-    """Add a user as a connection/study buddy"""
+    """Add a user as a connection/study buddy - bidirectional"""
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     
@@ -1039,18 +1120,21 @@ def connect_user():
     
     user_id = session['user_id']
     
-    # Check if already connected
-    existing = Connection.query.filter_by(
-        user_id=user_id,
-        connected_user_id=connected_user_id
+    # Check if already connected (in either direction)
+    existing = Connection.query.filter(
+        ((Connection.user_id == user_id) & (Connection.connected_user_id == connected_user_id)) |
+        ((Connection.user_id == connected_user_id) & (Connection.connected_user_id == user_id))
     ).first()
     
     if existing:
         return jsonify({'error': 'Already connected with this user'}), 400
     
     try:
-        connection = Connection(user_id=user_id, connected_user_id=connected_user_id)
-        db.session.add(connection)
+        # Create bidirectional connections
+        connection1 = Connection(user_id=user_id, connected_user_id=connected_user_id)
+        connection2 = Connection(user_id=connected_user_id, connected_user_id=user_id)
+        db.session.add(connection1)
+        db.session.add(connection2)
         db.session.commit()
         return jsonify({'success': True, 'message': 'Connected successfully!'})
     except Exception as e:
@@ -1363,7 +1447,7 @@ def get_group_members(group_id):
 
 @app.route('/api/send-group-message', methods=['POST'])
 def send_group_message():
-    """Send message to group - supports text, image, poll, and AI message types"""
+    """Send message to group - supports text, image, pdf, poll, and AI message types"""
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     
@@ -1396,6 +1480,7 @@ def send_group_message():
     
     try:
         image_path = None
+        pdf_path = None
         
         # Handle image upload
         if message_type == 'image' and 'image' in request.files:
@@ -1409,12 +1494,25 @@ def send_group_message():
                 file.save(filepath)
                 logger.info(f'Group chat image uploaded: {image_path}')
         
+        # Handle PDF upload
+        if message_type == 'pdf' and 'pdf' in request.files:
+            file = request.files['pdf']
+            if file and file.filename and allowed_file(file.filename):
+                os.makedirs('uploads/group_chat', exist_ok=True)
+                timestamp = datetime.utcnow().timestamp()
+                ext = file.filename.rsplit('.', 1)[1].lower()
+                pdf_path = f"group_{group_id}_{user_id}_{timestamp}.{ext}"
+                filepath = os.path.join('uploads/group_chat', pdf_path)
+                file.save(filepath)
+                logger.info(f'Group chat PDF uploaded: {pdf_path}')
+        
         msg = GroupMessage(
             group_id=group_id, 
             sender_id=user_id, 
             content=content,
             message_type=message_type,
-            image_path=image_path
+            image_path=image_path,
+            pdf_path=pdf_path
         )
         db.session.add(msg)
         db.session.commit()
@@ -1428,6 +1526,7 @@ def send_group_message():
                 'content': content,
                 'message_type': message_type,
                 'image_url': f'/uploads/group_chat/{image_path}' if image_path else None,
+                'pdf_url': f'/uploads/group_chat/{pdf_path}' if pdf_path else None,
                 'created_at': msg.created_at.isoformat()
             }
         })
@@ -1435,6 +1534,7 @@ def send_group_message():
         db.session.rollback()
         logger.error(f'Error sending group message: {str(e)}', exc_info=True)
         return jsonify({'error': str(e)}), 500
+
 
 @app.route('/api/get-group-messages/<int:group_id>')
 def get_group_messages(group_id):
@@ -1461,6 +1561,7 @@ def get_group_messages(group_id):
             'content': msg.content,
             'message_type': msg.message_type,
             'image_url': f'/uploads/group_chat/{msg.image_path}' if msg.image_path else None,
+            'pdf_url': f'/uploads/group_chat/{msg.pdf_path}' if msg.pdf_path else None,
             'created_at': msg.created_at.isoformat(),
             'is_sent': msg.sender_id == user_id
         }
@@ -1468,6 +1569,7 @@ def get_group_messages(group_id):
         # Include poll data if this is a poll message
         if msg.message_type == 'poll' and msg.poll_id:
             poll = Poll.query.get(msg.poll_id)
+
             if poll:
                 options_data = []
                 for opt in poll.options:
@@ -2408,5 +2510,4 @@ def uploaded_file(filename):
     return send_from_directory('uploads', filename)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
-
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=app.debug)
