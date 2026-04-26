@@ -1,6 +1,4 @@
-﻿# Create .gitignore
-@"
-.env
+﻿.env
 .env.*
 uploads/
 instance/
@@ -8,8 +6,4 @@ __pycache__/
 *.pyc
 .DS_Store
 venv/
-"@ | Out-File -FilePath .gitignore -Encoding utf8
-
-git add .gitignore
-git reset .env
-git status
+.venv/
