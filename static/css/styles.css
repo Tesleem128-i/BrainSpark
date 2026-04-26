@@ -1055,3 +1055,134 @@ section {
   }
 }
 
+/* ============================================
+   MOBILE HEADER ICONS
+   ============================================ */
+
+.mobile-header-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 9999px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mobile-header-icon:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  transform: scale(1.1);
+}
+
+.mobile-header-icon:active {
+  transform: scale(0.95);
+}
+
+[data-theme="dark"] .mobile-header-icon:hover,
+.dark-mode .mobile-header-icon:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Mobile Menu Styles */
+.mobile-menu a {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  margin: 0 0.5rem;
+}
+
+.mobile-menu a:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  transform: translateX(4px);
+}
+
+[data-theme="dark"] .mobile-menu a:hover,
+.dark-mode .mobile-menu a:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.mobile-menu i {
+  width: 1.5rem;
+  text-align: center;
+  margin-right: 0.75rem;
+}
+
+/* Hamburger button specific */
+.hamburger-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.hamburger-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+}
+
+/* Mobile menu animation */
+.mobile-menu {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: top;
+}
+
+.mobile-menu.hidden {
+  opacity: 0;
+  transform: scaleY(0);
+  pointer-events: none;
+}
+
+.mobile-menu:not(.hidden) {
+  opacity: 1;
+  transform: scaleY(1);
+  pointer-events: auto;
+}
+/* Essential fallback styles */
+[data-theme="dark"] {
+    color-scheme: dark;
+}
+
+[data-theme="dark"] .dark\:bg-gray-900 {
+    background-color: #111827 !important;
+}
+
+[data-theme="dark"] .dark\:text-gray-300 {
+    color: #d1d5db !important;
+}
+
+/* Fix mobile menu backdrop */
+.mobile-menu {
+    backdrop-filter: blur(20px);
+}
+
+/* Ensure content visibility */
+section {
+    position: relative;
+    z-index: 10;
+}
+
+/* ============================================
+   QUIZ MOBILE FIXES
+   ============================================ */
+
+/* Touch manipulation fallback for older browsers */
+.touch-manipulation {
+    touch-action: manipulation;
+    -webkit-touch-callout: none;
+}
+
+/* Quiz settings mobile optimization */
+@media (max-width: 640px) {
+    #settings-screen .card {
+        padding: 1.5rem !important;
+    }
+    
+    .time-limit-btn {
+        min-height: 44px;
+    }
+    
+    #quiz-container button {
+        min-height: 48px;
+    }
+}

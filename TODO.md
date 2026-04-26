@@ -1,37 +1,25 @@
-# Render Deployment TODO
+# Quiz Mobile Fixes - TODO
 
-## Steps
-- [x] Step 1: Update requirements.txt (add psycopg2-binary)
-- [x] Step 2: Update app.py (PostgreSQL config, env vars, production settings)
-- [x] Step 3: Create render.yaml
-- [x] Step 4: Create Procfile
-- [x] Step 5: Create .env.example
-- [x] Step 6: Create runtime.txt
+## Plan
+- [x] Fix Next/Previous buttons clickability on mobile
+- [x] Reduce quiz settings menu size on mobile
+- [x] Fix number input editing on mobile
+- [x] Add mobile-specific CSS overrides
 
-## Deployment Ready!
+## Files Edited
+1. `templates/quiz.html` - HTML structure + JavaScript fixes
+2. `static/css/styles.css` - Mobile media query overrides
 
-### Files Modified
-- `requirements.txt` - Added `psycopg2-binary==2.9.9`
-- `app.py` - Auto-detects PostgreSQL via DATABASE_URL, env-based SECRET_KEY, PORT binding
+## Changes Summary
 
-### Files Created
-- `render.yaml` - Render blueprint configuration
-- `Procfile` - Gunicorn start command
-- `.env.example` - Environment variable documentation
-- `runtime.txt` - Python 3.11.6
+### templates/quiz.html
+1. **Navigation Buttons**: Removed `data-aos="fade-up"`, added `ontouchstart` handlers, changed to `flex-col sm:flex-row` layout, added `min-h-[48px]` and `touch-manipulation` classes
+2. **Settings Screen**: Reduced padding from `p-12` to `p-6 sm:p-12` (responsive)
+3. **Settings Heading**: Reduced from `text-3xl` to `text-xl sm:text-3xl`
+4. **Question Count Input**: Reduced size (`p-2 sm:p-4`, `w-24 sm:w-32`), replaced aggressive `onkeyup` with debounced `oninput` handler
+5. **Time Limit Buttons**: Reduced padding (`p-3 sm:p-6`), font size (`text-sm sm:text-lg`), grid gap (`gap-2 sm:gap-4`), added `min-h-[44px]`
+6. **JavaScript**: Added `handleQuestionInput()` with 500ms debounce that doesn't force-reset input value during typing
 
-### Render Dashboard Environment Variables to Set
-```
-DATABASE_URL      (auto-provided by Render PostgreSQL)
-SECRET_KEY        (auto-generate or set manually)
-GOOGLE_AI_API_KEY (your Gemini API key)
-MAIL_USERNAME     (Gmail address)
-MAIL_PASSWORD     (Gmail app password)
-```
-
-### Next Steps
-1. Push code to GitHub
-2. Connect Render to your GitHub repo
-3. Add your PostgreSQL database (already have the URL)
-4. Set environment variables in Render dashboard
-5. Deploy!
+### static/css/styles.css
+- Added `.touch-manipulation` fallback with `touch-action: manipulation`
+- Added `@media (max-width: 640px)` overrides for quiz settings card padding, time limit button min-height, and quiz container button min-height

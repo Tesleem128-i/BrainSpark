@@ -21,6 +21,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="relative overflow-x-hidden">
     <canvas id="particles-js" class="fixed inset-0 z-0 pointer-events-none"></canvas>
@@ -36,18 +37,28 @@
                     <a href="#how-it-works" class="text-lg hover:text-blue-400 transition-all duration-300 relative group">How It Works</a>
                     <a href="#contact" class="text-lg hover:text-blue-400 transition-all duration-300 relative group">Contact</a>
                 </div>
-                <div class="flex items-center space-x-4">
-                    <a href="/signup" class="text-lg hover:text-blue-400 transition-all duration-300 relative group">Sign Up</a>
-                    <a href="/login" class="text-lg hover:text-blue-400 transition-all duration-300 relative group">Login</a>
-                    <button id="mode-toggle" class="px-4 py-2 bg-white/20 dark:bg-gray-800/50 backdrop-blur-sm rounded-full border border-white/30 dark:border-gray-600 text-sm font-medium hover:scale-105 hover:shadow-2xl transition-all duration-300 flex items-center space-x-2">
+                <div class="flex items-center space-x-2">
+                    <!-- Desktop: Text links -->
+                    <a href="/signup" class="hidden md:block text-lg hover:text-blue-400 transition-all duration-300 relative group">Sign Up</a>
+                    <a href="/login" class="hidden md:block text-lg hover:text-blue-400 transition-all duration-300 relative group">Login</a>
+                    
+                    <!-- Mobile: Icon buttons -->
+                    <a href="/signup" class="md:hidden mobile-header-icon p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 hover:scale-110" title="Sign Up">
+                        <i class="fas fa-user-plus text-xl text-gray-700 dark:text-gray-300 hover:text-blue-500"></i>
+                    </a>
+                    <a href="/login" class="md:hidden mobile-header-icon p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 hover:scale-110" title="Login">
+                        <i class="fas fa-sign-in-alt text-xl text-gray-700 dark:text-gray-300 hover:text-blue-500"></i>
+                    </a>
+                    
+                    <!-- Dark Mode Toggle -->
+                    <button id="mode-toggle" class="mobile-header-icon p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 hover:scale-110" title="Toggle Theme">
                         <span class="sun-icon">☀️</span>
-                        <span class="moon-icon">🌙</span>
-                        <span class="mode-text">Dark</span>
+                        <span class="moon-icon hidden">🌙</span>
                     </button>
-                    <button class="md:hidden hamburger-btn p-2">
-                        <span></span>
-                        <span></span>
-                        <span></span>
+                    
+                    <!-- Hamburger Menu -->
+                    <button class="md:hidden hamburger-btn mobile-header-icon p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 hover:scale-110" title="Menu">
+                        <i class="fas fa-bars text-xl text-gray-700 dark:text-gray-300"></i>
                     </button>
                 </div>
             </div>
@@ -56,14 +67,33 @@
 
     <!-- Mobile Navigation -->
     <div class="md:hidden">
-        <div class="mobile-menu hidden">
-            <div class="flex flex-col items-center space-y-4 py-6">
-                <a href="#about" class="text-lg hover:text-blue-400">About</a>
-                <a href="#features" class="text-lg hover:text-blue-400">Features</a>
-                <a href="#how-it-works" class="text-lg hover:text-blue-400">How It Works</a>
-                <a href="#contact" class="text-lg hover:text-blue-400">Contact</a>
-                <a href="/signup" class="text-lg hover:text-blue-400">Sign Up</a>
-                <a href="/login" class="text-lg hover:text-blue-400">Login</a>
+        <div class="mobile-menu hidden fixed top-16 left-0 w-full bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-b border-gray-200 dark:border-gray-700 z-40 shadow-lg">
+            <div class="flex flex-col space-y-1 py-4 px-4">
+                <a href="#about" class="flex items-center space-x-3 py-3 px-4 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all duration-300">
+                    <i class="fas fa-info-circle text-blue-500 text-lg w-6 text-center"></i>
+                    <span class="font-medium text-gray-700 dark:text-gray-300">About</span>
+                </a>
+                <a href="#features" class="flex items-center space-x-3 py-3 px-4 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all duration-300">
+                    <i class="fas fa-star text-purple-500 text-lg w-6 text-center"></i>
+                    <span class="font-medium text-gray-700 dark:text-gray-300">Features</span>
+                </a>
+                <a href="#how-it-works" class="flex items-center space-x-3 py-3 px-4 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all duration-300">
+                    <i class="fas fa-cogs text-emerald-500 text-lg w-6 text-center"></i>
+                    <span class="font-medium text-gray-700 dark:text-gray-300">How It Works</span>
+                </a>
+                <a href="#contact" class="flex items-center space-x-3 py-3 px-4 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all duration-300">
+                    <i class="fas fa-envelope text-pink-500 text-lg w-6 text-center"></i>
+                    <span class="font-medium text-gray-700 dark:text-gray-300">Contact</span>
+                </a>
+                <div class="border-t border-gray-200 dark:border-gray-700 my-2"></div>
+                <a href="/signup" class="flex items-center space-x-3 py-3 px-4 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all duration-300">
+                    <i class="fas fa-user-plus text-blue-500 text-lg w-6 text-center"></i>
+                    <span class="font-medium text-gray-700 dark:text-gray-300">Sign Up</span>
+                </a>
+                <a href="/login" class="flex items-center space-x-3 py-3 px-4 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all duration-300">
+                    <i class="fas fa-sign-in-alt text-green-500 text-lg w-6 text-center"></i>
+                    <span class="font-medium text-gray-700 dark:text-gray-300">Login</span>
+                </a>
             </div>
         </div>
     </div>

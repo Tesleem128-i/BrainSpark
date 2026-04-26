@@ -127,39 +127,42 @@ Devv AI<!DOCTYPE html>
 
         <!-- Quiz Settings Screen (Hidden initially) -->
         <div id="settings-screen" style="display: none;">
-            <div class="card rounded-2xl p-12 shadow-lg" data-aos="fade-up">
-                <h2 style="color: var(--text-primary);" class="text-3xl font-bold mb-8 text-center">⚙️ Quiz Settings</h2>
+            <div class="card rounded-2xl p-6 sm:p-12 shadow-lg">
+                <h2 style="color: var(--text-primary);" class="text-xl sm:text-3xl font-bold mb-6 sm:mb-8 text-center">⚙️ Quiz Settings</h2>
                 
                 <!-- Number of Questions Selection -->
-                <div class="mb-12">
-                    <p style="color: var(--text-primary);" class="text-xl font-semibold mb-4">📝 How many questions?</p>
-                    <div class="flex items-center gap-4">
+
+                <div class="mb-8 sm:mb-12">
+                    <p style="color: var(--text-primary);" class="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">📝 How many questions?</p>
+                    <div class="flex items-center gap-3 sm:gap-4">
                         <input type="number" id="question-count-input" min="1" max="100" value="10" 
-                            class="card rounded-lg p-4 text-center font-bold text-lg w-32" 
+                            class="card rounded-lg p-2 sm:p-4 text-center font-bold text-base sm:text-lg w-24 sm:w-32" 
                             style="color: var(--primary); border: 2px solid var(--primary);"
-                            onchange="selectQuestionCount(this.value)" onkeyup="selectQuestionCount(this.value)">
-                        <span style="color: var(--text-secondary);" class="text-lg">(max 100)</span>
+                            onchange="selectQuestionCount(this.value)" oninput="handleQuestionInput(event)">
+                        <span style="color: var(--text-secondary);" class="text-base sm:text-lg">(max 100)</span>
                     </div>
                 </div>
 
+
                 <!-- Time Selection -->
-                <div class="mb-12">
-                    <p style="color: var(--text-primary);" class="text-xl font-semibold mb-4">⏱️ Total time limit?</p>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <button onclick="selectTimeLimit(300)" class="time-limit-btn card rounded-lg p-6 text-center font-bold text-lg hover:scale-105 transition-transform" data-time="300">
+                <div class="mb-8 sm:mb-12">
+                    <p style="color: var(--text-primary);" class="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">⏱️ Total time limit?</p>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
+                        <button onclick="selectTimeLimit(300)" class="time-limit-btn card rounded-lg p-3 sm:p-6 text-center font-bold text-sm sm:text-lg hover:scale-105 transition-transform min-h-[44px] touch-manipulation" data-time="300">
                             <span style="color: var(--primary);">5 min</span>
                         </button>
-                        <button onclick="selectTimeLimit(600)" class="time-limit-btn card rounded-lg p-6 text-center font-bold text-lg hover:scale-105 transition-transform" data-time="600">
+                        <button onclick="selectTimeLimit(600)" class="time-limit-btn card rounded-lg p-3 sm:p-6 text-center font-bold text-sm sm:text-lg hover:scale-105 transition-transform min-h-[44px] touch-manipulation" data-time="600">
                             <span style="color: var(--primary);">10 min</span>
                         </button>
-                        <button onclick="selectTimeLimit(900)" class="time-limit-btn card rounded-lg p-6 text-center font-bold text-lg hover:scale-105 transition-transform" data-time="900">
+                        <button onclick="selectTimeLimit(900)" class="time-limit-btn card rounded-lg p-3 sm:p-6 text-center font-bold text-sm sm:text-lg hover:scale-105 transition-transform min-h-[44px] touch-manipulation" data-time="900">
                             <span style="color: var(--primary);">15 min</span>
                         </button>
-                        <button onclick="selectTimeLimit(1200)" class="time-limit-btn card rounded-lg p-6 text-center font-bold text-lg hover:scale-105 transition-transform" data-time="1200">
+                        <button onclick="selectTimeLimit(1200)" class="time-limit-btn card rounded-lg p-3 sm:p-6 text-center font-bold text-sm sm:text-lg hover:scale-105 transition-transform min-h-[44px] touch-manipulation" data-time="1200">
                             <span style="color: var(--primary);">20 min</span>
                         </button>
                     </div>
                 </div>
+
 
                 <div class="flex gap-4 justify-center">
                     <a href="/dashboard" class="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-semibold transition-all">
@@ -195,17 +198,25 @@ Devv AI<!DOCTYPE html>
             </div>
 
             <!-- Navigation Buttons -->
-            <div class="flex gap-4 justify-between" data-aos="fade-up">
-                <button id="prev-btn" onclick="previousQuestion()" class="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+            <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center sm:justify-between mt-6" style="pointer-events: auto; z-index: 100;">
+                <button id="prev-btn" 
+                        onclick="previousQuestion(); event.preventDefault()" 
+                        ontouchstart="previousQuestion(); event.preventDefault()"
+                        class="flex-1 sm:flex-none px-4 sm:px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px] touch-manipulation">
                     ← Previous
                 </button>
-                <button id="submit-btn" onclick="submitAnswers()" style="display: none;" class="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all">
+                <button id="submit-btn" onclick="submitAnswers()" style="display: none;" 
+                        class="flex-1 sm:flex-none px-4 sm:px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all min-h-[48px] touch-manipulation">
                     Submit Quiz
                 </button>
-                <button id="next-btn" onclick="nextQuestion()" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                <button id="next-btn" 
+                        onclick="nextQuestion(); event.preventDefault()" 
+                        ontouchstart="nextQuestion(); event.preventDefault()"
+                        class="flex-1 sm:flex-none px-4 sm:px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px] touch-manipulation">
                     Next →
                 </button>
             </div>
+
         </div>
 
         <!-- Results Screen (Hidden) -->
@@ -327,6 +338,21 @@ Devv AI<!DOCTYPE html>
             document.getElementById('settings-screen').style.display = 'block';
         }
 
+        let questionInputTimeout;
+        function handleQuestionInput(event) {
+            clearTimeout(questionInputTimeout);
+            questionInputTimeout = setTimeout(() => {
+                let parsed = parseInt(event.target.value);
+                if (!isNaN(parsed)) {
+                    if (parsed < 1) parsed = 1;
+                    if (parsed > 100) parsed = 100;
+                    selectedQuestionCount = parsed;
+                    enableStartButton();
+                }
+                // Don't force-reset input value during typing
+            }, 500);
+        }
+
         function selectQuestionCount(count) {
             let parsed = parseInt(count);
             if (isNaN(parsed) || parsed < 1) parsed = 1;
@@ -336,6 +362,7 @@ Devv AI<!DOCTYPE html>
             if (input && input.value != parsed) input.value = parsed;
             enableStartButton();
         }
+
 
         function selectTimeLimit(seconds) {
             selectedTimeLimit = seconds;
