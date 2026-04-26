@@ -359,197 +359,141 @@ def parse_generated_questions(questions_str):
         return {"questions": []}
 
 
+
 @app.route('/upload_notes', methods=['POST'])
 def upload_notes():
-    """PDF upload -> Gemini questions with deduplication via DB storage"""
+    """Simplified PDF -> Questions with better error handling"""
     if 'user_id' not in session:
-        return jsonify({'error': 'Please login first'}), 401
+        return jsonify({'success': False, 'error': 'Please login first'}), 401
     
     if 'file' not in request.files:
-        return jsonify({'error': 'No file'}), 400
+        return jsonify({'success': False, 'error': 'No file uploaded'}), 400
     
     file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'No file selected'}), 400
+    if not file or file.filename == '':
+        return jsonify({'success': False, 'error': 'No file selected'}), 400
     
-    if file and allowed_file(file.filename):
+    if not allowed_file(file.filename):
+        return jsonify({'success': False, 'error': 'Only PDF files allowed'}), 400
+    
+    try:
+        # Save file temporarily
         filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], f"temp_{int(datetime.now().timestamp())}_{filename}")
         file.save(filepath)
         
+        # Extract text with multiple methods (PyPDF2 + fallback)
+        text = extract_pdf_text_simple(filepath)
+        
+        # Cleanup temp file
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        
+        if not text or len(text.strip()) < 50:
+            return jsonify({
+                'success': False, 
+                'error': 'No readable text found in PDF. Try a text-based PDF (not scanned images).'
+            }), 400
+        
+        # Get parameters
+        question_type = request.form.get('type', 'objective')
+        hardness = request.form.get('hardness', 'medium')
+        question_count = min(int(request.form.get('question_count', 10)), 100)  # Max 100
+
+        
+        # Create SHORT, focused prompt
+        prompt = f"""Generate EXACTLY {question_count} {question_type} questions from this text:
+
+{text[:2000]}""" + """
+  
+**OUTPUT ONLY VALID JSON** (no explanations):
+{"questions": [{"question": "...", "options": ["A", "B", "C", "D"], "answer": "A", "explanation": "..."}, ...]}
+
+Rules:
+- Exactly 4 options (A,B,C,D format)
+- "answer" = exactly one option letter (A,B,C,or D)
+- {hardness} difficulty
+- No duplicate questions"""
+
+        logger.info(f"Generating {question_count} {question_type} questions (hardness: {hardness})")
+        
+        # Generate with Gemini
+        response = model.generate_content(prompt)
+        questions_text = response.text.strip()
+        
+        logger.info(f"Gemini response length: {len(questions_text)} chars")
+        logger.info(f"Gemini response preview: {questions_text[:500]}...")
+        
+        # Parse JSON response
         try:
-            # Extract text with error handling
-            text = ''
-            with open(filepath, 'rb') as pdf_file:
-                try:
-                    pdf_reader = PyPDF2.PdfReader(pdf_file)
-                    
-                    # Check if PDF is valid
-                    if not pdf_reader.pages:
-                        return jsonify({'error': 'PDF appears to be empty or invalid. Please upload a valid PDF file.'}), 400
-                    
-                    for page in pdf_reader.pages:
-                        try:
-                            extracted = page.extract_text()
-                            if extracted:
-                                text += extracted
-                        except Exception as page_error:
-                            logger.warning(f'Error extracting text from page: {str(page_error)}')
-                            continue
-                            
-                except PyPDF2.errors.PdfReadError as pdf_error:
-                    try:
-                        if os.path.exists(filepath):
-                            os.remove(filepath)
-                    except:
-                        pass
-                    return jsonify({'error': f'The PDF file appears to be corrupted or invalid. Please upload a valid PDF file. Error: {str(pdf_error)[:100]}'}), 400
+            # Extract JSON from response
+            start = questions_text.find('{')
+            end = questions_text.rfind('}') + 1
+            if start != -1 and end > start:
+                json_str = questions_text[start:end]
+                questions_data = json.loads(json_str)
+            else:
+                questions_data = {"questions": []}
+                
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON parse error: {str(e)}")
+            logger.error(f"Raw response: {questions_text}")
+            return jsonify({
+                'success': False, 
+                'error': 'Failed to parse AI response. Try again or use a simpler PDF.'
+            }), 500
+        
+        questions = questions_data.get('questions', [])
+        logger.info(f"Parsed {len(questions)} questions")
+        
+        if not questions:
+            return jsonify({
+                'success': False, 
+                'error': 'No questions generated. PDF might be too short/complex. Try another file.'
+            }), 400
+        
+        # Store in session (limit size)
+        session['quiz_questions'] = json.dumps({"questions": questions[:question_count]})
+        session.modified = True
+        
+        logger.info(f"✅ SUCCESS: Stored {len(questions)} questions in session")
+        return jsonify({
+            'success': True, 
+            'count': len(questions),
+            'redirect': '/quiz'
+        })
+        
+    except Exception as e:
+        logger.error(f"Upload notes error: {str(e)}", exc_info=True)
+        return jsonify({
+            'success': False, 
+            'error': f'Processing error: {str(e)[:100]}'
+        }), 500
+        
+def extract_pdf_text_simple(filepath):
+    """Simple PDF text extraction with fallbacks"""
+    try:
+        import PyPDF2
+        
+        text = ""
+        with open(filepath, 'rb') as f:
+            pdf_reader = PyPDF2.PdfReader(f)
             
-            if not text or len(text.strip()) == 0:
+            for page_num, page in enumerate(pdf_reader.pages[:10]):  # First 10 pages max
                 try:
-                    if os.path.exists(filepath):
-                        os.remove(filepath)
+                    page_text = page.extract_text()
+                    if page_text and page_text.strip():
+                        text += page_text + "\n"
                 except:
-                    pass
-                return jsonify({'error': 'Could not extract any text from the PDF. Please ensure the PDF contains readable text.'}), 400
-            
-            # Generate questions with Gemini
-            question_type = request.form.get('type', 'objective')
-            question_count = request.form.get('question_count', '10')
-            hardness = request.form.get('hardness', 'medium')
-            time_limit = request.form.get('time', '30')
-            
-            # Validate question count (max 100)
-            try:
-                question_count_int = int(question_count)
-            except ValueError:
-                question_count_int = 10
-            
-            if question_count_int > 100:
-                question_count_int = 100
-                question_count = '100'
-            elif question_count_int < 1:
-                question_count_int = 1
-                question_count = '1'
-            
-            user_id = session['user_id']
-            source_hash = hashlib.md5(text.encode()).hexdigest()
-            
-            # Fetch existing questions for this user to avoid duplicates
-            existing_questions = GeneratedQuestion.query.filter_by(user_id=user_id).all()
-            existing_question_texts = [q.question_text for q in existing_questions]
-            
-            # Build deduplication context for prompt
-            dedup_context = ""
-            if existing_question_texts:
-                recent_existing = existing_question_texts[-50:]
-                dedup_context = "\n\nCRITICAL: The following questions have ALREADY been generated for this user. You MUST NOT generate any question that is identical or very similar to these:\n"
-                for i, q_text in enumerate(recent_existing, 1):
-                    dedup_context += f"{i}. {q_text[:200]}\n"
-                dedup_context += "\nGenerate completely NEW and DIFFERENT questions only."
-            
-            # Create appropriate prompt based on question type
-            if question_type == 'theory':
-                prompt = f"""
-                From this note text: {text[:4000]}...
-                
-                Generate {question_count} theory/essay type questions at {hardness} difficulty.
-                For each question include:
-                - A clear theory/concept question that requires explanation
-                - Exactly 4 answer options
-                - The correct answer text (must match one of the 4 options exactly)
-                - A brief explanation for why this is correct
-                
-                IMPORTANT: Return ONLY valid JSON, no other text.
-                Format: {{"questions": [{{"question": "", "options": ["option1", "option2", "option3", "option4"], "answer": "", "explanation": ""}}]}}
-                The "answer" field MUST be exactly one of the options.
-                Time limit: {time_limit}s per question.
-                {dedup_context}
-                """
-            else:  # objective
-                prompt = f"""
-                From this note text: {text[:4000]}...
-                
-                Generate {question_count} multiple choice objective questions at {hardness} difficulty.
-                For each question include:
-                - A clear objective question
-                - Exactly 4 answer options
-                - The correct answer text (must match one of the options exactly)
-                - A brief explanation
-                
-                IMPORTANT: Return ONLY valid JSON, no other text.
-                Format: {{"questions": [{{"question": "", "options": ["option1", "option2", "option3", "option4"], "answer": "", "explanation": ""}}]}}
-                The "answer" field MUST be exactly one of the options.
-                Time limit: {time_limit}s per question.
-                {dedup_context}
-                """
-            
-            try:
-                response = model.generate_content(prompt)
-                questions_text = response.text
-                
-                # Parse and deduplicate
-                parsed_data = parse_generated_questions(questions_text)
-                new_questions = parsed_data.get('questions', [])
-                
-                # Filter out exact duplicates already in DB
-                unique_questions = []
-                for q in new_questions:
-                    q_text = q.get('question', '').strip()
-                    if q_text and q_text not in existing_question_texts:
-                        unique_questions.append(q)
-                        existing_question_texts.append(q_text)
-                
-                # Store new unique questions in DB
-                for q in unique_questions:
-                    gq = GeneratedQuestion(
-                        user_id=user_id,
-                        question_text=q.get('question', '').strip(),
-                        options=json.dumps(q.get('options', [])),
-                        correct_answer=q.get('answer', '').strip(),
-                        explanation=q.get('explanation', '').strip(),
-                        source_hash=source_hash,
-                        difficulty=hardness,
-                        question_type=question_type
-                    )
-                    db.session.add(gq)
-                db.session.commit()
-                
-                # Re-serialize the deduplicated questions for session storage
-                final_questions = json.dumps({"questions": unique_questions})
-                
-                # Cleanup - safely remove file
-                try:
-                    if os.path.exists(filepath):
-                        os.remove(filepath)
-                except:
-                    pass
-                
-                # Store questions in session to avoid URL length issues
-                session['quiz_questions'] = final_questions
-                session.modified = True
-                
-                return jsonify({'questions': final_questions, 'success': True, 'generated_count': len(unique_questions)})
-            except Exception as e:
-                # Cleanup on error too
-                try:
-                    if os.path.exists(filepath):
-                        os.remove(filepath)
-                except:
-                    pass
-                logger.error(f'Error generating questions: {str(e)}', exc_info=True)
-                return jsonify({'error': f'Error generating questions: {str(e)}'}), 500
-        except Exception as e:
-            # Cleanup on any error
-            try:
-                if os.path.exists(filepath):
-                    os.remove(filepath)
-            except:
-                pass
-            logger.error(f'Error processing PDF: {str(e)}', exc_info=True)
-            return jsonify({'error': f'Error processing PDF file: {str(e)[:100]}'}), 500
-    
-    return jsonify({'error': 'Invalid file type'}), 400
+                    continue
+        
+        return text.strip()
+        
+    except ImportError:
+        return "PDF library not available"
+    except Exception as e:
+        logger.warning(f"PDF extraction failed: {str(e)}")
+        return ""
 
 @app.route('/dashboard')
 def dashboard():

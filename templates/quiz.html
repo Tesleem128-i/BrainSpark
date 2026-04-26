@@ -504,10 +504,13 @@ Devv AI<!DOCTYPE html>
                     const selectedOption = question.options[selectedOptionIndex];
                     const correctAnswer = question.answer;
 
-                    // Only compare the selected option text with correct answer text
-                    if (selectedOption === correctAnswer) {
+                    const selectedLetter = getOptionLetter(selectedOption);
+
+                    // Compare selected letter with correct answer letter
+                    if (selectedLetter === correctAnswer || selectedOption === correctAnswer) {
                         correctCount++;
                     }
+
                 }
             });
 
@@ -599,7 +602,9 @@ Devv AI<!DOCTYPE html>
                 const selectedOption = selectedIndex !== undefined ? question.options[selectedIndex] : 'Not answered';
                 const correctAnswer = question.answer;
 
-                const isCorrect = selectedOption === correctAnswer || selectedIndex === correctAnswer;
+                const selectedLetter = getOptionLetter(selectedOption);
+                const isCorrect = selectedLetter === correctAnswer || selectedOption === correctAnswer || selectedIndex === correctAnswer;
+
                 const statusColor = isCorrect ? 'text-green-500' : 'text-red-500';
 
                 reviewHTML += `
@@ -620,7 +625,14 @@ Devv AI<!DOCTYPE html>
             reviewContainer.innerHTML = reviewHTML;
         }
 
+        function getOptionLetter(optionText) {
+            if (!optionText) return null;
+            const match = optionText.match(/^([A-D])\)/i);
+            return match ? match[1].toUpperCase() : null;
+        }
+
         function formatTime(seconds) {
+
             const mins = Math.floor(seconds / 60);
             const secs = seconds % 60;
             return `${mins}m ${secs}s`;
