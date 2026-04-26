@@ -1,4 +1,4 @@
-Devv AI<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
@@ -92,6 +92,19 @@ Devv AI<!DOCTYPE html>
         .question-count-btn:active, .time-limit-btn:active {
             transform: scale(0.98);
         }
+
+        .topic-item {
+            transition: all 0.2s ease;
+        }
+
+        .topic-item:hover {
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .topic-item.selected {
+            border-color: var(--primary) !important;
+            background: rgba(59, 130, 246, 0.1) !important;
+        }
     </style>
 </head>
 <body class="min-h-screen transition-colors duration-300" style="background: var(--bg-secondary);">
@@ -110,7 +123,6 @@ Devv AI<!DOCTYPE html>
                     Exit Quiz
                 </a>
             </div>
-        </div>
     </nav>
 
     <!-- Main Quiz Area -->
@@ -120,9 +132,38 @@ Devv AI<!DOCTYPE html>
         <div id="loading-state" class="card rounded-2xl p-12 text-center shadow-lg">
             <div class="inline-block">
                 <div class="w-12 h-12 border-4 border-blue-500 border-t-purple-600 rounded-full animate-spin mx-auto mb-4"></div>
-            </div>
             <p style="color: var(--text-primary);" class="text-lg font-semibold">Loading your quiz...</p>
             <p style="color: var(--text-secondary);">Parsing questions from your PDF</p>
+        </div>
+
+        <!-- Topic Selection Screen (Hidden initially) -->
+        <div id="topic-selection-screen" style="display: none;">
+            <div class="card rounded-2xl p-6 sm:p-12 shadow-lg">
+                <h2 style="color: var(--text-primary);" class="text-xl sm:text-3xl font-bold mb-2 text-center">📑 Select Topics</h2>
+                <p style="color: var(--text-secondary);" class="text-center mb-6 sm:mb-8">Choose which parts of your notes to test, or cover all slides</p>
+                
+                <!-- Cover All Slides Button -->
+                <div class="mb-6">
+                    <button onclick="selectAllTopics()" id="select-all-btn" class="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 mb-4">
+                        📄 Cover All Slides
+                    </button>
+                </div>
+
+                <!-- Topics List -->
+                <div class="mb-8 sm:mb-12">
+                    <p style="color: var(--text-primary);" class="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">🎯 Or select specific topics:</p>
+                    <div id="topics-container" class="space-y-3">
+                        <!-- Topics will be inserted here -->
+                    </div>
+
+                <div class="flex gap-4 justify-center">
+                    <a href="/dashboard" class="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-semibold transition-all">
+                        Cancel
+                    </a>
+                    <button onclick="generateQuestions()" id="generate-btn" disabled class="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                        Generate Questions 🚀
+                    </button>
+                </div>
         </div>
 
         <!-- Quiz Settings Screen (Hidden initially) -->
@@ -141,7 +182,6 @@ Devv AI<!DOCTYPE html>
                             onchange="selectQuestionCount(this.value)" oninput="handleQuestionInput(event)">
                         <span style="color: var(--text-secondary);" class="text-base sm:text-lg">(max 100)</span>
                     </div>
-                </div>
 
 
                 <!-- Time Selection -->
@@ -161,7 +201,6 @@ Devv AI<!DOCTYPE html>
                             <span style="color: var(--primary);">20 min</span>
                         </button>
                     </div>
-                </div>
 
 
                 <div class="flex gap-4 justify-center">
@@ -172,20 +211,22 @@ Devv AI<!DOCTYPE html>
                         Start Quiz 🚀
                     </button>
                 </div>
-            </div>
         </div>
 
         <!-- Quiz Container (Hidden initially) -->
         <div id="quiz-container" style="display: none;">
+            <!-- Selected Topics Badge -->
+            <div id="selected-topics-badge" class="mb-4 flex flex-wrap gap-2" style="display: none;">
+                <!-- Topic badges will be inserted here -->
+            </div>
+
             <!-- Progress Bar -->
             <div class="mb-8" data-aos="fade-up">
                 <div class="flex items-center justify-between mb-2">
-                    <span style="color: var(--text-primary);" class="font-semibold">Question <span id="current-question">1</span> of <span id="total-questions">0</span></span>
+                    <span style="color: var(--text-primary);" class="font-semibold">Question <span id="current-question">1</span> of <span id="total-questions">0</span>
                     <div class="timer" id="timer" style="color: var(--primary);">5m 0s</div>
-                </div>
                 <div class="w-full bg-opacity-20 rounded-full h-2 bg-gray-400">
                     <div id="progress-bar" class="bg-gradient-to-r from-blue-600 to-purple-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
-                </div>
             </div>
 
             <!-- Question Card -->
@@ -195,7 +236,6 @@ Devv AI<!DOCTYPE html>
                 <div id="options-container" class="space-y-4">
                     <!-- Options will be inserted here -->
                 </div>
-            </div>
 
             <!-- Navigation Buttons -->
             <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center sm:justify-between mt-6" style="pointer-events: auto; z-index: 100;">
@@ -217,8 +257,6 @@ Devv AI<!DOCTYPE html>
                 </button>
             </div>
 
-        </div>
-
         <!-- Results Screen (Hidden) -->
         <div id="results-screen" style="display: none;">
             <div class="card rounded-2xl p-12 text-center shadow-lg" data-aos="fade-up">
@@ -227,9 +265,7 @@ Devv AI<!DOCTYPE html>
                         <div style="color: white;">
                             <div class="text-5xl font-bold" id="final-score">0</div>
                             <div class="text-xl">out of 100</div>
-                        </div>
                     </div>
-                </div>
 
                 <h2 id="result-title" style="color: var(--text-primary);" class="text-3xl font-bold mb-2"></h2>
                 <p id="result-message" style="color: var(--text-secondary);" class="text-lg mb-8"></p>
@@ -248,7 +284,6 @@ Devv AI<!DOCTYPE html>
                         <p style="color: var(--text-secondary);" class="text-sm mb-1">Time Taken</p>
                         <p style="color: var(--primary);" class="text-2xl font-bold" id="time-taken">0s</p>
                     </div>
-                </div>
 
                 <!-- Review Answers -->
                 <div id="review-answers" class="mb-8 text-left" style="max-height: 400px; overflow-y: auto;">
@@ -260,9 +295,7 @@ Devv AI<!DOCTYPE html>
                         Back to Dashboard
                     </a>
                 </div>
-            </div>
         </div>
-    </div>
 
     <script>
         AOS.init({ duration: 1000 });
@@ -276,25 +309,147 @@ Devv AI<!DOCTYPE html>
         let selectedQuestionCount = null;
         let selectedTimeLimit = null;
         let timeStarted = null;
+        let selectedTopics = [];
+        let quizTopics = [];
 
         // Load quiz from API
         function loadQuiz() {
-            fetch('/api/get-quiz-questions')
+            // First check if topics need to be selected
+            fetch('/api/get-quiz-topics')
                 .then(res => res.json())
                 .then(data => {
                     if (!data.success) {
-                        throw new Error(data.error || 'Failed to load questions');
+                        throw new Error(data.error || 'Failed to load topics');
                     }
-                    parseQuestions(data.questions);
+                    
+                    if (data.already_generated) {
+                        // Questions already exist, load them directly
+                        return fetch('/api/get-quiz-questions')
+                            .then(res => res.json())
+                            .then(qData => {
+                                if (!qData.success) throw new Error(qData.error);
+                                parseQuestions(qData.questions);
+                            });
+                    } else {
+                        // Show topic selection screen
+                        showTopicSelection(data.topics);
+                    }
                 })
                 .catch(error => {
                     console.error('Error loading quiz:', error);
-                    document.getElementById('loading-state').innerHTML = `
-                        <p style="color: var(--danger);" class="text-lg font-semibold">Error Loading Quiz</p>
-                        <p style="color: var(--text-secondary);" class="mb-4">${error.message}</p>
-                        <a href="/dashboard" class="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg">Back to Dashboard</a>
-                    `;
+                    // Fallback: try loading questions directly
+                    fetch('/api/get-quiz-questions')
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                parseQuestions(data.questions);
+                            } else {
+                                document.getElementById('loading-state').innerHTML = `
+                                    <p style="color: var(--danger);" class="text-lg font-semibold">Error Loading Quiz</p>
+                                    <p style="color: var(--text-secondary);" class="mb-4">${error.message}</p>
+                                    <a href="/dashboard" class="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg">Back to Dashboard</a>
+                                `;
+                            }
+                        })
+                        .catch(() => {
+                            document.getElementById('loading-state').innerHTML = `
+                                <p style="color: var(--danger);" class="text-lg font-semibold">Error Loading Quiz</p>
+                                <p style="color: var(--text-secondary);" class="mb-4">${error.message}</p>
+                                <a href="/dashboard" class="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg">Back to Dashboard</a>
+                            `;
+                        });
                 });
+        }
+
+        function showTopicSelection(topics) {
+            document.getElementById('loading-state').style.display = 'none';
+            document.getElementById('topic-selection-screen').style.display = 'block';
+            
+            const container = document.getElementById('topics-container');
+            container.innerHTML = '';
+            selectedTopics = [];
+            quizTopics = topics;
+            
+            topics.forEach((topic, index) => {
+                const topicDiv = document.createElement('div');
+                topicDiv.className = 'topic-item flex items-center gap-3 p-3 card rounded-lg cursor-pointer';
+                topicDiv.style.border = '2px solid rgba(59, 130, 246, 0.2)';
+                topicDiv.onclick = (e) => {
+                    // Prevent toggling when clicking the checkbox directly (it handles itself)
+                    if (e.target.type !== 'checkbox') {
+                        const cb = document.getElementById(`topic-${index}`);
+                        cb.checked = !cb.checked;
+                        toggleTopic(index, topic);
+                    }
+                };
+                topicDiv.innerHTML = `
+                    <input type="checkbox" id="topic-${index}" class="w-5 h-5 rounded cursor-pointer" style="accent-color: var(--primary);" onchange="toggleTopic(${index}, '${topic.replace(/'/g, "\\'")}')">
+                    <label for="topic-${index}" class="flex-1 cursor-pointer font-medium" style="color: var(--text-primary);">${topic}</label>
+                `;
+                container.appendChild(topicDiv);
+            });
+            
+            updateGenerateButton();
+        }
+
+        function toggleTopic(index, topic) {
+            const checkbox = document.getElementById(`topic-${index}`);
+            const topicDiv = checkbox.closest('.topic-item');
+            
+            if (checkbox.checked) {
+                topicDiv.classList.add('selected');
+                if (!selectedTopics.includes(topic)) selectedTopics.push(topic);
+            } else {
+                topicDiv.classList.remove('selected');
+                selectedTopics = selectedTopics.filter(t => t !== topic);
+            }
+            
+            updateGenerateButton();
+        }
+
+        function selectAllTopics() {
+            selectedTopics = 'all';
+            generateQuestions();
+        }
+
+        function updateGenerateButton() {
+            const btn = document.getElementById('generate-btn');
+            btn.disabled = selectedTopics.length === 0 || selectedTopics === [];
+        }
+
+        function generateQuestions() {
+            const btn = document.getElementById('generate-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="animate-spin">⏳</span> Generating...';
+            btn.disabled = true;
+            document.getElementById('select-all-btn').disabled = true;
+            
+            fetch('/api/generate-questions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ selected_topics: selectedTopics })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to generate questions');
+                }
+                // Now load the questions
+                return fetch('/api/get-quiz-questions');
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) throw new Error(data.error);
+                document.getElementById('topic-selection-screen').style.display = 'none';
+                parseQuestions(data.questions);
+            })
+            .catch(error => {
+                console.error('Error generating questions:', error);
+                alert('Error: ' + error.message);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                document.getElementById('select-all-btn').disabled = false;
+            });
         }
 
         function parseQuestions(questionsStr) {
@@ -335,6 +490,7 @@ Devv AI<!DOCTYPE html>
 
         function showSettingsScreen() {
             document.getElementById('loading-state').style.display = 'none';
+            document.getElementById('topic-selection-screen').style.display = 'none';
             document.getElementById('settings-screen').style.display = 'block';
         }
 
@@ -391,6 +547,15 @@ Devv AI<!DOCTYPE html>
             document.getElementById('settings-screen').style.display = 'none';
             document.getElementById('quiz-container').style.display = 'block';
             document.getElementById('total-questions').textContent = quizData.length;
+            
+            // Show selected topics badge if specific topics were chosen
+            if (Array.isArray(selectedTopics) && selectedTopics.length > 0) {
+                const badgeContainer = document.getElementById('selected-topics-badge');
+                badgeContainer.style.display = 'flex';
+                badgeContainer.innerHTML = selectedTopics.map(t => 
+                    `<span class="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-700 border border-blue-200">${t}</span>`
+                ).join('');
+            }
             
             // Start timer
             timeStarted = Date.now();
@@ -505,9 +670,14 @@ Devv AI<!DOCTYPE html>
                     const correctAnswer = question.answer;
 
                     const selectedLetter = getOptionLetter(selectedOption);
+                    const correctAnswerLetter = getOptionLetter(correctAnswer);
+                    const correctAnswerNum = parseInt(correctAnswer);
 
                     // Compare selected letter with correct answer letter
-                    if (selectedLetter === correctAnswer || selectedOption === correctAnswer) {
+                    if (selectedLetter === correctAnswer || 
+                        selectedOption === correctAnswer || 
+                        selectedLetter === correctAnswerLetter ||
+                        (!isNaN(correctAnswerNum) && selectedOptionIndex === correctAnswerNum)) {
                         correctCount++;
                     }
 
@@ -603,7 +773,13 @@ Devv AI<!DOCTYPE html>
                 const correctAnswer = question.answer;
 
                 const selectedLetter = getOptionLetter(selectedOption);
-                const isCorrect = selectedLetter === correctAnswer || selectedOption === correctAnswer || selectedIndex === correctAnswer;
+                const correctAnswerLetter = getOptionLetter(correctAnswer);
+                const correctAnswerNum = parseInt(correctAnswer);
+                
+                const isCorrect = selectedLetter === correctAnswer || 
+                                 selectedOption === correctAnswer || 
+                                 selectedLetter === correctAnswerLetter ||
+                                 (!isNaN(correctAnswerNum) && selectedIndex === correctAnswerNum);
 
                 const statusColor = isCorrect ? 'text-green-500' : 'text-red-500';
 
@@ -618,7 +794,6 @@ Devv AI<!DOCTYPE html>
                             </div>
                             <span class="${statusColor} ml-4 font-bold">${isCorrect ? '✓' : '✗'}</span>
                         </div>
-                    </div>
                 `;
             });
 
@@ -627,8 +802,14 @@ Devv AI<!DOCTYPE html>
 
         function getOptionLetter(optionText) {
             if (!optionText) return null;
-            const match = optionText.match(/^([A-D])\)/i);
-            return match ? match[1].toUpperCase() : null;
+            const trimmed = String(optionText).trim();
+            // Match exactly just the letter A-D
+            const exactMatch = trimmed.match(/^([A-D])$/i);
+            if (exactMatch) return exactMatch[1].toUpperCase();
+            // Match letter followed by ., ), or : and then the rest of the text
+            const prefixMatch = trimmed.match(/^([A-D])[.\):]\s*(.*)$/i);
+            if (prefixMatch) return prefixMatch[1].toUpperCase();
+            return null;
         }
 
         function formatTime(seconds) {

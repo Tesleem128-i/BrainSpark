@@ -521,8 +521,7 @@
         
         const result = await response.json();
         
-        if (result.success) {
-            alert(`✅ Generated ${result.count} questions! Starting quiz...`);
+if (result.success) {
             window.location.href = '/quiz';
         } else {
             alert(`❌ Error: ${result.error}`);

@@ -50,12 +50,13 @@ if os.getenv('RENDER') and os.getenv('DATABASE_URL'):
     except (IndexError, AttributeError):
         print("Using PostgreSQL")
 else:
-    # Local SQLite
-    instance_path = os.path.join(os.getcwd(), 'instance')
+    # Local SQLite — store in KnowItNow-/instance
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    instance_path = os.path.join(base_dir, 'instance')
     os.makedirs(instance_path, exist_ok=True)
     db_path = os.path.join(instance_path, 'knowitnow.db').replace('\\', '/')
     app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
-    print("🏠 Using SQLite (local development)")
+    print(f"🏠 Using SQLite (local development) at {db_path}")
 
 
 # Secure secret key from environment
@@ -401,65 +402,62 @@ def upload_notes():
         question_count = min(int(request.form.get('question_count', 10)), 100)  # Max 100
 
         
-        # Create SHORT, focused prompt
-        prompt = f"""Generate EXACTLY {question_count} {question_type} questions from this text:
+        # Extract main topics/sections from the PDF text
+        topics_prompt = f"""Analyze this educational text and identify the main topics, sections, or chapters.
 
-{text[:2000]}""" + """
-  
+Text:
+{text[:3000]}
+
 **OUTPUT ONLY VALID JSON** (no explanations):
-{"questions": [{"question": "...", "options": ["A", "B", "C", "D"], "answer": "A", "explanation": "..."}, ...]}
+{{"topics": ["Topic 1", "Topic 2", "Topic 3", ...]}}
 
 Rules:
-- Exactly 4 options (A,B,C,D format)
-- "answer" = exactly one option letter (A,B,C,or D)
-- {hardness} difficulty
-- No duplicate questions"""
+- Extract 3-10 distinct main topics/sections
+- Use concise, clear topic names (2-6 words each)
+- Topics should represent distinct sections of the material
+- If the text is short or has no clear sections, return ["General Content"]"""
 
-        logger.info(f"Generating {question_count} {question_type} questions (hardness: {hardness})")
+        logger.info(f"Extracting topics from PDF (hardness: {hardness})")
         
         # Generate with Gemini
-        response = model.generate_content(prompt)
-        questions_text = response.text.strip()
+        response = model.generate_content(topics_prompt)
+        topics_text = response.text.strip()
         
-        logger.info(f"Gemini response length: {len(questions_text)} chars")
-        logger.info(f"Gemini response preview: {questions_text[:500]}...")
+        logger.info(f"Gemini topics response length: {len(topics_text)} chars")
+        logger.info(f"Gemini topics response preview: {topics_text[:500]}...")
         
         # Parse JSON response
         try:
-            # Extract JSON from response
-            start = questions_text.find('{')
-            end = questions_text.rfind('}') + 1
+            start = topics_text.find('{')
+            end = topics_text.rfind('}') + 1
             if start != -1 and end > start:
-                json_str = questions_text[start:end]
-                questions_data = json.loads(json_str)
+                json_str = topics_text[start:end]
+                topics_data = json.loads(json_str)
             else:
-                questions_data = {"questions": []}
-                
+                topics_data = {"topics": ["General Content"]}
         except json.JSONDecodeError as e:
-            logger.error(f"JSON parse error: {str(e)}")
-            logger.error(f"Raw response: {questions_text}")
-            return jsonify({
-                'success': False, 
-                'error': 'Failed to parse AI response. Try again or use a simpler PDF.'
-            }), 500
+            logger.error(f"JSON parse error for topics: {str(e)}")
+            topics_data = {"topics": ["General Content"]}
         
-        questions = questions_data.get('questions', [])
-        logger.info(f"Parsed {len(questions)} questions")
+        topics = topics_data.get('topics', ["General Content"])
+        if not topics:
+            topics = ["General Content"]
         
-        if not questions:
-            return jsonify({
-                'success': False, 
-                'error': 'No questions generated. PDF might be too short/complex. Try another file.'
-            }), 400
+        logger.info(f"Extracted {len(topics)} topics: {topics}")
         
-        # Store in session (limit size)
-        session['quiz_questions'] = json.dumps({"questions": questions[:question_count]})
+        # Store PDF text and topics in session (do NOT generate questions yet)
+        session['pdf_text'] = text
+        session['pdf_topics'] = json.dumps(topics)
+        session['quiz_questions'] = None  # Clear any old questions
+        session['question_type'] = question_type
+        session['hardness'] = hardness
+        session['question_count'] = question_count
         session.modified = True
         
-        logger.info(f"✅ SUCCESS: Stored {len(questions)} questions in session")
+        logger.info(f"✅ SUCCESS: Stored PDF text and {len(topics)} topics in session")
         return jsonify({
             'success': True, 
-            'count': len(questions),
+            'count': len(topics),
             'redirect': '/quiz'
         })
         
@@ -540,6 +538,113 @@ def get_quiz_questions():
         return jsonify({'error': 'No quiz data found. Please upload a PDF again.'}), 400
     
     return jsonify({'success': True, 'questions': questions})
+
+@app.route('/api/get-quiz-topics')
+def get_quiz_topics():
+    """Fetch detected topics from uploaded PDF"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    topics_json = session.get('pdf_topics')
+    questions = session.get('quiz_questions')
+    
+    # If questions already generated, skip topic selection
+    if questions:
+        return jsonify({'success': True, 'topics': [], 'already_generated': True})
+    
+    if not topics_json:
+        return jsonify({'error': 'No topics found. Please upload a PDF again.'}), 400
+    
+    try:
+        topics = json.loads(topics_json)
+        return jsonify({'success': True, 'topics': topics, 'already_generated': False})
+    except json.JSONDecodeError:
+        return jsonify({'error': 'Invalid topics data'}), 500
+
+@app.route('/api/generate-questions', methods=['POST'])
+def generate_questions():
+    """Generate quiz questions from selected topics or all slides"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    data = request.json or {}
+    selected_topics = data.get('selected_topics', 'all')
+    
+    pdf_text = session.get('pdf_text')
+    if not pdf_text:
+        return jsonify({'error': 'No PDF text found. Please upload a PDF again.'}), 400
+    
+    question_type = session.get('question_type', 'objective')
+    hardness = session.get('hardness', 'medium')
+    question_count = session.get('question_count', 10)
+    
+    try:
+        # Build prompt based on selection
+        if selected_topics == 'all' or not selected_topics:
+            prompt = f"""Generate EXACTLY {question_count} {question_type} questions from this text:
+
+{pdf_text[:3000]}
+
+**OUTPUT ONLY VALID JSON** (no explanations):
+{{"questions": [{{"question": "...", "options": ["A", "B", "C", "D"], "answer": "A", "explanation": "..."}}, ...]}}
+
+Rules:
+- Exactly 4 options (A,B,C,D format)
+- "answer" = exactly one option letter (A,B,C,or D)
+- {hardness} difficulty
+- No duplicate questions"""
+        else:
+            topics_str = ', '.join(selected_topics) if isinstance(selected_topics, list) else str(selected_topics)
+            prompt = f"""Generate EXACTLY {question_count} {question_type} questions from this text, focusing ONLY on these topics: {topics_str}
+
+Text:
+{pdf_text[:3000]}
+
+**OUTPUT ONLY VALID JSON** (no explanations):
+{{"questions": [{{"question": "...", "options": ["A", "B", "C", "D"], "answer": "A", "explanation": "..."}}, ...]}}
+
+Rules:
+- Focus questions ONLY on the specified topics: {topics_str}
+- Exactly 4 options (A,B,C,D format)
+- "answer" = exactly one option letter (A,B,C,or D)
+- {hardness} difficulty
+- No duplicate questions"""
+        
+        logger.info(f"Generating {question_count} {question_type} questions for topics: {selected_topics}")
+        
+        response = model.generate_content(prompt)
+        questions_text = response.text.strip()
+        
+        logger.info(f"Gemini response length: {len(questions_text)} chars")
+        
+        # Parse JSON response
+        try:
+            start = questions_text.find('{')
+            end = questions_text.rfind('}') + 1
+            if start != -1 and end > start:
+                json_str = questions_text[start:end]
+                questions_data = json.loads(json_str)
+            else:
+                questions_data = {"questions": []}
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON parse error: {str(e)}")
+            return jsonify({'success': False, 'error': 'Failed to parse AI response. Try again.'}), 500
+        
+        questions = questions_data.get('questions', [])
+        
+        if not questions:
+            return jsonify({'success': False, 'error': 'No questions generated. Try selecting different topics or upload a different PDF.'}), 400
+        
+        # Store in session
+        session['quiz_questions'] = json.dumps({"questions": questions[:question_count]})
+        session.modified = True
+        
+        logger.info(f"✅ SUCCESS: Generated and stored {len(questions)} questions")
+        return jsonify({'success': True, 'count': len(questions)})
+        
+    except Exception as e:
+        logger.error(f"Generate questions error: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'error': f'Processing error: {str(e)[:100]}'}), 500
 
 @app.route('/api/dashboard-stats')
 def dashboard_stats():
