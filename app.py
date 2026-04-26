@@ -40,7 +40,15 @@ if os.getenv('RENDER') and os.getenv('DATABASE_URL'):
     db_url += '?sslmode=require'
     
     app.config['SQLALCHEMY_DATABASE_URI'] = db_url
-    print(f"Using PostgreSQL: {db_url.split('@')[1].split('/')[0]}")  # Don't log full URL
+    # Safely extract and log the host
+    try:
+        if '@' in db_url:
+            host = db_url.split('@')[1].split('/')[0]
+            print(f"Using PostgreSQL: {host}")
+        else:
+            print("Using PostgreSQL (URL format)")
+    except (IndexError, AttributeError):
+        print("Using PostgreSQL")
 else:
     # Local SQLite
     instance_path = os.path.join(os.getcwd(), 'instance')
