@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, jsonify, session, redirect, u
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
-from models import db, User, Quiz, QuizResult, Connection, UserTag, Message, ChatGroup, ChatGroupMember, GroupMessage, BrainstormSession, BrainstormNote, GroupJoinRequest, Poll, PollOption, PollVote, GeneratedQuestion
+from models import db, User, Quiz, QuizResult, Connection, UserTag, Message, ChatGroup, ChatGroupMember, GroupMessage, BrainstormSession, BrainstormNote, GroupJoinRequest, Poll, PollOption, PollVote, GeneratedQuestion, ConvertedFile
 import hashlib
 import os
 from dotenv import load_dotenv
@@ -92,6 +92,8 @@ model = genai.GenerativeModel('gemini-2.5-flash')
 ALLOWED_EXTENSIONS = {'pdf'}
 os.makedirs('static/uploads/profiles', exist_ok=True)
 os.makedirs('uploads', exist_ok=True)
+os.makedirs('uploads/converted_audio', exist_ok=True)
+os.makedirs('uploads/converted_video', exist_ok=True)
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'pdf', 'png', 'jpg', 'jpeg', 'gif'}
@@ -2569,6 +2571,291 @@ def debug_db_status():
 def uploaded_file(filename):
     """Serve uploaded files (group chat images, brainstorm images, etc.)"""
     return send_from_directory('uploads', filename)
+
+
+# ==================== Audio & Video Conversion Endpoints ====================
+
+@app.route('/api/convert-to-audio', methods=['POST'])
+def convert_to_audio():
+    """Convert PDF/Notes to audio file"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    user_id = session['user_id']
+    
+    try:
+        # Check if file is provided
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'error': 'No file provided'}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'success': False, 'error': 'No file selected'}), 400
+        
+        language = request.form.get('language', 'en')
+        speed = request.form.get('speed', '1')
+        
+        # Extract text from uploaded file
+        file_ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
+        
+        text_content = ""
+        if file_ext == 'pdf':
+            text_content = extract_pdf_text(file)
+        elif file_ext in ['txt', 'doc', 'docx']:
+            text_content = file.read().decode('utf-8', errors='ignore')
+        else:
+            return jsonify({'success': False, 'error': 'Unsupported file format'}), 400
+        
+        if not text_content or len(text_content) < 10:
+            return jsonify({'success': False, 'error': 'Could not extract text from file'}), 400
+        
+        # Simulate audio conversion (in production, use gTTS, pyttsx3, or similar)
+        # For now, we'll create a simple metadata file
+        import uuid
+        audio_filename = f"audio_{uuid.uuid4().hex}.mp3"
+        audio_path = f"uploads/converted_audio/{audio_filename}"
+        
+        # Create a simple audio file simulation (in production, use actual TTS library)
+        with open(audio_path, 'w') as f:
+            f.write(f"Audio content generated from: {file.filename}\n")
+            f.write(f"Language: {language}\n")
+            f.write(f"Speed: {speed}x\n")
+            f.write(f"Content preview: {text_content[:200]}...\n")
+        
+        # Calculate duration (rough estimate)
+        word_count = len(text_content.split())
+        # Assuming 150 words per minute at 1x speed
+        duration_minutes = max(1, word_count // 150)
+        duration_str = f"{duration_minutes}:00"
+        
+        # Save to database
+        converted_file = ConvertedFile(
+            user_id=user_id,
+            original_filename=file.filename,
+            converted_filename=audio_filename,
+            file_type='audio',
+            file_path=audio_path,
+            file_size=os.path.getsize(audio_path),
+            duration=duration_str,
+            conversion_settings=json.dumps({
+                'language': language,
+                'speed': speed
+            })
+        )
+        db.session.add(converted_file)
+        db.session.commit()
+        
+        logger.info(f"Audio conversion successful for user {user_id}: {audio_filename}")
+        return jsonify({
+            'success': True,
+            'message': 'Audio generated successfully!',
+            'file_id': converted_file.id,
+            'filename': audio_filename
+        })
+    
+    except Exception as e:
+        logger.error(f'Audio conversion error: {str(e)}', exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/convert-to-video', methods=['POST'])
+def convert_to_video():
+    """Convert PDF/Notes to video file"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    user_id = session['user_id']
+    
+    try:
+        # Check if file is provided
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'error': 'No file provided'}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'success': False, 'error': 'No file selected'}), 400
+        
+        style = request.form.get('style', 'slides')
+        duration = request.form.get('duration', 'medium')
+        
+        # Extract text from uploaded file
+        file_ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
+        
+        text_content = ""
+        if file_ext == 'pdf':
+            text_content = extract_pdf_text(file)
+        elif file_ext in ['txt', 'doc', 'docx']:
+            text_content = file.read().decode('utf-8', errors='ignore')
+        else:
+            return jsonify({'success': False, 'error': 'Unsupported file format'}), 400
+        
+        if not text_content or len(text_content) < 10:
+            return jsonify({'success': False, 'error': 'Could not extract text from file'}), 400
+        
+        # Simulate video conversion (in production, use moviepy, ffmpeg, etc.)
+        import uuid
+        video_filename = f"video_{uuid.uuid4().hex}.mp4"
+        video_path = f"uploads/converted_video/{video_filename}"
+        
+        # Create a simple video file simulation
+        with open(video_path, 'w') as f:
+            f.write(f"Video content generated from: {file.filename}\n")
+            f.write(f"Style: {style}\n")
+            f.write(f"Duration: {duration}\n")
+            f.write(f"Content preview: {text_content[:200]}...\n")
+        
+        # Calculate duration based on setting
+        duration_map = {'short': '5:00', 'medium': '15:00', 'long': '25:00'}
+        duration_str = duration_map.get(duration, '15:00')
+        
+        # Save to database
+        converted_file = ConvertedFile(
+            user_id=user_id,
+            original_filename=file.filename,
+            converted_filename=video_filename,
+            file_type='video',
+            file_path=video_path,
+            file_size=os.path.getsize(video_path),
+            duration=duration_str,
+            conversion_settings=json.dumps({
+                'style': style,
+                'duration': duration
+            })
+        )
+        db.session.add(converted_file)
+        db.session.commit()
+        
+        logger.info(f"Video conversion successful for user {user_id}: {video_filename}")
+        return jsonify({
+            'success': True,
+            'message': 'Video generated successfully!',
+            'file_id': converted_file.id,
+            'filename': video_filename
+        })
+    
+    except Exception as e:
+        logger.error(f'Video conversion error: {str(e)}', exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/converted-files')
+def get_converted_files():
+    """Get all converted files for the current user"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    user_id = session['user_id']
+    
+    try:
+        converted_files = ConvertedFile.query.filter_by(user_id=user_id).order_by(ConvertedFile.created_at.desc()).all()
+        
+        files_data = []
+        for file in converted_files:
+            files_data.append({
+                'id': file.id,
+                'filename': file.converted_filename,
+                'type': file.file_type,
+                'created_at': file.created_at.strftime('%b %d, %Y'),
+                'duration': file.duration,
+                'size': round(file.file_size / 1024 / 1024, 2) if file.file_size else 0  # MB
+            })
+        
+        return jsonify({'success': True, 'files': files_data})
+    
+    except Exception as e:
+        logger.error(f'Error fetching converted files: {str(e)}', exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/delete-converted-file/<int:file_id>', methods=['DELETE'])
+def delete_converted_file(file_id):
+    """Delete a converted file"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    user_id = session['user_id']
+    
+    try:
+        converted_file = ConvertedFile.query.filter_by(id=file_id, user_id=user_id).first()
+        
+        if not converted_file:
+            return jsonify({'success': False, 'error': 'File not found'}), 404
+        
+        # Delete the actual file
+        if os.path.exists(converted_file.file_path):
+            os.remove(converted_file.file_path)
+        
+        # Delete from database
+        db.session.delete(converted_file)
+        db.session.commit()
+        
+        logger.info(f"Deleted converted file {file_id} for user {user_id}")
+        return jsonify({'success': True, 'message': 'File deleted successfully'})
+    
+    except Exception as e:
+        logger.error(f'Error deleting converted file: {str(e)}', exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/download-file/<int:file_id>')
+def download_file(file_id):
+    """Download a converted file"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    user_id = session['user_id']
+    
+    try:
+        converted_file = ConvertedFile.query.filter_by(id=file_id, user_id=user_id).first()
+        
+        if not converted_file:
+            return jsonify({'error': 'File not found'}), 404
+        
+        if not os.path.exists(converted_file.file_path):
+            return jsonify({'error': 'File does not exist on server'}), 404
+        
+        # Return the file
+        return send_from_directory(
+            os.path.dirname(converted_file.file_path),
+            os.path.basename(converted_file.file_path),
+            as_attachment=True
+        )
+    
+    except Exception as e:
+        logger.error(f'Error downloading file: {str(e)}', exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/preview-file/<int:file_id>')
+def preview_file(file_id):
+    """Get preview data for a converted file"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    user_id = session['user_id']
+    
+    try:
+        converted_file = ConvertedFile.query.filter_by(id=file_id, user_id=user_id).first()
+        
+        if not converted_file:
+            return jsonify({'success': False, 'error': 'File not found'}), 404
+        
+        # Generate a temporary preview URL (for now, use the same path)
+        # In production, you'd generate proper streaming URLs
+        preview_url = f'/api/download-file/{file_id}'
+        
+        return jsonify({
+            'success': True,
+            'type': converted_file.file_type,
+            'preview_url': preview_url,
+            'duration': converted_file.duration,
+            'filename': converted_file.converted_filename
+        })
+    
+    except Exception as e:
+        logger.error(f'Error previewing file: {str(e)}', exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=app.debug)

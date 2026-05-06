@@ -312,3 +312,22 @@ class GeneratedQuestion(db.Model):
 
     def __repr__(self):
         return f'<GeneratedQuestion {self.question_text[:50]}...>'
+
+
+class ConvertedFile(db.Model):
+    """Stores metadata for user-converted audio/video files"""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    original_filename = db.Column(db.String(200), nullable=False)
+    converted_filename = db.Column(db.String(200), nullable=False)
+    file_type = db.Column(db.String(20), nullable=False)  # audio or video
+    file_path = db.Column(db.String(300), nullable=False)
+    file_size = db.Column(db.Integer)  # in bytes
+    duration = db.Column(db.String(20))  # MM:SS format
+    conversion_settings = db.Column(db.Text)  # JSON storing language, speed, style, etc.
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    user = db.relationship('User', backref='converted_files')
+    
+    def __repr__(self):
+        return f'<ConvertedFile {self.original_filename} - {self.file_type}>'

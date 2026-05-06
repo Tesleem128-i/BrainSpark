@@ -301,6 +301,173 @@
             </div>
         </div>
 
+        <!-- 📚 Learn Better with Audio & Video Section -->
+        <div class="mb-8" data-aos="fade-up">
+            <div class="card rounded-2xl p-8 shadow-lg">
+                <div class="mb-6">
+                    <h3 class="text-3xl font-bold mb-2" style="color: var(--text-primary);">📚 Learn Better with Audio & Video</h3>
+                    <p style="color: var(--text-secondary);">Convert your study notes to engaging audio and video for better understanding</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Upload Section -->
+                    <div class="lg:col-span-2 space-y-6">
+                        <!-- File Upload -->
+                        <div class="bg-gradient-to-br from-purple-600/10 to-blue-600/10 rounded-2xl p-8 border-2 border-dashed border-purple-500 border-opacity-50 cursor-pointer transition-all duration-300 hover:border-opacity-100" id="av-upload-zone">
+                            <div class="text-center">
+                                <svg class="w-16 h-16 mx-auto mb-4 text-purple-500 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12M9 6h6"></path>
+                                </svg>
+                                <h4 class="text-xl font-bold mb-2" style="color: var(--text-primary);">Upload Notes or PDF</h4>
+                                <p style="color: var(--text-secondary);" class="text-sm">Drag and drop or click to browse</p>
+                                <p class="text-xs mt-2" style="color: var(--text-secondary);">Supports PDF, DOC, TXT files (Max 20MB)</p>
+                                <input type="file" id="av-file-input" accept=".pdf,.doc,.docx,.txt" class="hidden" />
+                            </div>
+                        </div>
+
+                        <!-- File Preview -->
+                        <div id="av-file-preview" style="display: none;" class="bg-opacity-20 rounded-xl p-4" style="background-color: rgba(168, 85, 247, 0.1);">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-3xl">📄</span>
+                                    <div>
+                                        <p class="font-semibold" style="color: var(--text-primary);" id="av-file-name"></p>
+                                        <p class="text-sm" style="color: var(--text-secondary);" id="av-file-size"></p>
+                                    </div>
+                                </div>
+                                <button onclick="clearAVFile()" class="text-red-500 hover:text-red-700 font-bold text-xl">✕</button>
+                            </div>
+                        </div>
+
+                        <!-- Conversion Options -->
+                        <div id="av-conversion-options" style="display: none;" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <!-- Audio Conversion -->
+                                <div class="card-secondary rounded-xl p-6 border-2 border-blue-500 border-opacity-30">
+                                    <div class="flex items-start justify-between mb-4">
+                                        <div>
+                                            <h5 class="text-lg font-bold flex items-center gap-2" style="color: var(--text-primary);">
+                                                <span>🎵</span> Convert to Audio
+                                            </h5>
+                                            <p class="text-sm mt-2" style="color: var(--text-secondary);">Hear your notes read aloud</p>
+                                        </div>
+                                    </div>
+                                    <div class="space-y-3">
+                                        <div>
+                                            <label class="text-sm font-semibold" style="color: var(--text-primary);">Audio Language</label>
+                                            <select id="av-audio-language" class="w-full card rounded-lg p-2 text-sm mt-1" style="color: var(--text-primary);">
+                                                <option value="en">English</option>
+                                                <option value="fr">Français</option>
+                                                <option value="es">Español</option>
+                                                <option value="de">Deutsch</option>
+                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="text-sm font-semibold" style="color: var(--text-primary);">Playback Speed</label>
+                                            <select id="av-audio-speed" class="w-full card rounded-lg p-2 text-sm mt-1" style="color: var(--text-primary);">
+                                                <option value="0.75">0.75x (Slow)</option>
+                                                <option value="1" selected>1x (Normal)</option>
+                                                <option value="1.25">1.25x (Fast)</option>
+                                                <option value="1.5">1.5x (Very Fast)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <button onclick="convertToAudio()" class="w-full mt-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg hover:shadow-lg transition-all duration-300 transform hover:scale-105">
+                                        ✨ Generate Audio
+                                    </button>
+                                </div>
+
+                                <!-- Video Conversion -->
+                                <div class="card-secondary rounded-xl p-6 border-2 border-orange-500 border-opacity-30">
+                                    <div class="flex items-start justify-between mb-4">
+                                        <div>
+                                            <h5 class="text-lg font-bold flex items-center gap-2" style="color: var(--text-primary);">
+                                                <span>🎬</span> Convert to Video
+                                            </h5>
+                                            <p class="text-sm mt-2" style="color: var(--text-secondary);">Create engaging video lessons</p>
+                                        </div>
+                                    </div>
+                                    <div class="space-y-3">
+                                        <div>
+                                            <label class="text-sm font-semibold" style="color: var(--text-primary);">Video Style</label>
+                                            <select id="av-video-style" class="w-full card rounded-lg p-2 text-sm mt-1" style="color: var(--text-primary);">
+                                                <option value="slides">📊 Slideshow</option>
+                                                <option value="animated">✨ Animated</option>
+                                                <option value="whiteboard">🎨 Whiteboard</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="text-sm font-semibold" style="color: var(--text-primary);">Video Duration</label>
+                                            <select id="av-video-duration" class="w-full card rounded-lg p-2 text-sm mt-1" style="color: var(--text-primary);">
+                                                <option value="short">Short (5-10 min)</option>
+                                                <option value="medium" selected>Medium (10-20 min)</option>
+                                                <option value="long">Long (20+ min)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <button onclick="convertToVideo()" class="w-full mt-4 py-2 bg-gradient-to-r from-orange-600 to-orange-700 text-white font-semibold rounded-lg hover:shadow-lg transition-all duration-300 transform hover:scale-105">
+                                        🎥 Generate Video
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Community Section -->
+                    <div>
+                        <div class="card-secondary rounded-2xl p-6 shadow-lg border border-opacity-20 h-full flex flex-col" style="border-color: var(--text-secondary);">
+                            <h4 class="text-lg font-bold mb-4 flex items-center gap-2" style="color: var(--text-primary);">
+                                <span>🌐 Community</span>
+                            </h4>
+                            <div class="space-y-3 flex-1">
+                                <p class="text-sm font-medium" style="color: var(--text-secondary);">Connect with learners from</p>
+                                <div class="space-y-2">
+                                    <div class="flex items-center gap-2 p-3 card rounded-lg hover:shadow-md transition-all duration-300">
+                                        <span class="text-xl">🏫</span>
+                                        <div>
+                                            <p class="text-xs" style="color: var(--text-secondary);">University</p>
+                                            <p class="font-semibold text-sm" style="color: var(--text-primary);">University of Ibadan</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2 p-3 card rounded-lg hover:shadow-md transition-all duration-300">
+                                        <span class="text-xl">🌍</span>
+                                        <div>
+                                            <p class="text-xs" style="color: var(--text-secondary);">Country</p>
+                                            <p class="font-semibold text-sm" style="color: var(--text-primary);">Nigeria</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2 p-3 card rounded-lg hover:shadow-md transition-all duration-300">
+                                        <span class="text-xl">📚</span>
+                                        <div>
+                                            <p class="text-xs" style="color: var(--text-secondary);">Level</p>
+                                            <p class="font-semibold text-sm" style="color: var(--text-primary);">Undergraduate</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="w-full mt-4 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all duration-300 transform hover:scale-105" onclick="findStudyBuddies()">
+                                🤝 Find Study Buddies
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Converted Files Section -->
+        <div class="mb-8" data-aos="fade-up">
+            <div class="card rounded-2xl p-8 shadow-lg">
+                <h3 class="text-2xl font-bold mb-6" style="color: var(--text-primary);">📁 Your Converted Files</h3>
+                <div id="converted-files-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="flex items-center justify-center p-12 col-span-full card-secondary rounded-2xl border-2 border-dashed border-opacity-30" style="border-color: var(--text-secondary);">
+                        <div class="text-center">
+                            <p class="text-lg font-semibold mb-2" style="color: var(--text-primary);">📭 No converted files yet</p>
+                            <p style="color: var(--text-secondary);">Upload your notes above to get started!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
     </div>
 
@@ -409,7 +576,10 @@
         }
 
         // Load data on page load
-        window.addEventListener('load', loadDashboardData);
+        window.addEventListener('load', () => {
+            loadDashboardData();
+            loadConvertedFiles();
+        });
 
         // ==================== Theme Toggle ====================
         const themeToggle = document.getElementById('theme-toggle');
@@ -783,7 +953,250 @@ if (result.success) {
             showAIModal();
         }
 
-        // ==================== Modal Helper ====================
+        // ==================== Audio & Video Conversion ====================
+        const avUploadZone = document.getElementById('av-upload-zone');
+        const avFileInput = document.getElementById('av-file-input');
+        const avFilePreview = document.getElementById('av-file-preview');
+        const avConversionOptions = document.getElementById('av-conversion-options');
+        let selectedAVFile = null;
+
+        // Upload zone drag & drop
+        avUploadZone.addEventListener('click', () => avFileInput.click());
+        avUploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            avUploadZone.style.borderColor = 'var(--primary)';
+            avUploadZone.style.background = 'rgba(168, 85, 247, 0.15)';
+        });
+        avUploadZone.addEventListener('dragleave', () => {
+            avUploadZone.style.borderColor = null;
+            avUploadZone.style.background = null;
+        });
+        avUploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            avUploadZone.style.borderColor = null;
+            avUploadZone.style.background = null;
+            if (e.dataTransfer.files[0]) {
+                avFileInput.files = e.dataTransfer.files;
+                handleAVFileSelect();
+            }
+        });
+
+        avFileInput.addEventListener('change', handleAVFileSelect);
+
+        function handleAVFileSelect() {
+            const file = avFileInput.files[0];
+            if (!file) return;
+
+            // Validate file size (20MB max)
+            if (file.size > 20 * 1024 * 1024) {
+                alert('File too large. Maximum size is 20MB.');
+                avFileInput.value = '';
+                return;
+            }
+
+            selectedAVFile = file;
+            
+            // Show preview
+            document.getElementById('av-file-name').textContent = file.name;
+            document.getElementById('av-file-size').textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+            avFilePreview.style.display = 'block';
+            avConversionOptions.style.display = 'block';
+            avUploadZone.style.opacity = '0.5';
+        }
+
+        function clearAVFile() {
+            selectedAVFile = null;
+            avFileInput.value = '';
+            avFilePreview.style.display = 'none';
+            avConversionOptions.style.display = 'none';
+            avUploadZone.style.opacity = '1';
+        }
+
+        async function convertToAudio() {
+            if (!selectedAVFile) {
+                alert('Please select a file first');
+                return;
+            }
+
+            const language = document.getElementById('av-audio-language').value;
+            const speed = document.getElementById('av-audio-speed').value;
+            
+            const formData = new FormData();
+            formData.append('file', selectedAVFile);
+            formData.append('language', language);
+            formData.append('speed', speed);
+            formData.append('type', 'audio');
+
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="animate-spin">⏳</span> Generating...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/convert-to-audio', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('✅ Audio generated successfully! Download will start automatically.');
+                    loadConvertedFiles();
+                    clearAVFile();
+                } else {
+                    alert(`❌ Error: ${result.error}`);
+                }
+            } catch (error) {
+                console.error('Audio conversion error:', error);
+                alert('❌ Network error. Please try again.');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        async function convertToVideo() {
+            if (!selectedAVFile) {
+                alert('Please select a file first');
+                return;
+            }
+
+            const style = document.getElementById('av-video-style').value;
+            const duration = document.getElementById('av-video-duration').value;
+            
+            const formData = new FormData();
+            formData.append('file', selectedAVFile);
+            formData.append('style', style);
+            formData.append('duration', duration);
+            formData.append('type', 'video');
+
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="animate-spin">⏳</span> Generating...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/convert-to-video', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('✅ Video generated successfully! Download will start automatically.');
+                    loadConvertedFiles();
+                    clearAVFile();
+                } else {
+                    alert(`❌ Error: ${result.error}`);
+                }
+            } catch (error) {
+                console.error('Video conversion error:', error);
+                alert('❌ Network error. Please try again.');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        async function loadConvertedFiles() {
+            try {
+                const response = await fetch('/api/converted-files');
+                const result = await response.json();
+
+                if (result.success && result.files.length > 0) {
+                    const container = document.getElementById('converted-files-container');
+                    container.innerHTML = result.files.map(file => `
+                        <div class="card-secondary rounded-xl p-6 shadow-md hover:shadow-lg transition-all duration-300 border border-opacity-20" style="border-color: var(--text-secondary);">
+                            <div class="flex items-start justify-between mb-3">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        ${file.type === 'audio' ? '<span class="text-2xl">🎵</span>' : '<span class="text-2xl">🎬</span>'}
+                                        <span class="px-2 py-1 rounded text-xs font-semibold" style="background-color: ${file.type === 'audio' ? 'rgba(59, 130, 246, 0.2); color: #3b82f6;' : 'rgba(249, 115, 22, 0.2); color: #f97316;'}">${file.type === 'audio' ? 'AUDIO' : 'VIDEO'}</span>
+                                    </div>
+                                    <p class="font-semibold" style="color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${file.filename}</p>
+                                    <p class="text-xs mt-1" style="color: var(--text-secondary);">${file.created_at}</p>
+                                </div>
+                                <button onclick="deleteConvertedFile('${file.id}')" class="text-red-500 hover:text-red-700 font-bold">✕</button>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="previewFile('${file.id}')" class="flex-1 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm font-semibold rounded-lg hover:shadow-md transition-all duration-300">
+                                    👁️ Preview
+                                </button>
+                                <button onclick="downloadFile('${file.id}')" class="flex-1 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-sm font-semibold rounded-lg hover:shadow-md transition-all duration-300">
+                                    ⬇️ Download
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading converted files:', error);
+            }
+        }
+
+        async function deleteConvertedFile(fileId) {
+            if (confirm('Are you sure you want to delete this file?')) {
+                try {
+                    const response = await fetch(`/api/delete-converted-file/${fileId}`, {
+                        method: 'DELETE'
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        loadConvertedFiles();
+                    }
+                } catch (error) {
+                    console.error('Error deleting file:', error);
+                }
+            }
+        }
+
+        async function downloadFile(fileId) {
+            try {
+                window.location.href = `/api/download-file/${fileId}`;
+            } catch (error) {
+                console.error('Error downloading file:', error);
+            }
+        }
+
+        async function previewFile(fileId) {
+            try {
+                const response = await fetch(`/api/preview-file/${fileId}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    let content = '';
+                    if (result.type === 'audio') {
+                        content = `
+                            <div class="text-center">
+                                <p class="text-lg font-semibold mb-4" style="color: var(--text-primary);">🎵 Audio Preview</p>
+                                <audio controls class="w-full mb-4" style="height: 40px;">
+                                    <source src="${result.preview_url}" type="audio/mpeg">
+                                    Your browser does not support the audio element.
+                                </audio>
+                                <p class="text-sm" style="color: var(--text-secondary);">Duration: ${result.duration}</p>
+                            </div>
+                        `;
+                    } else {
+                        content = `
+                            <div class="text-center">
+                                <p class="text-lg font-semibold mb-4" style="color: var(--text-primary);">🎬 Video Preview</p>
+                                <video controls class="w-full rounded-lg mb-4" style="max-height: 400px;">
+                                    <source src="${result.preview_url}" type="video/mp4">
+                                    Your browser does not support the video element.
+                                </video>
+                                <p class="text-sm" style="color: var(--text-secondary);">Duration: ${result.duration}</p>
+                            </div>
+                        `;
+                    }
+                    showModal(`${result.type === 'audio' ? '🎵' : '🎬'} Preview`, content);
+                }
+            } catch (error) {
+                alert('Error loading preview: ' + error.message);
+            }
+        }
+
         function showModal(title, content) {
             // Create modal if it doesn't exist
             let modal = document.getElementById('custom-modal');
