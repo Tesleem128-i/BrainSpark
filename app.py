@@ -12,6 +12,7 @@ import random
 import PyPDF2
 import io
 import json
+import textwrap
 from datetime import datetime, timedelta
 import logging
 
@@ -1920,9 +1921,6 @@ def schedule_brainstorm():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/get-group-sessions/<int:group_id>')
 def get_group_sessions(group_id):
@@ -2575,6 +2573,164 @@ def uploaded_file(filename):
 
 # ==================== Audio & Video Conversion Endpoints ====================
 
+def create_audio_from_text(text_content, audio_path, language, speed):
+    """Create an actual audio file from text content using pyttsx3"""
+    try:
+        import pyttsx3
+        
+        # Initialize text-to-speech engine
+        engine = pyttsx3.init()
+        
+        # Set speed (rate)
+        speed_multiplier = float(speed) if speed else 1.0
+        engine.setProperty('rate', int(150 * speed_multiplier))  # Default 150 WPM
+        
+        # Limit text to first 1000 words for reasonable audio length
+        words = text_content.split()
+        limited_text = ' '.join(words[:1000])
+        
+        # Save audio file
+        engine.save_to_file(limited_text, audio_path)
+        engine.runAndWait()
+        engine.stop()
+        
+        logger.info(f"Audio file created successfully: {audio_path}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error creating audio: {str(e)}", exc_info=True)
+        raise
+
+
+def create_video_from_text(text_content, video_path, style, duration_setting):
+    """
+    Create a video file from text content using MoviePy + Pillow.
+    No ImageMagick dependency — text is rendered via Pillow into numpy frames.
+    """
+    try:
+        import numpy as np
+        from PIL import Image, ImageDraw, ImageFont
+        from moviepy.editor import ImageClip, concatenate_videoclips
+
+        # Duration and chunk settings per style
+        duration_map = {'short': (5, 2), 'medium': (15, 3), 'long': (25, 5)}
+        total_duration, chunk_duration = duration_map.get(duration_setting, (15, 3))
+
+        # Background and text colours as RGB tuples (for Pillow)
+        style_map = {
+            'slides':     ((10,  30,  100), (255, 255, 255)),
+            'animated':   ((65,  105, 225), (255, 255, 255)),
+            'whiteboard': ((255, 255, 255), (0,   0,   0)),
+        }
+        bg_color, text_color = style_map.get(style, ((10, 30, 100), (255, 255, 255)))
+
+        # Split text into chunks
+        text_preview = text_content[:2000]
+        sentences = text_preview.split('.')
+        chunks, current = [], ""
+        for sentence in sentences:
+            sentence = sentence.strip()
+            if not sentence:
+                continue
+            if len(current) + len(sentence) < 250:
+                current += sentence + ". "
+            else:
+                if current.strip():
+                    chunks.append(current.strip())
+                current = sentence + ". "
+        if current.strip():
+            chunks.append(current.strip())
+
+        # Limit chunks based on duration setting
+        chunk_limit = {'short': 2, 'medium': 5, 'long': 8}
+        chunks = chunks[:chunk_limit.get(duration_setting, 5)]
+        if not chunks:
+            chunks = [text_content[:500]]
+
+        W, H = 1280, 720
+        clips = []
+
+        for chunk in chunks:
+            try:
+                # Create a blank PIL image with background colour
+                img = Image.new("RGB", (W, H), color=bg_color)
+                draw = ImageDraw.Draw(img)
+
+                # Try to load a TrueType font; fall back to PIL default
+                try:
+                    font = ImageFont.truetype("arial.ttf", 36)
+                except Exception:
+                    try:
+                        # Common fallback paths
+                        import platform
+                        if platform.system() == "Windows":
+                            font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 36)
+                        elif platform.system() == "Darwin":
+                            font = ImageFont.truetype("/Library/Fonts/Arial.ttf", 36)
+                        else:
+                            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 36)
+                    except Exception:
+                        font = ImageFont.load_default()
+
+                # Wrap text and draw onto image
+                lines = textwrap.wrap(chunk, width=48)[:6]  # max 6 lines
+                line_height = 50
+                total_text_h = len(lines) * line_height
+                y = (H - total_text_h) // 2
+
+                for line in lines:
+                    # Calculate text width for centering
+                    try:
+                        bbox = draw.textbbox((0, 0), line, font=font)
+                        text_w = bbox[2] - bbox[0]
+                    except AttributeError:
+                        # Older Pillow fallback
+                        text_w, _ = draw.textsize(line, font=font)
+                    x = (W - text_w) // 2
+                    draw.text((x, y), line, fill=text_color, font=font)
+                    y += line_height
+
+                # Convert PIL image → numpy array → MoviePy ImageClip
+                frame = np.array(img)
+                clip = ImageClip(frame).set_duration(chunk_duration)
+                clips.append(clip)
+
+            except Exception as clip_error:
+                logger.warning(f"Error creating clip for chunk: {str(clip_error)}")
+                continue
+
+        # Fallback: solid colour clip if all chunks failed
+        if not clips:
+            img = Image.new("RGB", (W, H), color=(10, 30, 100))
+            draw = ImageDraw.Draw(img)
+            try:
+                font = ImageFont.load_default()
+                draw.text((W // 2 - 50, H // 2), "Content", fill=(255, 255, 255), font=font)
+            except Exception:
+                pass
+            frame = np.array(img)
+            clips = [ImageClip(frame).set_duration(5)]
+
+        # Concatenate all clips and write the video file
+        final_video = concatenate_videoclips(clips)
+        final_video.write_videofile(
+            video_path,
+            fps=24,
+            codec='libx264',
+            audio=False,
+            verbose=False,
+            logger=None,
+            preset='ultrafast',
+        )
+
+        logger.info(f"Video file created successfully: {video_path}")
+        return True
+
+    except Exception as e:
+        logger.error(f"Error creating video: {str(e)}", exc_info=True)
+        raise
+
+
 @app.route('/api/convert-to-audio', methods=['POST'])
 def convert_to_audio():
     """Convert PDF/Notes to audio file"""
@@ -2609,23 +2765,19 @@ def convert_to_audio():
         if not text_content or len(text_content) < 10:
             return jsonify({'success': False, 'error': 'Could not extract text from file'}), 400
         
-        # Simulate audio conversion (in production, use gTTS, pyttsx3, or similar)
-        # For now, we'll create a simple metadata file
+        # Generate audio using pyttsx3
         import uuid
         audio_filename = f"audio_{uuid.uuid4().hex}.mp3"
         audio_path = f"uploads/converted_audio/{audio_filename}"
         
-        # Create a simple audio file simulation (in production, use actual TTS library)
-        with open(audio_path, 'w') as f:
-            f.write(f"Audio content generated from: {file.filename}\n")
-            f.write(f"Language: {language}\n")
-            f.write(f"Speed: {speed}x\n")
-            f.write(f"Content preview: {text_content[:200]}...\n")
+        # Create actual audio file
+        create_audio_from_text(text_content, audio_path, language, speed)
         
         # Calculate duration (rough estimate)
         word_count = len(text_content.split())
+        speed_multiplier = float(speed) if speed else 1.0
         # Assuming 150 words per minute at 1x speed
-        duration_minutes = max(1, word_count // 150)
+        duration_minutes = max(1, int((word_count // 150) / speed_multiplier))
         duration_str = f"{duration_minutes}:00"
         
         # Save to database
@@ -2692,17 +2844,13 @@ def convert_to_video():
         if not text_content or len(text_content) < 10:
             return jsonify({'success': False, 'error': 'Could not extract text from file'}), 400
         
-        # Simulate video conversion (in production, use moviepy, ffmpeg, etc.)
+        # Generate video using moviepy + Pillow (no ImageMagick needed)
         import uuid
         video_filename = f"video_{uuid.uuid4().hex}.mp4"
         video_path = f"uploads/converted_video/{video_filename}"
         
-        # Create a simple video file simulation
-        with open(video_path, 'w') as f:
-            f.write(f"Video content generated from: {file.filename}\n")
-            f.write(f"Style: {style}\n")
-            f.write(f"Duration: {duration}\n")
-            f.write(f"Content preview: {text_content[:200]}...\n")
+        # Create actual video file
+        create_video_from_text(text_content, video_path, style, duration)
         
         # Calculate duration based on setting
         duration_map = {'short': '5:00', 'medium': '15:00', 'long': '25:00'}
