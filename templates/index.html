@@ -1,345 +1,1120 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Brainspark - AI-Powered Interactive Quiz Platform</title>
-    <meta name="description" content="Upload notes, generate smart questions with Google Gemini AI, track scores, connect with students worldwide.">
-    <link rel="icon" type="image/png" href="/static/image/KNOWITNOW.png">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: { extend: { fontFamily: { inter: ['Inter', 'sans-serif'] } } }
-        }
-    </script>
-    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
-    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/TextPlugin.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body class="relative overflow-x-hidden">
-    <canvas id="particles-js" class="fixed inset-0 z-0 pointer-events-none"></canvas>
-    
-    <!-- Navigation -->
-    <nav class="fixed top-0 w-full backdrop-blur-xl bg-white/20 dark:bg-gray-900/20 border-b border-white/20 dark:border-gray-700/50 z-50 transition-all duration-300">
-        <div class="max-w-7xl mx-auto px-6 py-4">
-            <div class="flex items-center justify-between">
-                <a href="#hero" class="text-2xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent drop-shadow-lg">Brainspark</a>
-                <div class="hidden md:flex items-center space-x-8">
-                    <a href="#about" class="text-lg hover:text-blue-400 transition-all duration-300 relative group">About</a>
-                    <a href="#features" class="text-lg hover:text-blue-400 transition-all duration-300 relative group">Features</a>
-                    <a href="#how-it-works" class="text-lg hover:text-blue-400 transition-all duration-300 relative group">How It Works</a>
-                    <a href="#contact" class="text-lg hover:text-blue-400 transition-all duration-300 relative group">Contact</a>
-                </div>
-                <div class="flex items-center space-x-2">
-                    <!-- Desktop: Text links -->
-                    <a href="/signup" class="hidden md:block text-lg hover:text-blue-400 transition-all duration-300 relative group">Sign Up</a>
-                    <a href="/login" class="hidden md:block text-lg hover:text-blue-400 transition-all duration-300 relative group">Login</a>
-                    
-                    <!-- Mobile: Icon buttons -->
-                    <a href="/signup" class="md:hidden mobile-header-icon p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 hover:scale-110" title="Sign Up">
-                        <i class="fas fa-user-plus text-xl text-gray-700 dark:text-gray-300 hover:text-blue-500"></i>
-                    </a>
-                    <a href="/login" class="md:hidden mobile-header-icon p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 hover:scale-110" title="Login">
-                        <i class="fas fa-sign-in-alt text-xl text-gray-700 dark:text-gray-300 hover:text-blue-500"></i>
-                    </a>
-                    
-                    <!-- Dark Mode Toggle -->
-                    <button id="mode-toggle" class="mobile-header-icon p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 hover:scale-110" title="Toggle Theme">
-                        <span class="sun-icon">☀️</span>
-                        <span class="moon-icon hidden">🌙</span>
-                    </button>
-                    
-                    <!-- Hamburger Menu -->
-                    <button class="md:hidden hamburger-btn mobile-header-icon p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 hover:scale-110" title="Menu">
-                        <i class="fas fa-bars text-xl text-gray-700 dark:text-gray-300"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </nav>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Brainspark — Learn Smarter with AI</title>
+  <meta name="description" content="Upload notes, generate smart questions with Google Gemini AI, track scores, connect with students worldwide.">
+  <link rel="icon" type="image/png" href="/static/image/KNOWITNOW.png">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- Mobile Navigation -->
-    <div class="md:hidden">
-        <div class="mobile-menu hidden fixed top-16 left-0 w-full bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-b border-gray-200 dark:border-gray-700 z-40 shadow-lg">
-            <div class="flex flex-col space-y-1 py-4 px-4">
-                <a href="#about" class="flex items-center space-x-3 py-3 px-4 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all duration-300">
-                    <i class="fas fa-info-circle text-blue-500 text-lg w-6 text-center"></i>
-                    <span class="font-medium text-gray-700 dark:text-gray-300">About</span>
-                </a>
-                <a href="#features" class="flex items-center space-x-3 py-3 px-4 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all duration-300">
-                    <i class="fas fa-star text-purple-500 text-lg w-6 text-center"></i>
-                    <span class="font-medium text-gray-700 dark:text-gray-300">Features</span>
-                </a>
-                <a href="#how-it-works" class="flex items-center space-x-3 py-3 px-4 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all duration-300">
-                    <i class="fas fa-cogs text-emerald-500 text-lg w-6 text-center"></i>
-                    <span class="font-medium text-gray-700 dark:text-gray-300">How It Works</span>
-                </a>
-                <a href="#contact" class="flex items-center space-x-3 py-3 px-4 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all duration-300">
-                    <i class="fas fa-envelope text-pink-500 text-lg w-6 text-center"></i>
-                    <span class="font-medium text-gray-700 dark:text-gray-300">Contact</span>
-                </a>
-                <div class="border-t border-gray-200 dark:border-gray-700 my-2"></div>
-                <a href="/signup" class="flex items-center space-x-3 py-3 px-4 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all duration-300">
-                    <i class="fas fa-user-plus text-blue-500 text-lg w-6 text-center"></i>
-                    <span class="font-medium text-gray-700 dark:text-gray-300">Sign Up</span>
-                </a>
-                <a href="/login" class="flex items-center space-x-3 py-3 px-4 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all duration-300">
-                    <i class="fas fa-sign-in-alt text-green-500 text-lg w-6 text-center"></i>
-                    <span class="font-medium text-gray-700 dark:text-gray-300">Login</span>
-                </a>
-            </div>
-        </div>
+  <style>
+    /* ===================== TOKENS ===================== */
+    :root {
+      --ink: #0a0a14;
+      --ink2: #1c1c2e;
+      --surface: #ffffff;
+      --surface2: #f5f4f0;
+      --muted: #7a7a8c;
+      --accent: #ff4f30;
+      --accent2: #ff8c5a;
+      --gold: #f5c842;
+      --blue: #3b6bff;
+      --blue2: #7ba4ff;
+      --green: #00c98d;
+      --radius: 16px;
+      --radius-sm: 8px;
+      --transition: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    [data-theme="dark"] {
+      --ink: #f0efe8;
+      --ink2: #c8c6bc;
+      --surface: #0d0d18;
+      --surface2: #16162a;
+      --muted: #5a5a70;
+      --accent: #ff6244;
+      --accent2: #ffaa6e;
+    }
+
+    /* ===================== RESET ===================== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--surface);
+      color: var(--ink);
+      overflow-x: hidden;
+      transition: background 0.4s, color 0.4s;
+    }
+    ::selection { background: var(--accent); color: #fff; }
+    a { text-decoration: none; color: inherit; }
+    img { display: block; max-width: 100%; }
+
+    /* ===================== SCROLLBAR ===================== */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; }
+
+    /* ===================== NAV ===================== */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      padding: 0 6vw;
+      height: 72px;
+      display: flex; align-items: center; justify-content: space-between;
+      transition: background 0.5s, backdrop-filter 0.5s;
+    }
+    nav.scrolled {
+      background: rgba(10,10,20,0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .nav-logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.5rem;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #ff4f30, #ff8c5a);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .nav-links {
+      display: flex; align-items: center; gap: 2.5rem;
+      list-style: none;
+    }
+    .nav-links a {
+      font-size: 0.9rem; font-weight: 500; color: rgba(255,255,255,0.75);
+      letter-spacing: 0.01em;
+      transition: color 0.2s;
+      position: relative;
+    }
+    .nav-links a::after {
+      content: ''; position: absolute; bottom: -4px; left: 0; width: 0; height: 1px;
+      background: var(--accent); transition: width 0.3s;
+    }
+    .nav-links a:hover { color: #fff; }
+    .nav-links a:hover::after { width: 100%; }
+    .nav-cta {
+      display: flex; align-items: center; gap: 1rem;
+    }
+    .btn-outline {
+      padding: 0.5rem 1.2rem; border: 1.5px solid rgba(255,255,255,0.35);
+      color: #fff; border-radius: 50px; font-size: 0.875rem; font-weight: 500;
+      transition: all 0.2s;
+    }
+    .btn-outline:hover { border-color: #fff; background: rgba(255,255,255,0.08); }
+    .btn-primary {
+      padding: 0.5rem 1.4rem; background: var(--accent); color: #fff;
+      border-radius: 50px; font-size: 0.875rem; font-weight: 600;
+      transition: all 0.2s; box-shadow: 0 4px 20px rgba(255,79,48,0.4);
+    }
+    .btn-primary:hover { background: var(--accent2); transform: translateY(-1px); box-shadow: 0 6px 24px rgba(255,79,48,0.5); }
+    .hamburger { display: none; background: none; border: none; cursor: pointer; color: #fff; font-size: 1.4rem; }
+
+    /* ===================== HERO (NETFLIX STYLE) ===================== */
+    #hero {
+      position: relative; min-height: 100vh;
+      display: flex; align-items: flex-end;
+      padding: 0 6vw 10vh;
+      overflow: hidden;
+    }
+    .hero-bg {
+      position: absolute; inset: 0; z-index: 0;
+    }
+    .hero-bg img {
+      width: 100%; height: 100%; object-fit: cover; object-position: center top;
+      filter: brightness(0.45);
+    }
+    .hero-bg::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(
+        to bottom,
+        rgba(10,10,20,0.1) 0%,
+        rgba(10,10,20,0.0) 40%,
+        rgba(10,10,20,0.6) 70%,
+        rgba(10,10,20,0.95) 100%
+      );
+    }
+    /* Noise grain overlay */
+    .hero-bg::before {
+      content: '';
+      position: absolute; inset: 0; z-index: 1;
+      opacity: 0.025;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+    .hero-content { position: relative; z-index: 1; max-width: 700px; }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.35rem 1rem; border-radius: 50px;
+      background: rgba(255,79,48,0.15); border: 1px solid rgba(255,79,48,0.4);
+      color: #ff7a5a; font-size: 0.8rem; font-weight: 500; letter-spacing: 0.05em;
+      text-transform: uppercase; margin-bottom: 1.5rem;
+      opacity: 0; transform: translateY(20px);
+      animation: fadeUp 0.7s 0.2s forwards;
+    }
+    .hero-badge span { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; animation: blink 1.5s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    .hero-title {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(3rem, 8vw, 6rem);
+      font-weight: 800; line-height: 1; letter-spacing: -0.03em;
+      color: #fff; margin-bottom: 1.5rem;
+      opacity: 0; transform: translateY(30px);
+      animation: fadeUp 0.7s 0.35s forwards;
+    }
+    .hero-title em { font-style: normal; color: var(--accent); }
+    .hero-subtitle {
+      font-size: 1.15rem; font-weight: 300; color: rgba(255,255,255,0.75);
+      line-height: 1.7; max-width: 520px; margin-bottom: 2.5rem;
+      opacity: 0; transform: translateY(20px);
+      animation: fadeUp 0.7s 0.5s forwards;
+    }
+    .hero-subtitle strong { color: #fff; font-weight: 500; }
+    .hero-actions {
+      display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+      opacity: 0; transform: translateY(20px);
+      animation: fadeUp 0.7s 0.65s forwards;
+    }
+    .btn-hero {
+      display: inline-flex; align-items: center; gap: 0.6rem;
+      padding: 0.85rem 2rem; border-radius: 50px;
+      font-size: 1rem; font-weight: 600; transition: all var(--transition);
+    }
+    .btn-hero-primary {
+      background: var(--accent); color: #fff;
+      box-shadow: 0 8px 30px rgba(255,79,48,0.45);
+    }
+    .btn-hero-primary:hover { background: var(--accent2); transform: translateY(-2px) scale(1.02); box-shadow: 0 12px 36px rgba(255,79,48,0.55); }
+    .btn-hero-ghost {
+      background: rgba(255,255,255,0.12); color: #fff;
+      border: 1.5px solid rgba(255,255,255,0.3); backdrop-filter: blur(10px);
+    }
+    .btn-hero-ghost:hover { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.6); }
+    .hero-stats {
+      margin-top: 3rem; display: flex; gap: 2.5rem; flex-wrap: wrap;
+      opacity: 0; transform: translateY(20px);
+      animation: fadeUp 0.7s 0.8s forwards;
+    }
+    .hero-stat { display: flex; flex-direction: column; gap: 0.2rem; }
+    .hero-stat-num {
+      font-family: 'Syne', sans-serif; font-size: 1.75rem; font-weight: 700; color: #fff; line-height: 1;
+    }
+    .hero-stat-label { font-size: 0.8rem; color: rgba(255,255,255,0.5); letter-spacing: 0.04em; text-transform: uppercase; }
+    .hero-stat-divider { width: 1px; background: rgba(255,255,255,0.12); align-self: stretch; }
+
+    /* Scroll indicator */
+    .scroll-hint {
+      position: absolute; bottom: 2.5rem; left: 50%; transform: translateX(-50%);
+      display: flex; flex-direction: column; align-items: center; gap: 0.5rem; z-index: 2;
+      color: rgba(255,255,255,0.4); font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase;
+      animation: bounce 2s ease-in-out infinite;
+    }
+    .scroll-hint-line { width: 1px; height: 40px; background: linear-gradient(to bottom, rgba(255,255,255,0.4), transparent); }
+    @keyframes bounce { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(6px)} }
+
+    @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+
+    /* ===================== TRUSTED BY ===================== */
+    .trusted-bar {
+      background: var(--surface2); padding: 2rem 6vw;
+      display: flex; align-items: center; gap: 3rem; overflow: hidden;
+      border-top: 1px solid rgba(0,0,0,0.06);
+    }
+    .trusted-label { font-size: 0.8rem; font-weight: 500; color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; }
+    .trusted-logos { display: flex; align-items: center; gap: 3rem; overflow: hidden; }
+    .trusted-logo {
+      display: flex; align-items: center; gap: 0.6rem;
+      font-size: 0.95rem; font-weight: 600; color: var(--muted); white-space: nowrap;
+      opacity: 0.6; transition: opacity 0.2s;
+    }
+    .trusted-logo:hover { opacity: 1; }
+    .trusted-logo i { font-size: 1.2rem; }
+
+    /* ===================== SECTION SHARED ===================== */
+    section { padding: 7rem 6vw; }
+    .section-eyebrow {
+      font-size: 0.8rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--accent); margin-bottom: 1rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .section-eyebrow::before { content: ''; width: 20px; height: 2px; background: var(--accent); border-radius: 1px; }
+    .section-title {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 800; letter-spacing: -0.03em;
+      line-height: 1.1; color: var(--ink); margin-bottom: 1.5rem;
+    }
+    .section-desc { font-size: 1.1rem; color: var(--muted); line-height: 1.7; max-width: 520px; }
+    .text-accent { color: var(--accent); }
+
+    /* ===================== HOW IT WORKS ===================== */
+    #how-it-works { background: var(--ink2 == '#1c1c2e' ? var(--surface) : '#0a0a14'); }
+    .hiw-wrap {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 6rem; align-items: center;
+    }
+    .hiw-steps { display: flex; flex-direction: column; gap: 2rem; }
+    .hiw-step {
+      display: flex; gap: 1.5rem; align-items: flex-start;
+      padding: 1.75rem; border-radius: var(--radius); border: 1px solid rgba(0,0,0,0.06);
+      background: var(--surface); transition: all var(--transition);
+      cursor: default; position: relative; overflow: hidden;
+    }
+    .hiw-step::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(255,79,48,0.04), rgba(59,107,255,0.04));
+      opacity: 0; transition: opacity var(--transition);
+    }
+    .hiw-step:hover { transform: translateX(6px); box-shadow: 0 10px 40px rgba(0,0,0,0.08); }
+    .hiw-step:hover::before { opacity: 1; }
+    .hiw-num {
+      font-family: 'Syne', sans-serif; font-size: 3rem; font-weight: 800;
+      line-height: 1; color: transparent;
+      -webkit-text-stroke: 2px rgba(255,79,48,0.25);
+      min-width: 2.5rem;
+    }
+    .hiw-step:hover .hiw-num { -webkit-text-stroke-color: var(--accent); }
+    .hiw-step-content h3 { font-family: 'Syne', sans-serif; font-size: 1.2rem; font-weight: 700; margin-bottom: 0.4rem; color: var(--ink); }
+    .hiw-step-content p { font-size: 0.95rem; color: var(--muted); line-height: 1.6; }
+    .hiw-visual {
+      position: relative; border-radius: 24px; overflow: hidden; aspect-ratio: 4/5;
+    }
+    .hiw-visual img {
+      width: 100%; height: 100%; object-fit: cover;
+      transition: transform 8s ease-in-out;
+    }
+    .hiw-visual:hover img { transform: scale(1.04); }
+    .hiw-visual-badge {
+      position: absolute; bottom: 1.5rem; left: 1.5rem; right: 1.5rem;
+      background: rgba(10,10,20,0.85); backdrop-filter: blur(20px);
+      border-radius: var(--radius-sm); padding: 1.25rem 1.5rem;
+      border: 1px solid rgba(255,255,255,0.08);
+      display: flex; align-items: center; gap: 1rem;
+    }
+    .hiw-visual-badge-icon {
+      width: 42px; height: 42px; border-radius: 10px;
+      background: var(--accent); display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 1.1rem; flex-shrink: 0;
+    }
+    .hiw-visual-badge p { font-size: 0.85rem; color: rgba(255,255,255,0.65); margin: 0.1rem 0 0; }
+    .hiw-visual-badge strong { color: #fff; font-size: 0.95rem; }
+
+    /* ===================== FEATURES ===================== */
+    #features { background: var(--surface2); }
+    .features-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px;
+      border-radius: 24px; overflow: hidden;
+      border: 1px solid rgba(0,0,0,0.07);
+      margin-top: 4rem;
+    }
+    .feature-card {
+      background: var(--surface); padding: 2.5rem 2rem;
+      display: flex; flex-direction: column; gap: 1.25rem;
+      transition: all var(--transition); cursor: default; position: relative;
+    }
+    .feature-card:hover { background: var(--ink); }
+    .feature-card:hover .feature-title { color: #fff; }
+    .feature-card:hover .feature-desc { color: rgba(255,255,255,0.5); }
+    .feature-card:hover .feature-icon-wrap { background: var(--accent); }
+    .feature-card:hover .feature-icon-wrap i { color: #fff; }
+    .feature-card:hover .feature-tag { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5); }
+    .feature-img {
+      width: 100%; height: 160px; object-fit: cover; border-radius: 12px;
+      transition: transform 0.6s;
+    }
+    .feature-card:hover .feature-img { transform: scale(1.03); }
+    .feature-icon-wrap {
+      width: 48px; height: 48px; border-radius: 12px;
+      background: rgba(255,79,48,0.08); display: flex; align-items: center; justify-content: center;
+      transition: background var(--transition);
+    }
+    .feature-icon-wrap i { font-size: 1.3rem; color: var(--accent); transition: color var(--transition); }
+    .feature-title { font-family: 'Syne', sans-serif; font-size: 1.15rem; font-weight: 700; color: var(--ink); transition: color var(--transition); }
+    .feature-desc { font-size: 0.9rem; color: var(--muted); line-height: 1.6; transition: color var(--transition); flex: 1; }
+    .feature-tag {
+      display: inline-flex; align-items: center;
+      padding: 0.3rem 0.75rem; border-radius: 50px;
+      font-size: 0.75rem; font-weight: 500; letter-spacing: 0.04em;
+      background: rgba(255,79,48,0.08); color: var(--accent);
+      transition: all var(--transition); align-self: flex-start;
+    }
+
+    /* ===================== STATS RIBBON ===================== */
+    .stats-ribbon {
+      background: var(--ink); padding: 5rem 6vw;
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem;
+    }
+    .stat-item { text-align: center; }
+    .stat-num {
+      font-family: 'Syne', sans-serif; font-size: clamp(2.5rem, 5vw, 4rem);
+      font-weight: 800; color: #fff; line-height: 1; margin-bottom: 0.5rem;
+    }
+    .stat-num span { color: var(--accent); }
+    .stat-label { font-size: 0.85rem; color: rgba(255,255,255,0.4); letter-spacing: 0.06em; text-transform: uppercase; }
+
+    /* ===================== SHOWCASE / TESTIMONIALS ===================== */
+    #showcase { background: var(--surface); }
+    .showcase-grid { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 1.5rem; margin-top: 4rem; }
+    .showcase-card {
+      border-radius: var(--radius); overflow: hidden; position: relative;
+      background: var(--surface2); border: 1px solid rgba(0,0,0,0.06);
+      transition: transform var(--transition), box-shadow var(--transition);
+    }
+    .showcase-card:hover { transform: translateY(-6px); box-shadow: 0 20px 60px rgba(0,0,0,0.12); }
+    .showcase-card-img { width: 100%; height: 200px; object-fit: cover; }
+    .showcase-card.tall .showcase-card-img { height: 100%; min-height: 320px; }
+    .showcase-card-body { padding: 1.5rem; }
+    .showcase-quote { font-size: 1rem; line-height: 1.65; color: var(--ink); margin-bottom: 1.2rem; }
+    .showcase-author { display: flex; align-items: center; gap: 0.75rem; }
+    .showcase-avatar {
+      width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid var(--surface2);
+    }
+    .showcase-author-info p { font-size: 0.85rem; font-weight: 600; color: var(--ink); margin: 0; }
+    .showcase-author-info span { font-size: 0.78rem; color: var(--muted); }
+    .stars { color: var(--gold); font-size: 0.8rem; margin-bottom: 0.75rem; letter-spacing: 2px; }
+
+    /* ===================== AI HIGHLIGHT ===================== */
+    #ai-highlight {
+      background: var(--surface2);
+      display: grid; grid-template-columns: 1fr 1fr; gap: 6rem; align-items: center;
+    }
+    .ai-visual {
+      position: relative; border-radius: 24px; overflow: hidden;
+    }
+    .ai-visual img { width: 100%; border-radius: 24px; }
+    .ai-chat-float {
+      position: absolute; top: 1.5rem; right: -1.5rem;
+      background: #fff; border-radius: var(--radius); padding: 1.25rem 1.5rem;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+      border: 1px solid rgba(0,0,0,0.06); max-width: 260px;
+      animation: floatCard 4s ease-in-out infinite;
+    }
+    .ai-chat-float p { font-size: 0.85rem; color: #1a1a2e; line-height: 1.5; margin-top: 0.5rem; }
+    .ai-chat-float .ai-label { font-size: 0.72rem; font-weight: 600; color: var(--accent); letter-spacing: 0.06em; text-transform: uppercase; }
+    .ai-score-float {
+      position: absolute; bottom: 2rem; left: -2rem;
+      background: #fff; border-radius: var(--radius); padding: 1.25rem 1.5rem;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+      border: 1px solid rgba(0,0,0,0.06);
+      animation: floatCard 4s ease-in-out infinite 2s;
+    }
+    @keyframes floatCard { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+    .score-circle {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: conic-gradient(var(--green) 0% 88%, rgba(0,201,141,0.12) 88% 100%);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Syne', sans-serif; font-size: 0.95rem; font-weight: 700; color: #1a1a2e;
+    }
+    .ai-features-list { margin-top: 2.5rem; display: flex; flex-direction: column; gap: 1rem; }
+    .ai-feature-item { display: flex; align-items: flex-start; gap: 1rem; }
+    .ai-feature-icon { width: 36px; height: 36px; border-radius: 8px; background: rgba(255,79,48,0.08); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .ai-feature-icon i { color: var(--accent); font-size: 1rem; }
+    .ai-feature-text h4 { font-size: 0.95rem; font-weight: 600; color: var(--ink); margin-bottom: 0.2rem; }
+    .ai-feature-text p { font-size: 0.85rem; color: var(--muted); line-height: 1.5; }
+
+    /* ===================== FAQ ===================== */
+    #faq { background: var(--surface); }
+    .faq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; margin-top: 3rem; align-items: start; }
+    .faq-list { display: flex; flex-direction: column; gap: 1px; }
+    .faq-item { border-radius: var(--radius-sm); overflow: hidden; }
+    .faq-q {
+      width: 100%; display: flex; align-items: center; justify-content: space-between;
+      padding: 1.25rem 1.5rem; background: var(--surface2); border: none; cursor: pointer;
+      font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 500;
+      color: var(--ink); text-align: left; gap: 1rem; transition: background 0.2s;
+    }
+    .faq-q:hover { background: rgba(255,79,48,0.04); }
+    .faq-q.open { background: var(--accent); color: #fff; }
+    .faq-q.open .faq-chevron { transform: rotate(180deg); color: #fff; }
+    .faq-chevron { transition: transform 0.3s; color: var(--muted); flex-shrink: 0; }
+    .faq-a {
+      max-height: 0; overflow: hidden; transition: max-height 0.4s ease, padding 0.3s;
+      background: var(--surface2); font-size: 0.9rem; color: var(--muted); line-height: 1.7;
+      padding: 0 1.5rem;
+    }
+    .faq-a.open { max-height: 200px; padding: 1.25rem 1.5rem; }
+    .faq-visual img { width: 100%; border-radius: var(--radius); }
+    .faq-contact-card {
+      margin-top: 2rem; padding: 2rem; border-radius: var(--radius);
+      background: var(--ink); color: #fff;
+      display: flex; flex-direction: column; gap: 1rem;
+    }
+    .faq-contact-card h3 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.3rem; }
+    .faq-contact-card p { font-size: 0.9rem; color: rgba(255,255,255,0.5); }
+    .faq-contact-card a { display: inline-flex; align-items: center; gap: 0.5rem; background: var(--accent); color: #fff; padding: 0.65rem 1.4rem; border-radius: 50px; font-size: 0.875rem; font-weight: 600; transition: background 0.2s; }
+    .faq-contact-card a:hover { background: var(--accent2); }
+
+    /* ===================== CTA SECTION ===================== */
+    #cta {
+      position: relative; min-height: 80vh; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      text-align: center; padding: 8rem 6vw;
+    }
+    .cta-bg { position: absolute; inset: 0; z-index: 0; }
+    .cta-bg img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.3) saturate(1.2); }
+    .cta-bg::after {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse at center, rgba(255,79,48,0.25) 0%, rgba(10,10,20,0.8) 70%);
+    }
+    .cta-content { position: relative; z-index: 1; max-width: 680px; }
+    .cta-content h2 {
+      font-family: 'Syne', sans-serif; font-size: clamp(2.5rem, 6vw, 4.5rem);
+      font-weight: 800; color: #fff; line-height: 1.05; letter-spacing: -0.03em; margin-bottom: 1.5rem;
+    }
+    .cta-content p { font-size: 1.1rem; color: rgba(255,255,255,0.65); line-height: 1.7; margin-bottom: 2.5rem; }
+    .cta-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .cta-input-wrap { display: flex; gap: 0; max-width: 460px; margin: 0 auto 1.5rem; }
+    .cta-input {
+      flex: 1; padding: 0.9rem 1.25rem; border: none; border-radius: 50px 0 0 50px;
+      font-size: 0.95rem; background: rgba(255,255,255,0.92); color: #1a1a2e;
+      outline: none; font-family: 'DM Sans', sans-serif;
+    }
+    .cta-submit {
+      padding: 0.9rem 1.75rem; background: var(--accent); color: #fff;
+      border: none; border-radius: 0 50px 50px 0; font-size: 0.95rem;
+      font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif;
+      transition: background 0.2s;
+    }
+    .cta-submit:hover { background: var(--accent2); }
+    .cta-note { font-size: 0.8rem; color: rgba(255,255,255,0.35); }
+
+    /* ===================== FOOTER ===================== */
+    footer {
+      background: #080810; padding: 5rem 6vw 2.5rem;
+      border-top: 1px solid rgba(255,255,255,0.04);
+    }
+    .footer-grid { display: grid; grid-template-columns: 1.5fr repeat(3, 1fr); gap: 3rem; margin-bottom: 4rem; }
+    .footer-brand h3 { font-family: 'Syne', sans-serif; font-size: 1.5rem; font-weight: 800; color: var(--accent); margin-bottom: 1rem; }
+    .footer-brand p { font-size: 0.9rem; color: rgba(255,255,255,0.35); line-height: 1.7; max-width: 280px; }
+    .footer-social { display: flex; gap: 0.75rem; margin-top: 1.5rem; }
+    .footer-social a {
+      width: 36px; height: 36px; border-radius: 8px;
+      background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.5);
+      display: flex; align-items: center; justify-content: center; font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+    .footer-social a:hover { background: var(--accent); color: #fff; transform: translateY(-2px); }
+    .footer-col h4 { font-size: 0.8rem; font-weight: 600; color: rgba(255,255,255,0.6); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 1.25rem; }
+    .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 0.75rem; }
+    .footer-col ul a { font-size: 0.9rem; color: rgba(255,255,255,0.35); transition: color 0.2s; }
+    .footer-col ul a:hover { color: #fff; }
+    .footer-bottom {
+      border-top: 1px solid rgba(255,255,255,0.06); padding-top: 2rem;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .footer-bottom p { font-size: 0.82rem; color: rgba(255,255,255,0.25); }
+    .footer-bottom-links { display: flex; gap: 1.5rem; }
+    .footer-bottom-links a { font-size: 0.82rem; color: rgba(255,255,255,0.25); transition: color 0.2s; }
+    .footer-bottom-links a:hover { color: rgba(255,255,255,0.6); }
+
+    /* ===================== THEME TOGGLE ===================== */
+    #theme-btn {
+      width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: rgba(255,255,255,0.7); font-size: 0.95rem; transition: all 0.2s;
+    }
+    #theme-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+
+    /* ===================== MOBILE MENU ===================== */
+    .mobile-menu {
+      display: none; position: fixed; inset: 0; z-index: 200;
+      background: rgba(8,8,16,0.97); backdrop-filter: blur(20px);
+      flex-direction: column; align-items: center; justify-content: center; gap: 2rem;
+    }
+    .mobile-menu.open { display: flex; }
+    .mobile-menu a { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 700; color: #fff; }
+    .mobile-close {
+      position: absolute; top: 1.5rem; right: 1.5rem;
+      background: none; border: none; color: rgba(255,255,255,0.6); font-size: 1.5rem; cursor: pointer;
+    }
+
+    /* ===================== RESPONSIVE ===================== */
+    @media (max-width: 1024px) {
+      .hiw-wrap { grid-template-columns: 1fr; gap: 3rem; }
+      .hiw-visual { aspect-ratio: 16/9; }
+      #ai-highlight { grid-template-columns: 1fr; }
+      .ai-chat-float { right: 0; }
+    }
+    @media (max-width: 900px) {
+      .features-grid { grid-template-columns: 1fr 1fr; }
+      .stats-ribbon { grid-template-columns: repeat(2, 1fr); }
+      .showcase-grid { grid-template-columns: 1fr 1fr; }
+      .faq-grid { grid-template-columns: 1fr; }
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 640px) {
+      section { padding: 5rem 5vw; }
+      nav { padding: 0 5vw; }
+      .nav-links, .btn-outline { display: none; }
+      .hamburger { display: block; }
+      .features-grid { grid-template-columns: 1fr; }
+      .stats-ribbon { grid-template-columns: 1fr 1fr; padding: 3rem 5vw; }
+      .showcase-grid { grid-template-columns: 1fr; }
+      .footer-grid { grid-template-columns: 1fr; gap: 2rem; }
+      .footer-bottom { flex-direction: column; gap: 1rem; text-align: center; }
+      .hero-stats { gap: 1.5rem; }
+      .trusted-bar { flex-direction: column; align-items: flex-start; gap: 1.5rem; }
+    }
+
+    /* ===================== SCROLL REVEAL ===================== */
+    .reveal { opacity: 0; transform: translateY(32px); transition: opacity 0.7s ease, transform 0.7s ease; }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+  </style>
+</head>
+<body>
+
+<!-- ======================== NAV ======================== -->
+<nav id="main-nav">
+  <a href="#" class="nav-logo">Brainspark</a>
+  <ul class="nav-links">
+    <li><a href="#how-it-works">How it Works</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#showcase">Students</a></li>
+    <li><a href="#faq">FAQ</a></li>
+  </ul>
+  <div class="nav-cta">
+    <button id="theme-btn" onclick="toggleTheme()" title="Toggle theme"><i class="fas fa-moon"></i></button>
+    <a href="/login" class="btn-outline">Sign in</a>
+    <a href="/signup" class="btn-primary">Get started free</a>
+    <button class="hamburger" onclick="openMenu()"><i class="fas fa-bars"></i></button>
+  </div>
+</nav>
+
+<!-- Mobile menu -->
+<div class="mobile-menu" id="mobile-menu">
+  <button class="mobile-close" onclick="closeMenu()"><i class="fas fa-times"></i></button>
+  <a href="#how-it-works" onclick="closeMenu()">How it Works</a>
+  <a href="#features" onclick="closeMenu()">Features</a>
+  <a href="#showcase" onclick="closeMenu()">Students</a>
+  <a href="#faq" onclick="closeMenu()">FAQ</a>
+  <a href="/signup" onclick="closeMenu()" style="color: var(--accent);">Get started free →</a>
+</div>
+
+<!-- ======================== HERO ======================== -->
+<section id="hero">
+  <div class="hero-bg">
+    <img src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=1800&q=80&fit=crop" alt="Students studying together" loading="eager">
+  </div>
+
+  <div class="hero-content">
+    <div class="hero-badge">
+      <span></span>
+      Now powered by Google Gemini 2.5
     </div>
 
-    <!-- Hero Section -->
-    <section id="hero" class="min-h-screen flex flex-col items-center justify-center text-center relative px-6 pt-20 pb-32 overflow-hidden">
-        <div class="max-w-4xl mx-auto z-10">
-            <img src="/static/image/KNOWITNOW.png" alt="Brainspark" id="hero-logo" class="w-96 h-auto mx-auto mb-12 drop-shadow-2xl animate-pulse-hero">
-            <h1 class="text-6xl md:text-7xl lg:text-8xl font-black bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 bg-clip-text text-transparent mb-8 drop-shadow-2xl animate-fade-in-up">
-                Know<span class="text-transparent bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text">It</span>Now
-            </h1>
-            <p class="text-xl md:text-2xl lg:text-3xl text-gray-700 dark:text-gray-300 max-w-3xl mx-auto mb-12 leading-relaxed animate-fade-in-up animation-delay-200">
-                The ultimate AI-powered quiz platform. Upload notes, generate smart questions with <strong>Google Gemini</strong>, track scores, 
-                connect globally. Master your studies smarter, not harder.
-            </p>
-            <div class="flex flex-col sm:flex-row gap-6 justify-center items-center animate-fade-in-up animation-delay-400">
-                <a href="/signup" class="px-12 py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold text-lg rounded-3xl shadow-2xl hover:shadow-3xl hover:scale-105 transform transition-all duration-500 drop-shadow-2xl">Sign Up Free →</a>
-                <a href="/signup" class="px-12 py-6 border-2 border-blue-500/50 hover:border-blue-400 text-blue-600 hover:text-blue-500 font-bold text-lg rounded-3xl hover:scale-105 transform transition-all duration-500 backdrop-blur-sm">Get Started</a>
-            </div>
-            <div class="flex flex-wrap justify-center gap-6 mt-16 text-sm text-gray-500 dark:text-gray-400 animate-fade-in-up animation-delay-600">
-                <span>✅ Trusted by 50K+ students</span>
-                <span>⚡ Instant question generation</span>
-                <span>🌍 Global student network</span>
-            </div>
-        </div>
-    </section>
+    <h1 class="hero-title">
+      Study smarter.<br>Learn <em>faster.</em>
+    </h1>
 
-    <!-- About Section -->
-    <section id="about" class="py-32 px-6 relative">
-        <div class="max-w-7xl mx-auto">
-            <div class="text-center mb-24">
-                <h2 class="text-5xl md:text-6xl lg:text-7xl font-black bg-gradient-to-r from-gray-900 to-gray-700 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent mb-6">Why Choose Brainspark?</h2>
-                <p class="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">Revolutionary learning platform combining AI question generation, adaptive quizzing, social learning, and performance analytics.</p>
-            </div>
-            <div class="grid md:grid-cols-2 gap-16 items-center">
-                <div data-aos="fade-right">
-                    <img src="/static/image/KNOWITNOW.png" alt="Platform" class="w-full h-96 object-cover rounded-3xl shadow-2xl hover:rotate-3 hover:scale-105 transition-all duration-700">
-                </div>
-                <div data-aos="fade-left" class="space-y-8">
-                    <div class="bg-gradient-to-br from-blue-50/80 to-purple-50/80 dark:from-blue-900/30 dark:to-purple-900/30 p-8 rounded-3xl backdrop-blur-sm border border-blue-100/50 dark:border-blue-800/50 shadow-xl hover:shadow-2xl transition-all duration-500">
-                        <h3 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">AI That Understands You</h3>
-                        <p class="text-lg text-gray-600 dark:text-gray-300 leading-relaxed">Upload any PDF notes. Our Google Gemini AI extracts key concepts and generates personalized objective/theory questions at your difficulty level.</p>
-                    </div>
-                    <div class="bg-gradient-to-br from-purple-50/80 to-pink-50/80 dark:from-purple-900/30 dark:to-pink-900/30 p-8 rounded-3xl backdrop-blur-sm border border-purple-100/50 dark:border-purple-800/50 shadow-xl hover:shadow-2xl transition-all duration-500">
-                        <h3 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">Global Study Network</h3>
-                        <p class="text-lg text-gray-600 dark:text-gray-300 leading-relaxed">Connect with students from your school, country, level. Compete on leaderboards, form study groups, share strategies.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
+    <p class="hero-subtitle">
+      Upload your notes. Brainspark's AI generates smart questions, grades your answers, explains your mistakes, and connects you with students worldwide. <strong>Exam prep, reimagined.</strong>
+    </p>
 
-    <!-- Stats Section -->
-    <section class="py-24 px-6 bg-gradient-to-br from-blue-600/10 to-purple-600/10 dark:from-blue-900/20 dark:to-purple-900/20">
-        <div class="max-w-6xl mx-auto text-center">
-            <div class="grid md:grid-cols-4 gap-12">
-                <div data-aos="zoom-in">
-                    <div class="text-5xl md:text-6xl font-black text-transparent bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text mb-4" data-target="50000">0</div>
-                    <p class="text-xl font-semibold text-gray-700 dark:text-gray-300">Students</p>
-                </div>
-                <div data-aos="zoom-in" data-aos-delay="200">
-                    <div class="text-5xl md:text-6xl font-black text-transparent bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text mb-4" data-target="2500000">0</div>
-                    <p class="text-xl font-semibold text-gray-700 dark:text-gray-300">Quizzes Taken</p>
-                </div>
-                <div data-aos="zoom-in" data-aos-delay="400">
-                    <div class="text-5xl md:text-6xl font-black text-transparent bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text mb-4" data-target="98">0</div>
-                    <p class="text-xl font-semibold text-gray-700 dark:text-gray-300">Success Rate %</p>
-                </div>
-                <div data-aos="zoom-in" data-aos-delay="600">
-                    <div class="text-5xl md:text-6xl font-black text-transparent bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text mb-4" data-target="150">0</div>
-                    <p class="text-xl font-semibold text-gray-700 dark:text-gray-300">Countries</p>
-                </div>
-            </div>
-        </div>
-    </section>
+    <div class="hero-actions">
+      <a href="/signup" class="btn-hero btn-hero-primary">
+        <i class="fas fa-bolt"></i> Start for free
+      </a>
+      <a href="#how-it-works" class="btn-hero btn-hero-ghost">
+        <i class="fas fa-play"></i> See how it works
+      </a>
+    </div>
 
-    <!-- Features (Enhanced) -->
-    <section id="features" class="py-32 px-6">
-        <div class="max-w-7xl mx-auto text-center mb-24">
-            <h2 class="text-5xl md:text-6xl lg:text-7xl font-black bg-gradient-to-r from-gray-900 to-gray-700 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent mb-6">Powerful Features</h2>
-            <p class="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">Everything you need to master any subject with AI-powered learning.</p>
-        </div>
-        <div class="grid md:grid-cols-3 gap-8 max-w-7xl mx-auto">
-            <div class="group relative card p-10 transform hover:-translate-y-4 transition-all duration-700 hover:shadow-2xl cursor-pointer rounded-3xl border-0 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900/50 dark:to-gray-800/50 backdrop-blur-xl" data-aos="fade-up" data-aos-delay="100">
-                <div class="w-24 h-24 bg-gradient-to-r from-blue-500 to-blue-600 rounded-3xl flex items-center justify-center mb-8 shadow-2xl group-hover:scale-110 transition-transform duration-500 mx-auto">
-                    <span class="text-3xl">📚</span>
-                </div>
-                <h3 class="text-3xl font-bold text-gray-900 dark:text-white mb-6 group-hover:text-blue-600 transition-colors">Smart Question Generator</h3>
-                <p class="text-lg text-gray-600 dark:text-gray-400 leading-relaxed mb-8">Upload PDF notes. AI generates up to 100 objective/theory questions matching your difficulty. Perfect for exam prep.</p>
-                <ul class="space-y-2 text-left text-gray-500 dark:text-gray-400">
-                    <li>• Custom difficulty levels</li>
-                    <li>• Timed practice mode</li>
-                    <li>• Instant AI grading</li>
-                </ul>
-            </div>
-            <div class="group relative card p-10 transform hover:-translate-y-4 transition-all duration-700 hover:shadow-2xl cursor-pointer rounded-3xl border-0 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900/50 dark:to-gray-800/50 backdrop-blur-xl" data-aos="fade-up" data-aos-delay="200">
-                <div class="w-24 h-24 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-3xl flex items-center justify-center mb-8 shadow-2xl group-hover:scale-110 transition-transform duration-500 mx-auto">
-                    <span class="text-3xl">🎯</span>
-                </div>
-                <h3 class="text-3xl font-bold text-gray-900 dark:text-white mb-6 group-hover:text-emerald-600 transition-colors">AI-Powered Quizzes</h3>
-                <p class="text-lg text-gray-600 dark:text-gray-400 leading-relaxed mb-8">Real-time scoring, detailed Gemini AI explanations for wrong answers, performance analytics, weak area detection.</p>
-                <ul class="space-y-2 text-left text-gray-500 dark:text-gray-400">
-                    <li>• Instant feedback</li>
-                    <li>• Progress tracking</li>
-                    <li>• Adaptive difficulty</li>
-                </ul>
-            </div>
-            <div class="group relative card p-10 transform hover:-translate-y-4 transition-all duration-700 hover:shadow-2xl cursor-pointer rounded-3xl border-0 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900/50 dark:to-gray-800/50 backdrop-blur-xl" data-aos="fade-up" data-aos-delay="300">
-                <div class="w-24 h-24 bg-gradient-to-r from-purple-500 to-purple-600 rounded-3xl flex items-center justify-center mb-8 shadow-2xl group-hover:scale-110 transition-transform duration-500 mx-auto">
-                    <span class="text-3xl">👥</span>
-                </div>
-                <h3 class="text-3xl font-bold text-gray-900 dark:text-white mb-6 group-hover:text-purple-600 transition-colors">Global Connections</h3>
-                <p class="text-lg text-gray-600 dark:text-gray-400 leading-relaxed mb-8">Match with students by school/country/level. Leaderboards, study groups, challenge friends worldwide.</p>
-                <ul class="space-y-2 text-left text-gray-500 dark:text-gray-400">
-                    <li>• School matching</li>
-                    <li>• Leaderboards</li>
-                    <li>• Study groups</li>
-                </ul>
-            </div>
-        </div>
-    </section>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="hero-stat-num" data-count="50000">0</div>
+        <div class="hero-stat-label">Active Students</div>
+      </div>
+      <div class="hero-stat-divider"></div>
+      <div class="hero-stat">
+        <div class="hero-stat-num" data-count="2500000">0</div>
+        <div class="hero-stat-label">Quizzes Taken</div>
+      </div>
+      <div class="hero-stat-divider"></div>
+      <div class="hero-stat">
+        <div class="hero-stat-num" data-count="150">0</div>
+        <div class="hero-stat-label">Countries</div>
+      </div>
+    </div>
+  </div>
 
-    <!-- How It Works -->
-    <section id="how-it-works" class="py-32 px-6 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900/50 dark:to-gray-800">
-        <div class="max-w-7xl mx-auto text-center mb-24">
-            <h2 class="text-5xl md:text-6xl font-black bg-gradient-to-r from-gray-900 to-gray-700 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent mb-6">How It Works</h2>
-        </div>
-        <div class="grid md:grid-cols-3 gap-12 max-w-6xl mx-auto">
-            <div class="text-center group" data-aos="fade-up" data-aos-delay="100">
-                <div class="w-24 h-24 bg-gradient-to-r from-orange-500 to-orange-600 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-2xl group-hover:scale-110 transition-all duration-500">
-                    <span class="text-2xl">1️⃣</span>
-                </div>
-                <h3 class="text-3xl font-bold text-gray-900 dark:text-white mb-6">Upload Notes</h3>
-                <p class="text-lg text-gray-600 dark:text-gray-400 max-w-md mx-auto">Upload any PDF notes or textbooks. Our AI extracts key concepts automatically.</p>
-            </div>
-            <div class="text-center group" data-aos="fade-up" data-aos-delay="200">
-                <div class="w-24 h-24 bg-gradient-to-r from-blue-500 to-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-2xl group-hover:scale-110 transition-all duration-500">
-                    <span class="text-2xl">2️⃣</span>
-                </div>
-                <h3 class="text-3xl font-bold text-gray-900 dark:text-white mb-6">Generate Questions</h3>
-                <p class="text-lg text-gray-600 dark:text-gray-400 max-w-md mx-auto">Choose question type, difficulty, timer. Get up to 100 smart questions instantly.</p>
-            </div>
-            <div class="text-center group" data-aos="fade-up" data-aos-delay="300">
-                <div class="w-24 h-24 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-2xl group-hover:scale-110 transition-all duration-500">
-                    <span class="text-2xl">3️⃣</span>
-                </div>
-                <h3 class="text-3xl font-bold text-gray-900 dark:text-white mb-6">Master & Connect</h3>
-                <p class="text-lg text-gray-600 dark:text-gray-400 max-w-md mx-auto">Practice, get AI explanations, track progress, connect with global students.</p>
-            </div>
-        </div>
-    </section>
+  <div class="scroll-hint">
+    <div class="scroll-hint-line"></div>
+    Scroll
+  </div>
+</section>
 
-    <!-- FAQ Enhanced -->
-    <section id="faq" class="py-32 px-6">
-        <div class="max-w-4xl mx-auto text-center mb-24">
-            <h2 class="text-5xl md:text-6xl font-black bg-gradient-to-r from-gray-900 to-gray-700 dark:from-orange-400 dark:to-red-400 bg-clip-text text-transparent mb-6">Frequently Asked Questions</h2>
-        </div>
-        <div class="max-w-4xl mx-auto space-y-6">
-            <div class="card hover:shadow-2xl transition-all duration-500 p-8 rounded-3xl border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm group" data-aos="fade-up">
-                <h4 class="text-2xl font-bold text-gray-900 dark:text-white mb-4 group-hover:text-blue-600 transition-colors">What types of files can I upload?</h4>
-                <p class="text-lg text-gray-600 dark:text-gray-400 leading-relaxed">PDF notes, textbooks, lecture slides (up to 50MB). Our AI extracts text from any format automatically.</p>
-            </div>
-            <div class="card hover:shadow-2xl transition-all duration-500 p-8 rounded-3xl border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm group" data-aos="fade-up" data-aos-delay="100">
-                <h4 class="text-2xl font-bold text-gray-900 dark:text-white mb-4 group-hover:text-emerald-600 transition-colors">Is my data private and secure?</h4>
-                <p class="text-lg text-gray-600 dark:text-gray-400 leading-relaxed">100% private. Files processed temporarily, never stored. End-to-end encryption. GDPR compliant.</p>
-            </div>
-            <div class="card hover:shadow-2xl transition-all duration-500 p-8 rounded-3xl border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm group" data-aos="fade-up" data-aos-delay="200">
-                <h4 class="text-2xl font-bold text-gray-900 dark:text-white mb-4 group-hover:text-purple-600 transition-colors">What AI technology powers the questions?</h4>
-                <p class="text-lg text-gray-600 dark:text-gray-400 leading-relaxed">Google Gemini 1.5 - state-of-the-art AI with superior understanding of technical content and question generation.</p>
-            </div>
-        </div>
-    </section>
+<!-- ======================== TRUSTED BY ======================== -->
+<div class="trusted-bar">
+  <span class="trusted-label">Trusted by students at</span>
+  <div class="trusted-logos">
+    <div class="trusted-logo"><i class="fas fa-university"></i> Harvard Extension</div>
+    <div class="trusted-logo"><i class="fas fa-graduation-cap"></i> MIT OpenCourseWare</div>
+    <div class="trusted-logo"><i class="fas fa-book"></i> University of Lagos</div>
+    <div class="trusted-logo"><i class="fas fa-flask"></i> Imperial College</div>
+    <div class="trusted-logo"><i class="fas fa-star"></i> Oxford Brookes</div>
+  </div>
+</div>
 
-    <!-- Contact Enhanced -->
-    <section id="contact" class="py-32 px-6 relative overflow-hidden">
-        <div class="max-w-4xl mx-auto text-center mb-24">
-            <h2 class="text-5xl md:text-6xl font-black bg-gradient-to-r from-gray-900 to-gray-700 dark:from-pink-400 dark:to-rose-400 bg-clip-text text-transparent mb-6">Get In Touch</h2>
-            <p class="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">Ready to transform how you study? Send us a message and we'll get back within 24 hours.</p>
+<!-- ======================== HOW IT WORKS ======================== -->
+<section id="how-it-works">
+  <div class="hiw-wrap">
+    <div>
+      <div class="section-eyebrow reveal">Process</div>
+      <h2 class="section-title reveal">Three steps to exam-ready</h2>
+      <p class="section-desc reveal">From raw PDF to personalized quiz in under 30 seconds. No manual question writing. No guessing what's important.</p>
+
+      <div class="hiw-steps" style="margin-top: 3rem;">
+        <div class="hiw-step reveal">
+          <div class="hiw-num">01</div>
+          <div class="hiw-step-content">
+            <h3>Upload your notes</h3>
+            <p>Drop any PDF — lecture slides, textbooks, handouts. Brainspark reads them all and extracts every concept automatically.</p>
+          </div>
         </div>
-        <form id="contact-form" class="max-w-2xl mx-auto grid gap-8" data-aos="zoom-in">
-            <div class="grid md:grid-cols-2 gap-6">
-                <input type="text" name="name" placeholder="Full Name" required class="input-field p-6 rounded-3xl border-2 border-gray-200/50 dark:border-gray-600 focus:border-blue-400 focus:ring-4 focus:ring-blue-400/20 transition-all duration-300 text-lg">
-                <input type="email" name="email" placeholder="Email Address" required class="input-field p-6 rounded-3xl border-2 border-gray-200/50 dark:border-gray-600 focus:border-blue-400 focus:ring-4 focus:ring-blue-400/20 transition-all duration-300 text-lg">
-            </div>
-            <textarea name="message" rows="6" placeholder="Tell us about your study needs..." required class="input-field p-6 rounded-3xl border-2 border-gray-200/50 dark:border-gray-600 focus:border-blue-400 focus:ring-4 focus:ring-blue-400/20 transition-all duration-300 text-lg resize-none"></textarea>
-            <button type="submit" class="w-full p-8 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold text-xl rounded-3xl shadow-2xl hover:shadow-3xl hover:scale-[1.02] transition-all duration-500 transform">Send Message 🚀</button>
-        </form>
-    </section>
-
-    <!-- Footer -->
-    <footer class="bg-gradient-to-r from-gray-900 to-gray-800 dark:from-gray-900 dark:to-gray-950 text-white py-16 px-6">
-        <div class="max-w-7xl mx-auto grid md:grid-cols-4 gap-12 text-sm">
-            <div>
-                <div class="text-2xl font-black bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-6">Brainspark</div>
-                <p class="text-gray-400 leading-relaxed mb-6 max-w-md">Transforming education with AI-powered quizzes and global student connections.</p>
-                <div class="flex space-x-4">
-                    <a href="#" class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/40 transition-all duration-300">📘</a>
-                    <a href="#" class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/40 transition-all duration-300">🐦</a>
-                    <a href="#" class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/40 transition-all duration-300">📸</a>
-                </div>
-            </div>
-            <div>
-                <h4 class="font-bold text-lg mb-6">Product</h4>
-                <ul class="space-y-3 text-gray-400">
-                    <li><a href="#" class="hover:text-white transition-colors">Features</a></li>
-                    <li><a href="#" class="hover:text-white transition-colors">Pricing</a></li>
-                    <li><a href="#" class="hover:text-white transition-colors">Dashboard</a></li>
-                    <li><a href="#" class="hover:text-white transition-colors">API</a></li>
-                </ul>
-            </div>
-            <div>
-                <h4 class="font-bold text-lg mb-6">Company</h4>
-                <ul class="space-y-3 text-gray-400">
-                    <li><a href="#" class="hover:text-white transition-colors">About</a></li>
-                    <li><a href="#" class="hover:text-white transition-colors">Careers</a></li>
-                    <li><a href="#" class="hover:text-white transition-colors">Press</a></li>
-                    <li><a href="#" class="hover:text-white transition-colors">Blog</a></li>
-                </ul>
-            </div>
-            <div>
-                <h4 class="font-bold text-lg mb-6">Support</h4>
-                <ul class="space-y-3 text-gray-400">
-                    <li><a href="#" class="hover:text-white transition-colors">Help Center</a></li>
-                    <li><a href="#" class="hover:text-white transition-colors">Contact</a></li>
-                    <li><a href="#" class="hover:text-white transition-colors">Privacy</a></li>
-                    <li><a href="#" class="hover:text-white transition-colors">Terms</a></li>
-                </ul>
-            </div>
+        <div class="hiw-step reveal">
+          <div class="hiw-num">02</div>
+          <div class="hiw-step-content">
+            <h3>AI generates smart questions</h3>
+            <p>Google Gemini creates up to 100 objective or theory questions. Choose difficulty, question type, and time limit.</p>
+          </div>
         </div>
-        <div class="border-t border-gray-800 mt-16 pt-12 text-center text-gray-500 text-sm">
-            © 2024 Brainspark. All rights reserved. Made with ❤️ for students worldwide.
+        <div class="hiw-step reveal">
+          <div class="hiw-num">03</div>
+          <div class="hiw-step-content">
+            <h3>Practice, learn & connect</h3>
+            <p>Get instant AI explanations for wrong answers. Track your progress. Challenge students in 150+ countries.</p>
+          </div>
         </div>
-    </footer>
+      </div>
+    </div>
 
-    <script>
-        // Server theme sync
-        const serverTheme = '{{ theme }}';
-        if (serverTheme) document.documentElement.setAttribute('data-theme', serverTheme);
+    <div class="hiw-visual reveal">
+      <img src="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=900&q=80&fit=crop" alt="Student studying with laptop">
+      <div class="hiw-visual-badge">
+        <div class="hiw-visual-badge-icon"><i class="fas fa-brain"></i></div>
+        <div>
+          <strong>AI just generated 40 questions</strong>
+          <p>from your Biology Chapter 7 PDF</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
-        const hamburger = document.querySelector('.hamburger-btn');
-        const mobileMenu = document.querySelector('.mobile-menu');
+<!-- ======================== FEATURES ======================== -->
+<section id="features">
+  <div class="section-eyebrow reveal">What you get</div>
+  <h2 class="section-title reveal">Everything you need to <span class="text-accent">ace</span> any subject</h2>
 
-        hamburger.addEventListener('click', () => {
-            mobileMenu.classList.toggle('hidden');
+  <div class="features-grid">
+
+    <div class="feature-card reveal">
+      <img src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&q=75&fit=crop" alt="AI quiz generation" class="feature-img">
+      <div class="feature-icon-wrap"><i class="fas fa-file-pdf"></i></div>
+      <div class="feature-title">Smart PDF Quiz Generator</div>
+      <p class="feature-desc">Upload any PDF. Our Gemini-powered AI reads it, finds the key concepts, and creates perfect exam-style questions in seconds.</p>
+      <span class="feature-tag">Up to 100 questions</span>
+    </div>
+
+    <div class="feature-card reveal">
+      <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&q=75&fit=crop" alt="Analytics dashboard" class="feature-img">
+      <div class="feature-icon-wrap"><i class="fas fa-chart-line"></i></div>
+      <div class="feature-title">Performance Analytics</div>
+      <p class="feature-desc">Track your scores day by day. Identify weak topics automatically. See exactly where you're improving and where to focus.</p>
+      <span class="feature-tag">Real-time insights</span>
+    </div>
+
+    <div class="feature-card reveal">
+      <img src="https://images.unsplash.com/photo-1581092921461-39b9d08a6985?w=600&q=75&fit=crop" alt="AI explanations" class="feature-img">
+      <div class="feature-icon-wrap"><i class="fas fa-robot"></i></div>
+      <div class="feature-title">AI Explanations</div>
+      <p class="feature-desc">Get wrong answers? Gemini explains exactly why, with step-by-step reasoning and related concepts so you truly understand.</p>
+      <span class="feature-tag">Instant feedback</span>
+    </div>
+
+    <div class="feature-card reveal">
+      <img src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=600&q=75&fit=crop" alt="Study groups" class="feature-img">
+      <div class="feature-icon-wrap"><i class="fas fa-users"></i></div>
+      <div class="feature-title">Global Study Network</div>
+      <p class="feature-desc">Find study buddies matched by school, subject, and level. Create private groups, share notes, and challenge each other.</p>
+      <span class="feature-tag">150+ countries</span>
+    </div>
+
+    <div class="feature-card reveal">
+      <img src="https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=600&q=75&fit=crop" alt="Brainstorm sessions" class="feature-img">
+      <div class="feature-icon-wrap"><i class="fas fa-lightbulb"></i></div>
+      <div class="feature-title">AI Brainstorm Sessions</div>
+      <p class="feature-desc">Schedule group brainstorms with your study crew. Drop images, problems, and PDFs — let AI facilitate the discussion.</p>
+      <span class="feature-tag">With live polls</span>
+    </div>
+
+    <div class="feature-card reveal">
+      <img src="https://images.unsplash.com/photo-1508774400-f6ac9d6c83c6?w=600&q=75&fit=crop" alt="Timed quizzes" class="feature-img">
+      <div class="feature-icon-wrap"><i class="fas fa-stopwatch"></i></div>
+      <div class="feature-title">Timed Practice Mode</div>
+      <p class="feature-desc">Simulate real exam conditions with customizable timers. Build speed and confidence before the actual test day.</p>
+      <span class="feature-tag">Adaptive difficulty</span>
+    </div>
+
+  </div>
+</section>
+
+<!-- ======================== STATS RIBBON ======================== -->
+<div class="stats-ribbon">
+  <div class="stat-item reveal">
+    <div class="stat-num"><span>50</span>K+</div>
+    <div class="stat-label">Active students</div>
+  </div>
+  <div class="stat-item reveal">
+    <div class="stat-num"><span>2.5</span>M+</div>
+    <div class="stat-label">Quizzes completed</div>
+  </div>
+  <div class="stat-item reveal">
+    <div class="stat-num"><span>98</span>%</div>
+    <div class="stat-label">Success rate</div>
+  </div>
+  <div class="stat-item reveal">
+    <div class="stat-num"><span>150</span>+</div>
+    <div class="stat-label">Countries reached</div>
+  </div>
+</div>
+
+<!-- ======================== AI HIGHLIGHT ======================== -->
+<section id="ai-highlight">
+  <div class="ai-visual reveal">
+    <img src="https://images.unsplash.com/photo-1509062522246-3755977927d7?w=900&q=80&fit=crop" alt="AI learning platform">
+    <div class="ai-chat-float">
+      <div class="ai-label">✦ Gemini AI</div>
+      <p>"The answer is <strong>C</strong> because the mitochondria generates ATP via oxidative phosphorylation. Here's why the others are wrong..."</p>
+    </div>
+    <div class="ai-score-float" style="display:flex; align-items:center; gap:0.75rem;">
+      <div class="score-circle">88%</div>
+      <div>
+        <strong style="font-size:0.9rem; color:#1a1a2e; display:block;">Biology Quiz</strong>
+        <span style="font-size:0.78rem; color:#7a7a8c;">↑ 12% from last week</span>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="section-eyebrow reveal">Powered by AI</div>
+    <h2 class="section-title reveal">The AI that actually <span class="text-accent">teaches</span></h2>
+    <p class="section-desc reveal">We don't just tell you that you're wrong. Brainspark's Gemini 2.5 integration gives you personalized, subject-aware explanations that stick.</p>
+
+    <div class="ai-features-list">
+      <div class="ai-feature-item reveal">
+        <div class="ai-feature-icon"><i class="fas fa-brain"></i></div>
+        <div class="ai-feature-text">
+          <h4>Context-aware explanations</h4>
+          <p>Answers are explained using language from your own notes, so they always make sense.</p>
+        </div>
+      </div>
+      <div class="ai-feature-item reveal">
+        <div class="ai-feature-icon"><i class="fas fa-sliders-h"></i></div>
+        <div class="ai-feature-text">
+          <h4>Adaptive difficulty</h4>
+          <p>Questions get harder as you improve. Easy mode when you're rusty. Push mode before finals.</p>
+        </div>
+      </div>
+      <div class="ai-feature-item reveal">
+        <div class="ai-feature-icon"><i class="fas fa-shield-alt"></i></div>
+        <div class="ai-feature-text">
+          <h4>Privacy-first processing</h4>
+          <p>Your PDFs are processed temporarily and never stored. GDPR compliant, fully encrypted.</p>
+        </div>
+      </div>
+      <div class="ai-feature-item reveal">
+        <div class="ai-feature-icon"><i class="fas fa-comments"></i></div>
+        <div class="ai-feature-text">
+          <h4>Multi-turn AI tutor chat</h4>
+          <p>Ask follow-up questions about your quiz. Keep the conversation going until you truly get it.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================== TESTIMONIALS ======================== -->
+<section id="showcase">
+  <div class="section-eyebrow reveal">Student Stories</div>
+  <h2 class="section-title reveal">Real results from real students</h2>
+
+  <div class="showcase-grid">
+    <div class="showcase-card tall reveal" style="grid-row: span 2;">
+      <img src="https://images.unsplash.com/photo-1543269664-7eef42226a21?w=600&q=80&fit=crop" alt="Student" class="showcase-card-img" style="height: 260px;">
+      <div class="showcase-card-body">
+        <div class="stars">★★★★★</div>
+        <p class="showcase-quote">"I used to spend 4 hours making flashcards by hand. Brainspark generates 80 targeted questions from my lecture PDF in 20 seconds. My grades went from B to A in one semester."</p>
+        <div class="showcase-author">
+          <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=80&q=75&fit=crop&crop=face" alt="Amara" class="showcase-avatar">
+          <div class="showcase-author-info">
+            <p>Amara Osei</p>
+            <span>Medicine, University of Ghana</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="showcase-card reveal">
+      <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=600&q=75&fit=crop" alt="Students" class="showcase-card-img">
+      <div class="showcase-card-body">
+        <div class="stars">★★★★★</div>
+        <p class="showcase-quote">"The AI explanations are like having a tutor available at midnight. It's helped me understand concepts I was afraid to ask about in class."</p>
+        <div class="showcase-author">
+          <img src="https://images.unsplash.com/photo-1607990281513-2c110a25bd8c?w=80&q=75&fit=crop&crop=face" alt="Raj" class="showcase-avatar">
+          <div class="showcase-author-info">
+            <p>Raj Patel</p>
+            <span>Computer Science, Imperial College</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="showcase-card reveal">
+      <div class="showcase-card-body" style="padding: 2rem;">
+        <div class="stars">★★★★★</div>
+        <p class="showcase-quote">"Connected with a study group in Brazil through Brainspark. We do daily quizzes together. It's made studying actually fun."</p>
+        <div class="showcase-author">
+          <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&q=75&fit=crop&crop=face" alt="Sofia" class="showcase-avatar">
+          <div class="showcase-author-info">
+            <p>Sofia Mendes</p>
+            <span>Economics, São Paulo</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================== FAQ ======================== -->
+<section id="faq">
+  <div class="section-eyebrow reveal">FAQ</div>
+  <h2 class="section-title reveal">Got questions?<br>We've got answers.</h2>
+
+  <div class="faq-grid">
+    <div class="faq-list">
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          What file types can I upload?
+          <i class="fas fa-chevron-down faq-chevron"></i>
+        </button>
+        <div class="faq-a">
+          PDF files up to 50MB. This covers lecture slides, textbook chapters, scanned notes (text-based), and any course material you have as a PDF.
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          How many questions can I generate?
+          <i class="fas fa-chevron-down faq-chevron"></i>
+        </button>
+        <div class="faq-a">
+          Up to 100 questions per PDF session. You can choose between multiple-choice objective questions and open-ended theory questions, and set the difficulty level from easy to hard.
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Is my data private and secure?
+          <i class="fas fa-chevron-down faq-chevron"></i>
+        </button>
+        <div class="faq-a">
+          Your files are processed temporarily by Google Gemini and never stored on our servers. All data is end-to-end encrypted and we are fully GDPR compliant.
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          What AI powers Brainspark?
+          <i class="fas fa-chevron-down faq-chevron"></i>
+        </button>
+        <div class="faq-a">
+          Google Gemini 2.5 Flash — one of the most capable AI models available. It's specifically excellent at understanding educational content and generating pedagogically sound questions.
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Is Brainspark free to use?
+          <i class="fas fa-chevron-down faq-chevron"></i>
+        </button>
+        <div class="faq-a">
+          Yes! Sign up for free and get full access to quiz generation, AI explanations, and the student network. We believe quality education tools should be accessible to everyone.
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Can I connect with students in my country?
+          <i class="fas fa-chevron-down faq-chevron"></i>
+        </button>
+        <div class="faq-a">
+          Absolutely. The study buddy finder lets you filter by country, school, study level, and subject tags. Brainspark automatically prioritizes students closest to your profile.
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="faq-visual reveal">
+        <img src="https://images.unsplash.com/photo-1513258496099-48168024aec0?w=700&q=80&fit=crop" alt="Student on laptop" style="border-radius: 16px;">
+      </div>
+      <div class="faq-contact-card reveal">
+        <h3>Still have questions?</h3>
+        <p>Our team responds within 24 hours. We're real humans who love helping students succeed.</p>
+        <a href="#contact"><i class="fas fa-envelope"></i> Contact support</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================== CTA ======================== -->
+<section id="cta">
+  <div class="cta-bg">
+    <img src="https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1800&q=80&fit=crop" alt="Students">
+  </div>
+  <div class="cta-content reveal">
+    <h2>Your next exam is closer than you think.</h2>
+    <p>Join 50,000+ students who've already stopped cramming and started learning with Brainspark.</p>
+    <div class="cta-input-wrap">
+      <input class="cta-input" type="email" placeholder="Enter your university email...">
+      <button class="cta-submit">Get started free →</button>
+    </div>
+    <p class="cta-note">Free forever. No credit card. Instant access.</p>
+  </div>
+</section>
+
+<!-- ======================== FOOTER ======================== -->
+<footer>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <h3>Brainspark</h3>
+      <p>AI-powered quiz generation and global student networking for students who want to learn smarter, not just harder.</p>
+      <div class="footer-social">
+        <a href="#"><i class="fab fa-twitter"></i></a>
+        <a href="#"><i class="fab fa-instagram"></i></a>
+        <a href="#"><i class="fab fa-linkedin"></i></a>
+        <a href="#"><i class="fab fa-youtube"></i></a>
+      </div>
+    </div>
+    <div class="footer-col">
+      <h4>Product</h4>
+      <ul>
+        <li><a href="#">Features</a></li>
+        <li><a href="#">Pricing</a></li>
+        <li><a href="#">Dashboard</a></li>
+        <li><a href="#">Changelog</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Company</h4>
+      <ul>
+        <li><a href="#">About</a></li>
+        <li><a href="#">Blog</a></li>
+        <li><a href="#">Careers</a></li>
+        <li><a href="#">Press</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Support</h4>
+      <ul>
+        <li><a href="#">Help Centre</a></li>
+        <li><a href="#">Contact</a></li>
+        <li><a href="#">Privacy Policy</a></li>
+        <li><a href="#">Terms of Service</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2025 Brainspark. Made with ❤️ for students everywhere.</p>
+    <div class="footer-bottom-links">
+      <a href="#">Privacy</a>
+      <a href="#">Terms</a>
+      <a href="#">Cookies</a>
+    </div>
+  </div>
+</footer>
+
+<!-- ======================== SCRIPTS ======================== -->
+<script>
+  // Nav scroll
+  const nav = document.getElementById('main-nav');
+  window.addEventListener('scroll', () => {
+    nav.classList.toggle('scrolled', window.scrollY > 60);
+  });
+
+  // Mobile menu
+  function openMenu() { document.getElementById('mobile-menu').classList.add('open'); }
+  function closeMenu() { document.getElementById('mobile-menu').classList.remove('open'); }
+
+  // Theme toggle
+  let dark = false;
+  function toggleTheme() {
+    dark = !dark;
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    document.getElementById('theme-btn').innerHTML = dark ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+  }
+
+  // FAQ accordion
+  function toggleFaq(btn) {
+    const answer = btn.nextElementSibling;
+    const isOpen = answer.classList.contains('open');
+    document.querySelectorAll('.faq-a').forEach(a => a.classList.remove('open'));
+    document.querySelectorAll('.faq-q').forEach(q => q.classList.remove('open'));
+    if (!isOpen) {
+      answer.classList.add('open');
+      btn.classList.add('open');
+    }
+  }
+
+  // Scroll reveal
+  const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        revealObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+  // Animated counters in hero
+  function animateCounter(el, target) {
+    const isLarge = target >= 10000;
+    let start = 0;
+    const steps = 60;
+    const increment = target / steps;
+    const timer = setInterval(() => {
+      start += increment;
+      if (start >= target) {
+        start = target;
+        clearInterval(timer);
+      }
+      if (isLarge) {
+        el.textContent = (start / 1000).toFixed(start >= target ? 0 : 1) + 'K+';
+      } else {
+        el.textContent = Math.floor(start) + '+';
+      }
+    }, 30);
+  }
+  const heroObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        document.querySelectorAll('[data-count]').forEach(el => {
+          animateCounter(el, parseInt(el.dataset.count));
         });
-    </script>
-    <script src="/static/js/main.js"></script>
+        heroObserver.disconnect();
+      }
+    });
+  }, { threshold: 0.5 });
+  const heroStats = document.querySelector('.hero-stats');
+  if (heroStats) heroObserver.observe(heroStats);
+
+  // Smooth scroll for anchor links
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+</script>
 </body>
 </html>

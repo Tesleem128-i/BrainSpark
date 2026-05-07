@@ -1,1245 +1,1300 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Brainspark</title>
-    <link rel="icon" type="image/png" href="/static/image/KNOWITNOW.png">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/styles.css">
-    <style>
-        :root {
-            --primary: #3b82f6;
-            --secondary: #8b5cf6;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Brainspark</title>
+  <link rel="icon" type="image/png" href="/static/image/KNOWITNOW.png">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 
-        body.dark-mode {
-            --bg-primary: #0f172a;
-            --bg-secondary: #1e293b;
-            --bg-tertiary: #334155;
-            --text-primary: #f1f5f9;
-            --text-secondary: #cbd5e1;
-        }
+  <style>
+    /* ===================== TOKENS ===================== */
+    :root {
+      --ink: #0a0a14;
+      --ink2: #1c1c2e;
+      --surface: #ffffff;
+      --surface2: #f5f4f0;
+      --surface3: #eeece8;
+      --muted: #7a7a8c;
+      --accent: #ff4f30;
+      --accent2: #ff8c5a;
+      --blue: #3b6bff;
+      --blue2: #7ba4ff;
+      --green: #00c98d;
+      --gold: #f5c842;
+      --radius: 16px;
+      --radius-sm: 8px;
+      --radius-lg: 24px;
+      --transition: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      --nav-h: 72px;
+      --sidebar-w: 260px;
+    }
+    [data-theme="dark"] {
+      --ink: #f0efe8;
+      --ink2: #c8c6bc;
+      --surface: #0d0d18;
+      --surface2: #16162a;
+      --surface3: #1e1e32;
+      --muted: #5a5a70;
+      --accent: #ff6244;
+      --accent2: #ffaa6e;
+      --blue: #5580ff;
+      --blue2: #88aaff;
+    }
 
-        body:not(.dark-mode) {
-            --bg-primary: #ffffff;
-            --bg-secondary: #f8fafc;
-            --bg-tertiary: #e2e8f0;
-            --text-primary: #0f172a;
-            --text-secondary: #64748b;
-        }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--surface2);
+      color: var(--ink);
+      min-height: 100vh;
+      transition: background 0.4s, color 0.4s;
+    }
+    ::selection { background: var(--accent); color: #fff; }
+    a { text-decoration: none; color: inherit; }
+    button { font-family: 'DM Sans', sans-serif; }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; }
 
-        .card {
-            background: var(--bg-primary);
-            color: var(--text-primary);
-        }
+    /* ===================== LAYOUT ===================== */
+    .app-wrap { display: flex; min-height: 100vh; }
 
-        .card-secondary {
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-        }
+    /* ===================== SIDEBAR ===================== */
+    .sidebar {
+      width: var(--sidebar-w); flex-shrink: 0;
+      position: fixed; top: 0; left: 0; bottom: 0; z-index: 90;
+      background: var(--surface);
+      border-right: 1px solid rgba(0,0,0,0.06);
+      display: flex; flex-direction: column;
+      transition: background 0.4s, transform 0.4s;
+      overflow: hidden;
+    }
+    [data-theme="dark"] .sidebar { border-color: rgba(255,255,255,0.05); }
 
-        .stat-card {
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
-            border: 2px solid rgba(59, 130, 246, 0.2);
-        }
+    .sidebar-logo {
+      padding: 1.5rem 1.75rem;
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+      display: flex; align-items: center; gap: 0.75rem;
+      flex-shrink: 0;
+    }
+    [data-theme="dark"] .sidebar-logo { border-color: rgba(255,255,255,0.05); }
+    .sidebar-logo-text {
+      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.25rem;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #ff4f30, #ff8c5a);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .sidebar-logo-sub { font-size: 0.7rem; color: var(--muted); margin-top: 0.05rem; }
 
-        body.dark-mode .stat-card {
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
-            border: 2px solid rgba(59, 130, 246, 0.3);
-        }
+    .sidebar-user {
+      padding: 1.25rem 1.75rem;
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+      display: flex; align-items: center; gap: 0.875rem;
+      flex-shrink: 0;
+    }
+    [data-theme="dark"] .sidebar-user { border-color: rgba(255,255,255,0.05); }
+    .sidebar-avatar {
+      width: 40px; height: 40px; border-radius: 10px;
+      object-fit: cover; border: 2px solid rgba(255,79,48,0.3);
+      flex-shrink: 0;
+    }
+    .sidebar-user-name { font-size: 0.875rem; font-weight: 600; color: var(--ink); line-height: 1.3; }
+    .sidebar-user-level { font-size: 0.72rem; color: var(--muted); }
 
-        .mode-toggle-btn {
-            transition: all 0.3s ease;
-        }
+    .sidebar-nav { flex: 1; padding: 1rem 0; overflow-y: auto; }
+    .sidebar-section-label {
+      font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--muted);
+      padding: 0 1.75rem; margin: 1rem 0 0.4rem;
+    }
+    .sidebar-link {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.7rem 1.75rem; font-size: 0.875rem; font-weight: 500;
+      color: var(--muted); transition: all 0.2s; cursor: pointer;
+      border: none; background: none; width: 100%; text-align: left;
+      position: relative; border-radius: 0;
+    }
+    .sidebar-link i { width: 18px; text-align: center; font-size: 0.9rem; }
+    .sidebar-link:hover { color: var(--ink); background: var(--surface2); }
+    .sidebar-link.active {
+      color: var(--accent); background: rgba(255,79,48,0.06);
+      font-weight: 600;
+    }
+    .sidebar-link.active::before {
+      content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+      width: 3px; background: var(--accent); border-radius: 0 2px 2px 0;
+    }
+    .sidebar-link .badge {
+      margin-left: auto; background: var(--accent); color: #fff;
+      font-size: 0.65rem; font-weight: 700; padding: 0.15rem 0.45rem;
+      border-radius: 50px; line-height: 1.4;
+    }
 
-        .mode-toggle-btn:hover {
-            transform: scale(1.1);
-        }
+    .sidebar-footer {
+      padding: 1rem 1.75rem 1.5rem;
+      border-top: 1px solid rgba(0,0,0,0.06);
+      display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0;
+    }
+    [data-theme="dark"] .sidebar-footer { border-color: rgba(255,255,255,0.05); }
+    .sidebar-footer-btn {
+      flex: 1; padding: 0.6rem; border-radius: var(--radius-sm);
+      background: var(--surface2); border: 1px solid rgba(0,0,0,0.06);
+      color: var(--muted); font-size: 0.8rem; font-weight: 500;
+      cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+    }
+    [data-theme="dark"] .sidebar-footer-btn { border-color: rgba(255,255,255,0.06); }
+    .sidebar-footer-btn:hover { background: var(--surface3); color: var(--ink); }
+    .sidebar-footer-btn.danger:hover { background: rgba(255,79,48,0.1); color: var(--accent); border-color: rgba(255,79,48,0.2); }
+    #theme-btn-sidebar {
+      width: 36px; height: 36px; flex-shrink: 0;
+      background: var(--surface2); border: 1px solid rgba(0,0,0,0.06);
+      border-radius: var(--radius-sm); color: var(--muted); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: 0.875rem;
+      transition: all 0.2s;
+    }
+    [data-theme="dark"] #theme-btn-sidebar { border-color: rgba(255,255,255,0.06); }
+    #theme-btn-sidebar:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
 
-        .upload-zone {
-            border: 2px dashed rgba(59, 130, 246, 0.5);
-            transition: all 0.3s ease;
-        }
+    /* ===================== MAIN ===================== */
+    .main-wrap {
+      margin-left: var(--sidebar-w);
+      flex: 1; min-height: 100vh;
+      display: flex; flex-direction: column;
+    }
 
-        .upload-zone.dragover {
-            border-color: var(--primary);
-            background: rgba(59, 130, 246, 0.05);
-        }
-    </style>
+    /* Top bar */
+    .topbar {
+      position: sticky; top: 0; z-index: 80;
+      height: var(--nav-h);
+      background: var(--surface);
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2.5rem;
+      transition: background 0.4s;
+    }
+    [data-theme="dark"] .topbar { border-color: rgba(255,255,255,0.05); }
+    .topbar-greeting {
+      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem;
+      color: var(--ink); letter-spacing: -0.01em;
+    }
+    .topbar-greeting span { color: var(--accent); }
+    .topbar-right { display: flex; align-items: center; gap: 0.75rem; }
+    .topbar-btn {
+      width: 36px; height: 36px; border-radius: var(--radius-sm);
+      background: var(--surface2); border: 1px solid rgba(0,0,0,0.06);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: var(--muted); font-size: 0.875rem; transition: all 0.2s;
+    }
+    [data-theme="dark"] .topbar-btn { border-color: rgba(255,255,255,0.06); }
+    .topbar-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .hamburger-btn { display: none; }
+
+    /* Main content */
+    .main-content { padding: 2rem 2.5rem; flex: 1; }
+
+    /* ===================== PAGE SECTIONS ===================== */
+    .page-section { display: none; }
+    .page-section.active { display: block; }
+
+    /* Page header */
+    .page-header {
+      margin-bottom: 2rem;
+      opacity: 0; transform: translateY(16px);
+      animation: fadeUp 0.5s 0.1s forwards;
+    }
+    .page-eyebrow {
+      font-size: 0.72rem; font-weight: 600; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--accent);
+      display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem;
+    }
+    .page-eyebrow::before { content: ''; width: 16px; height: 2px; background: var(--accent); border-radius: 1px; }
+    .page-title {
+      font-family: 'Syne', sans-serif; font-size: clamp(1.5rem, 3vw, 2rem);
+      font-weight: 800; color: var(--ink); letter-spacing: -0.02em; line-height: 1.1;
+    }
+    .page-title em { font-style: normal; color: var(--accent); }
+    .page-subtitle { font-size: 0.9rem; color: var(--muted); margin-top: 0.25rem; }
+
+    @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+
+    /* ===================== STAT CARDS ===================== */
+    .stats-row {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem;
+      margin-bottom: 2rem;
+    }
+    .stat-card {
+      background: var(--surface); border-radius: var(--radius);
+      padding: 1.5rem; border: 1px solid rgba(0,0,0,0.06);
+      transition: all var(--transition); position: relative; overflow: hidden;
+      opacity: 0; transform: translateY(16px);
+    }
+    [data-theme="dark"] .stat-card { border-color: rgba(255,255,255,0.06); }
+    .stat-card.anim-1 { animation: fadeUp 0.5s 0.2s forwards; }
+    .stat-card.anim-2 { animation: fadeUp 0.5s 0.3s forwards; }
+    .stat-card.anim-3 { animation: fadeUp 0.5s 0.4s forwards; }
+    .stat-card:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,0,0,0.08); }
+    .stat-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+    .stat-card.red::before { background: var(--accent); }
+    .stat-card.blue::before { background: var(--blue); }
+    .stat-card.green::before { background: var(--green); }
+    .stat-card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 0.75rem; }
+    .stat-icon {
+      width: 40px; height: 40px; border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center; font-size: 1rem;
+      flex-shrink: 0;
+    }
+    .stat-icon.red { background: rgba(255,79,48,0.1); color: var(--accent); }
+    .stat-icon.blue { background: rgba(59,107,255,0.1); color: var(--blue); }
+    .stat-icon.green { background: rgba(0,201,141,0.1); color: var(--green); }
+    .stat-num {
+      font-family: 'Syne', sans-serif; font-size: 2rem;
+      font-weight: 800; color: var(--ink); line-height: 1; letter-spacing: -0.02em;
+    }
+    .stat-label { font-size: 0.78rem; color: var(--muted); margin-top: 0.25rem; font-weight: 500; }
+    .stat-delta { font-size: 0.75rem; color: var(--green); display: flex; align-items: center; gap: 0.2rem; margin-top: 0.5rem; }
+
+    /* ===================== CARDS / PANELS ===================== */
+    .panel {
+      background: var(--surface); border-radius: var(--radius);
+      border: 1px solid rgba(0,0,0,0.06);
+      transition: background 0.4s;
+    }
+    [data-theme="dark"] .panel { border-color: rgba(255,255,255,0.06); }
+    .panel-head {
+      padding: 1.5rem 1.75rem; border-bottom: 1px solid rgba(0,0,0,0.06);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    [data-theme="dark"] .panel-head { border-color: rgba(255,255,255,0.05); }
+    .panel-title {
+      font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700;
+      color: var(--ink); letter-spacing: -0.01em; display: flex; align-items: center; gap: 0.5rem;
+    }
+    .panel-title i { color: var(--accent); }
+    .panel-body { padding: 1.75rem; }
+
+    /* ===================== GRID LAYOUTS ===================== */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+    .mb-6 { margin-bottom: 1.5rem; }
+    .mb-8 { margin-bottom: 2rem; }
+
+    /* ===================== UPLOAD ZONE ===================== */
+    .upload-zone {
+      border: 2px dashed rgba(0,0,0,0.12); border-radius: var(--radius-sm);
+      padding: 2.5rem 1.5rem; text-align: center; cursor: pointer;
+      transition: all 0.25s; background: var(--surface2);
+    }
+    [data-theme="dark"] .upload-zone { border-color: rgba(255,255,255,0.1); }
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--accent); background: rgba(255,79,48,0.04);
+    }
+    .upload-zone i { font-size: 2.5rem; color: var(--muted); margin-bottom: 0.75rem; display: block; }
+    .upload-zone strong { font-size: 0.925rem; color: var(--ink); display: block; margin-bottom: 0.25rem; }
+    .upload-zone span { font-size: 0.8rem; color: var(--muted); }
+    .upload-zone.has-file i { color: var(--green); }
+    .upload-zone.has-file strong { color: var(--green); }
+
+    /* ===================== FORM ELEMENTS ===================== */
+    .field-group { margin-bottom: 1.25rem; }
+    .field-label {
+      display: block; font-size: 0.8rem; font-weight: 600;
+      color: var(--ink); margin-bottom: 0.4rem;
+    }
+    .field-input, .field-select {
+      width: 100%; padding: 0.75rem 1rem;
+      border: 1.5px solid rgba(0,0,0,0.1); border-radius: var(--radius-sm);
+      background: var(--surface2); color: var(--ink);
+      font-family: 'DM Sans', sans-serif; font-size: 0.9rem;
+      transition: all 0.2s; outline: none;
+    }
+    [data-theme="dark"] .field-input, [data-theme="dark"] .field-select {
+      border-color: rgba(255,255,255,0.08);
+    }
+    .field-input:focus, .field-select:focus {
+      border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,79,48,0.1);
+      background: var(--surface);
+    }
+    .field-select {
+      cursor: pointer;
+      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%237a7a8c' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+      background-position: right 0.75rem center; background-repeat: no-repeat; background-size: 1.2em;
+      -webkit-appearance: none; padding-right: 2.5rem;
+    }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+    /* ===================== BUTTONS ===================== */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+      padding: 0.75rem 1.5rem; border-radius: var(--radius-sm);
+      font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 600;
+      cursor: pointer; border: none; transition: all var(--transition); line-height: 1;
+    }
+    .btn-primary {
+      background: var(--accent); color: #fff;
+      box-shadow: 0 6px 20px rgba(255,79,48,0.3);
+    }
+    .btn-primary:hover { background: var(--accent2); transform: translateY(-1px); box-shadow: 0 8px 28px rgba(255,79,48,0.4); }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .btn-secondary {
+      background: var(--surface2); color: var(--ink);
+      border: 1px solid rgba(0,0,0,0.08);
+    }
+    [data-theme="dark"] .btn-secondary { border-color: rgba(255,255,255,0.08); }
+    .btn-secondary:hover { background: var(--surface3); }
+    .btn-blue {
+      background: var(--blue); color: #fff;
+      box-shadow: 0 6px 20px rgba(59,107,255,0.25);
+    }
+    .btn-blue:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .btn-green {
+      background: var(--green); color: #fff;
+      box-shadow: 0 6px 20px rgba(0,201,141,0.25);
+    }
+    .btn-green:hover { filter: brightness(1.08); transform: translateY(-1px); }
+    .btn-full { width: 100%; }
+    .btn-sm { padding: 0.5rem 1rem; font-size: 0.8rem; }
+    .btn-lg { padding: 0.9rem 2rem; font-size: 1rem; font-family: 'Syne', sans-serif; font-weight: 700; }
+
+    /* ===================== ACTIVITY ITEMS ===================== */
+    .activity-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.875rem 0; border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+    [data-theme="dark"] .activity-item { border-color: rgba(255,255,255,0.04); }
+    .activity-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .activity-item:first-child { padding-top: 0; }
+    .activity-title { font-size: 0.875rem; font-weight: 500; color: var(--ink); }
+    .activity-meta { font-size: 0.75rem; color: var(--muted); margin-top: 0.1rem; }
+    .score-badge {
+      font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 700;
+      padding: 0.3rem 0.6rem; border-radius: var(--radius-sm); min-width: 56px; text-align: center;
+    }
+    .score-high { background: rgba(0,201,141,0.1); color: var(--green); }
+    .score-mid { background: rgba(245,200,66,0.1); color: #c98800; }
+    .score-low { background: rgba(255,79,48,0.1); color: var(--accent); }
+
+    /* ===================== COMMUNITY TAGS ===================== */
+    .info-tag {
+      display: flex; align-items: center; gap: 0.6rem;
+      padding: 0.6rem 0.875rem; background: var(--surface2);
+      border-radius: var(--radius-sm); border: 1px solid rgba(0,0,0,0.06);
+      font-size: 0.8rem; font-weight: 500; color: var(--ink);
+      margin-bottom: 0.5rem;
+    }
+    [data-theme="dark"] .info-tag { border-color: rgba(255,255,255,0.06); }
+    .info-tag i { font-size: 0.8rem; color: var(--accent); width: 14px; text-align: center; }
+
+    /* ===================== AV UPLOAD ===================== */
+    .av-upload-zone {
+      border: 2px dashed rgba(168,85,247,0.35); border-radius: var(--radius-sm);
+      padding: 2.5rem 1.5rem; text-align: center; cursor: pointer;
+      background: rgba(168,85,247,0.04); transition: all 0.25s;
+    }
+    .av-upload-zone:hover, .av-upload-zone.dragover {
+      border-color: rgba(168,85,247,0.7); background: rgba(168,85,247,0.08);
+    }
+    .av-upload-zone i { font-size: 2.5rem; color: #a855f7; margin-bottom: 0.75rem; display: block; opacity: 0.7; }
+    .av-upload-zone strong { font-size: 0.9rem; color: var(--ink); display: block; margin-bottom: 0.25rem; }
+    .av-upload-zone span { font-size: 0.78rem; color: var(--muted); }
+
+    .av-option-card {
+      background: var(--surface2); border-radius: var(--radius-sm);
+      border: 1.5px solid rgba(0,0,0,0.08); padding: 1.25rem;
+      transition: all 0.2s;
+    }
+    [data-theme="dark"] .av-option-card { border-color: rgba(255,255,255,0.08); }
+    .av-option-card:hover { border-color: var(--accent); }
+    .av-option-title { font-size: 0.875rem; font-weight: 700; color: var(--ink); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem; }
+
+    /* ===================== CONVERTED FILES ===================== */
+    .file-card {
+      background: var(--surface2); border-radius: var(--radius-sm);
+      border: 1px solid rgba(0,0,0,0.06); padding: 1.25rem;
+      transition: all 0.2s;
+    }
+    [data-theme="dark"] .file-card { border-color: rgba(255,255,255,0.06); }
+    .file-card:hover { box-shadow: 0 6px 24px rgba(0,0,0,0.07); }
+    .file-type-badge {
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      padding: 0.2rem 0.6rem; border-radius: 50px;
+      font-size: 0.65rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+    }
+    .file-type-audio { background: rgba(59,107,255,0.12); color: var(--blue); }
+    .file-type-video { background: rgba(255,79,48,0.1); color: var(--accent); }
+
+    /* ===================== EMPTY STATE ===================== */
+    .empty-state {
+      padding: 3rem 2rem; text-align: center;
+      border: 2px dashed rgba(0,0,0,0.08); border-radius: var(--radius-sm);
+    }
+    [data-theme="dark"] .empty-state { border-color: rgba(255,255,255,0.07); }
+    .empty-state i { font-size: 2rem; color: var(--muted); margin-bottom: 0.75rem; display: block; opacity: 0.5; }
+    .empty-state p { font-size: 0.875rem; color: var(--muted); }
+    .empty-state strong { color: var(--ink); font-weight: 600; display: block; margin-bottom: 0.25rem; }
+
+    /* ===================== MODAL ===================== */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; z-index: 500;
+      background: rgba(0,0,0,0.65); backdrop-filter: blur(6px);
+      align-items: center; justify-content: center; padding: 1.5rem;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface); border-radius: var(--radius-lg);
+      padding: 2.5rem; max-width: 560px; width: 100%;
+      max-height: 80vh; overflow-y: auto;
+      border: 1px solid rgba(0,0,0,0.06);
+      box-shadow: 0 40px 80px rgba(0,0,0,0.2);
+      position: relative;
+    }
+    [data-theme="dark"] .modal { border-color: rgba(255,255,255,0.07); }
+    .modal-close {
+      position: absolute; top: 1.25rem; right: 1.25rem;
+      width: 30px; height: 30px; border-radius: 50%;
+      background: var(--surface2); border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted); font-size: 0.85rem; transition: all 0.2s;
+    }
+    .modal-close:hover { background: var(--accent); color: #fff; }
+    .modal-title {
+      font-family: 'Syne', sans-serif; font-size: 1.25rem; font-weight: 800;
+      color: var(--ink); margin-bottom: 1.25rem; letter-spacing: -0.02em;
+    }
+
+    /* AI chat */
+    .ai-msg { margin-bottom: 1rem; }
+    .ai-msg-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 0.3rem; }
+    .ai-msg-user .ai-msg-label { color: var(--blue); }
+    .ai-msg-ai .ai-msg-label { color: var(--green); }
+    .ai-msg-bubble {
+      padding: 0.75rem 1rem; border-radius: var(--radius-sm);
+      font-size: 0.875rem; line-height: 1.6; color: var(--ink);
+    }
+    .ai-msg-user .ai-msg-bubble { background: rgba(59,107,255,0.08); border-left: 2px solid var(--blue); }
+    .ai-msg-ai .ai-msg-bubble { background: rgba(0,201,141,0.06); border-left: 2px solid var(--green); }
+
+    /* ===================== RESPONSIVE ===================== */
+    @media (max-width: 1100px) {
+      .grid-2-1 { grid-template-columns: 1fr; }
+      .stats-row { grid-template-columns: 1fr 1fr 1fr; }
+    }
+    @media (max-width: 900px) {
+      :root { --sidebar-w: 0px; }
+      .sidebar { transform: translateX(-260px); width: 260px; }
+      .sidebar.open { transform: translateX(0); }
+      .main-wrap { margin-left: 0; }
+      .hamburger-btn { display: flex !important; }
+      .grid-2 { grid-template-columns: 1fr; }
+      .stats-row { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 600px) {
+      .main-content { padding: 1.5rem 1rem; }
+      .stats-row { grid-template-columns: 1fr; }
+      .grid-3 { grid-template-columns: 1fr; }
+      .field-row { grid-template-columns: 1fr; }
+    }
+
+    /* ===================== REVEAL ===================== */
+    .reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.6s ease, transform 0.6s ease; }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+  </style>
 </head>
-<body class="min-h-screen transition-colors duration-300" style="background: var(--bg-secondary);">
-    
-    <!-- Top Navigation Bar -->
-    <nav class="sticky top-0 z-50 card border-b border-opacity-20 shadow-lg">
-        <div class="max-w-7xl mx-auto px-6 py-4">
-            <div class="flex items-center justify-between">
-                <!-- Logo & Branding -->
-                <div class="flex items-center gap-3">
-                    <div class="h-12 w-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                        <img src="/static/image/KNOWITNOW.png" alt="Logo" class="h-8 w-8">
-                    </div>
-                    <div>
-                        <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Brainspark</h1>
-                        <p class="text-xs font-medium" style="color: var(--text-secondary);">Challenge. Learn. Connect.</p>
-                    </div>
-                </div>
+<body>
 
-                <!-- Right Side Icons -->
-                <div class="flex items-center gap-4">
-                    <!-- Theme Toggle -->
-                    <button id="theme-toggle" class="mode-toggle-btn p-3 rounded-xl bg-opacity-20 hover:bg-opacity-30 transition-all duration-300">
-                        <svg id="sun-icon" class="w-6 h-6 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v2a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l-2.12-2.12a.5.5 0 10-.707.707L13.828 16.3a1 1 0 001.414-1.414l-.464-.465zM2.05 13.464l2.12-2.12a.5.5 0 10-.707-.707L1.343 12.828A1 1 0 102.757 14.243l-.707-.78z" clip-rule="evenodd"></path>
-                        </svg>
-                        <svg id="moon-icon" class="w-6 h-6 text-blue-400 hidden" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
-                        </svg>
-                    </button>
+<!-- ===================== SIDEBAR ===================== -->
+<div class="app-wrap">
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <img src="/static/image/KNOWITNOW.png" alt="Logo" style="width:32px;height:32px;border-radius:8px;object-fit:cover;" onerror="this.style.display='none'">
+    <div>
+      <div class="sidebar-logo-text">Brainspark</div>
+      <div class="sidebar-logo-sub">Challenge. Learn. Connect.</div>
+    </div>
+  </div>
 
-                    
+  <div class="sidebar-user">
+    <img src="{{ user.get_profile_pic_url() }}" alt="{{ user.name }}" class="sidebar-avatar" onerror="this.src='https://ui-avatars.com/api/?name={{ user.name }}&background=ff4f30&color=fff'">
+    <div>
+      <div class="sidebar-user-name">{{ user.name }}</div>
+      <div class="sidebar-user-level">{{ user.study_level }}</div>
+    </div>
+  </div>
 
-                    <!-- User Profile -->
-                    <div class="flex items-center gap-3 pl-4 border-l border-opacity-20" style="border-color: var(--text-secondary);">
-                        <div class="text-right hidden sm:block">
-                            <p class="font-semibold" style="color: var(--text-primary);">{{ user.name }}</p>
-                            <p class="text-xs" style="color: var(--text-secondary);">{{ user.study_level }}</p>
-                        </div>
-                        <img src="{{ user.get_profile_pic_url() }}" alt="Profile" class="h-10 w-10 rounded-xl object-cover border-2 border-blue-500">
-                    </div>
+  <nav class="sidebar-nav">
+    <div class="sidebar-section-label">Main</div>
+    <button class="sidebar-link active" onclick="showSection('home', this)">
+      <i class="fas fa-home"></i> Overview
+    </button>
+    <button class="sidebar-link" onclick="showSection('upload', this)">
+      <i class="fas fa-file-pdf"></i> Generate Quiz
+    </button>
+    <button class="sidebar-link" onclick="showSection('analytics', this)">
+      <i class="fas fa-chart-line"></i> Analytics
+    </button>
 
-                    <!-- Logout -->
-                    <button onclick="logout()" class="p-3 rounded-xl hover:bg-red-500 hover:bg-opacity-20 transition-all duration-300" title="Logout">
-                        <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                        </svg>
-                    </button>
-                </div>
+    <div class="sidebar-section-label">Connect</div>
+    <button class="sidebar-link" onclick="findStudyBuddies()">
+      <i class="fas fa-users"></i> Study Buddies
+    </button>
+    <button class="sidebar-link" onclick="showSection('media', this)">
+      <i class="fas fa-photo-video"></i> Audio & Video
+    </button>
+
+    <div class="sidebar-section-label">Tools</div>
+    <button class="sidebar-link" onclick="showAIModal()">
+      <i class="fas fa-robot"></i> AI Tutor
+    </button>
+  </nav>
+
+  <div class="sidebar-footer">
+    <button id="theme-btn-sidebar" onclick="toggleTheme()" title="Toggle theme">
+      <i class="fas fa-moon" id="sidebar-theme-icon"></i>
+    </button>
+    <button class="sidebar-footer-btn danger" onclick="logout()">
+      <i class="fas fa-sign-out-alt"></i> Sign out
+    </button>
+  </div>
+</aside>
+
+<!-- ===================== MAIN ===================== -->
+<div class="main-wrap">
+  <header class="topbar">
+    <div style="display:flex;align-items:center;gap:1rem;">
+      <button class="topbar-btn hamburger-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+      <div class="topbar-greeting">
+        Good {{ time_of_day }}, <span>{{ user.name.split(' ')[0] }}</span> 👋
+      </div>
+    </div>
+    <div class="topbar-right">
+      <button class="topbar-btn" onclick="toggleTheme()" title="Toggle theme" id="theme-btn-topbar">
+        <i class="fas fa-moon" id="topbar-theme-icon"></i>
+      </button>
+      <img src="{{ user.get_profile_pic_url() }}" alt="{{ user.name }}" style="width:36px;height:36px;border-radius:8px;object-fit:cover;border:2px solid rgba(255,79,48,0.3);" onerror="this.src='https://ui-avatars.com/api/?name={{ user.name }}&background=ff4f30&color=fff'">
+    </div>
+  </header>
+
+  <main class="main-content">
+
+    <!-- ======================== HOME SECTION ======================== -->
+    <div class="page-section active" id="section-home">
+      <div class="page-header">
+        <div class="page-eyebrow">Dashboard</div>
+        <h1 class="page-title">Your learning <em>snapshot</em></h1>
+        <p class="page-subtitle">Track your progress and keep the momentum going.</p>
+      </div>
+
+      <!-- Stats row -->
+      <div class="stats-row">
+        <div class="stat-card red anim-1">
+          <div class="stat-card-top">
+            <div>
+              <div class="stat-num" id="total-quizzes">—</div>
+              <div class="stat-label">Total Quizzes</div>
+              <div class="stat-delta"><i class="fas fa-arrow-up" style="font-size:0.65rem;"></i> All time</div>
             </div>
+            <div class="stat-icon red"><i class="fas fa-layer-group"></i></div>
+          </div>
         </div>
-    </nav>
-
-    <!-- Main Content -->
-    <div class="max-w-7xl mx-auto px-6 py-8">
-        
-        <!-- Welcome Section -->
-        <div class="mb-8" data-aos="fade-up">
-            <h2 class="text-4xl font-bold mb-2" style="color: var(--text-primary);">Welcome back, {{ user.name }}! 👋</h2>
-            <p style="color: var(--text-secondary);">Ready to challenge yourself and learn something new today?</p>
+        <div class="stat-card blue anim-2">
+          <div class="stat-card-top">
+            <div>
+              <div class="stat-num" id="average-score">—</div>
+              <div class="stat-label">Average Score</div>
+              <div class="stat-delta"><i class="fas fa-bolt" style="font-size:0.65rem;"></i> Keep it up</div>
+            </div>
+            <div class="stat-icon blue"><i class="fas fa-chart-bar"></i></div>
+          </div>
         </div>
-
-        <!-- Quick Stats -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div class="stat-card card rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1" data-aos="fade-up" data-aos-delay="0">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium" style="color: var(--text-secondary);">Total Quizzes</p>
-                        <p class="text-4xl font-bold mt-2" style="color: var(--primary);" id="total-quizzes">0</p>
-                    </div>
-                    <div class="p-4 rounded-xl bg-blue-500 bg-opacity-20">
-                        <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                    </div>
-                </div>
+        <div class="stat-card green anim-3">
+          <div class="stat-card-top">
+            <div>
+              <div class="stat-num" id="connections">—</div>
+              <div class="stat-label">Connections</div>
+              <div class="stat-delta"><i class="fas fa-globe" style="font-size:0.65rem;"></i> Worldwide</div>
             </div>
-
-            <div class="stat-card card rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1" data-aos="fade-up" data-aos-delay="100">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium" style="color: var(--text-secondary);">Average Score</p>
-                        <p class="text-4xl font-bold mt-2" style="color: var(--success);" id="average-score">0%</p>
-                    </div>
-                    <div class="p-4 rounded-xl bg-green-500 bg-opacity-20">
-                        <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                        </svg>
-                    </div>
-                </div>
-            </div>
-
-
-            <div class="stat-card card rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1" data-aos="fade-up" data-aos-delay="300">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium" style="color: var(--text-secondary);">Connections</p>
-                        <p class="text-4xl font-bold mt-2" style="color: var(--secondary);" id="connections">0</p>
-                    </div>
-                    <div class="p-4 rounded-xl bg-purple-500 bg-opacity-20">
-                        <svg class="w-8 h-8 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 12H9m6 0a6 6 0 11-12 0 6 6 0 0112 0z"></path>
-                        </svg>
-                    </div>
-                </div>
-            </div>
+            <div class="stat-icon green"><i class="fas fa-users"></i></div>
+          </div>
         </div>
+      </div>
 
-        <!-- Main Actions Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-            
-            <!-- Upload Notes Section -->
-            <div class="lg:col-span-2" data-aos="fade-up">
-                <div class="card rounded-2xl p-8 shadow-lg">
-                    <h3 class="text-2xl font-bold mb-6" style="color: var(--text-primary);">📚 Upload Your Notes</h3>
-                    
-                    <!-- Tabs for Question Type -->
-                    <div class="flex gap-2 mb-6 bg-opacity-20 rounded-xl p-1" style="background-color: rgba(59, 130, 246, 0.1);">
-                        <button class="tab-btn flex-1 py-2 rounded-lg font-medium transition-all duration-300" data-tab="objective" style="background-color: var(--primary); color: white;">
-                            <span>📋 Objective</span>
-                        </button>
-                        
-                    </div>
-
-                    <!-- File Upload Drag & Drop -->
-                    <div class="upload-zone rounded-2xl p-8 text-center mb-6 cursor-pointer transition-all duration-300" id="upload-zone">
-                        <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-                        </svg>
-                        <p class="font-semibold" style="color: var(--text-primary);">Drag and drop your PDF notes here</p>
-                        <p class="text-sm" style="color: var(--text-secondary);">or click to browse</p>
-                        <input type="file" id="pdf-input" accept=".pdf" class="hidden" />
-                    </div>
-
-                    <!-- Difficulty & Question Count Settings -->
-                    <div class="grid grid-cols-2 gap-4 mb-6">
-
-                        
-                        <div>
-                            <label class="block text-sm font-semibold mb-2" style="color: var(--text-primary);">Difficulty Level</label>
-                            <select id="hardness" class="w-full card rounded-lg p-3 font-medium" style="color: var(--text-primary);">
-                                <option value="easy">🟢 Easy</option>
-                                <option value="medium" selected>🟡 Medium</option>
-                                <option value="hard">🔴 Hard</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-semibold mb-2" style="color: var(--text-primary);">Number of Questions</label>
-                            <input type="number" id="question-count-upload" min="5" max="100" value="10" 
-                                   class="w-full card rounded-lg p-3 font-medium" style="color: var(--text-primary); border: 2px solid var(--primary);">
-                        </div>
-
-                       
-                    </div>
-
-                    <!-- Upload Button -->
-                    <button onclick="uploadNotes()" class="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                        <span>🚀 Generate Questions from PDF</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Quick Features Sidebar -->
-            <div class="space-y-6" data-aos="fade-up" data-aos-delay="200">
-                
-                <!-- Community Connect -->
-                <div class="card-secondary rounded-2xl p-6 shadow-lg border border-opacity-20" style="border-color: var(--text-secondary);">
-                    <h4 class="text-lg font-bold mb-4 flex items-center gap-2" style="color: var(--text-primary);">
-                        <span>🌐 Community</span>
-                    </h4>
-                    <div class="space-y-3">
-                        <p class="text-sm" style="color: var(--text-secondary);">Connect with learners from</p>
-                        <div class="space-y-2">
-                            <div class="flex items-center gap-2 p-3 card rounded-lg">
-                                <span>🏫</span>
-                                <span class="font-medium" style="color: var(--text-primary);">{{ user.school }}</span>
-                            </div>
-                            <div class="flex items-center gap-2 p-3 card rounded-lg">
-                                <span>🌍</span>
-                                <span class="font-medium" style="color: var(--text-primary);">{{ user.country }}</span>
-                            </div>
-                            <div class="flex items-center gap-2 p-3 card rounded-lg">
-                                <span>📚</span>
-                                <span class="font-medium" style="color: var(--text-primary);">{{ user.study_level }}</span>
-                            </div>
-                        </div>
-                    </div>
-                    <button class="w-full mt-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all duration-300" onclick="findStudyBuddies()">
-                        Find Study Buddies
-                    </button>
-                </div>
-
-                
-
-                <!-- AI Explanations -->
-                <div class="card-secondary rounded-2xl p-6 shadow-lg border border-opacity-20" style="border-color: var(--text-secondary);">
-                    <h4 class="text-lg font-bold mb-4 flex items-center gap-2" style="color: var(--text-primary);">
-                        <span>🤖 AI Assistant</span>
-                    </h4>
-                    <p class="text-sm mb-3" style="color: var(--text-secondary);">Get instant explanations powered by Google Gemini</p>
-                    <button class="w-full py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all duration-300" onclick="askAI()">
-                        Ask AI
-                    </button>
-                </div>
-            </div>
+      <!-- Chart + Activity -->
+      <div class="grid-2 mb-6 reveal">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title"><i class="fas fa-chart-line"></i> Performance Trend</span>
+          </div>
+          <div class="panel-body">
+            <canvas id="performanceChart" height="200"></canvas>
+          </div>
         </div>
-
-        <!-- Stats & Performance Section -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-            
-            <!-- Performance Chart -->
-            <div class="card rounded-2xl p-8 shadow-lg" data-aos="fade-up">
-                <h3 class="text-xl font-bold mb-6" style="color: var(--text-primary);">📊 Performance Trend</h3>
-                <canvas id="performanceChart"></canvas>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title"><i class="fas fa-history"></i> Recent Activity</span>
+          </div>
+          <div class="panel-body" id="recent-activity-container">
+            <div class="empty-state">
+              <i class="fas fa-clock"></i>
+              <strong>No quizzes yet</strong>
+              <p>Generate and take your first quiz!</p>
             </div>
-
-            <!-- Recent Activity -->
-            <div class="card rounded-2xl p-8 shadow-lg" data-aos="fade-up" data-aos-delay="100">
-                <h3 class="text-xl font-bold mb-6" style="color: var(--text-primary);">🎯 Recent Activity</h3>
-                <div class="space-y-4" id="recent-activity-container">
-                    <div class="flex items-center justify-center p-8">
-                        <p style="color: var(--text-secondary);">Loading activity...</p>
-                    </div>
-                </div>
-            </div>
+          </div>
         </div>
+      </div>
 
-        <!-- 📚 Learn Better with Audio & Video Section -->
-        <div class="mb-8" data-aos="fade-up">
-            <div class="card rounded-2xl p-8 shadow-lg">
-                <div class="mb-6">
-                    <h3 class="text-3xl font-bold mb-2" style="color: var(--text-primary);">📚 Learn Better with Audio & Video</h3>
-                    <p style="color: var(--text-secondary);">Convert your study notes to engaging audio and video for better understanding</p>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <!-- Upload Section -->
-                    <div class="lg:col-span-2 space-y-6">
-                        <!-- File Upload -->
-                        <div class="bg-gradient-to-br from-purple-600/10 to-blue-600/10 rounded-2xl p-8 border-2 border-dashed border-purple-500 border-opacity-50 cursor-pointer transition-all duration-300 hover:border-opacity-100" id="av-upload-zone">
-                            <div class="text-center">
-                                <svg class="w-16 h-16 mx-auto mb-4 text-purple-500 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12M9 6h6"></path>
-                                </svg>
-                                <h4 class="text-xl font-bold mb-2" style="color: var(--text-primary);">Upload Notes or PDF</h4>
-                                <p style="color: var(--text-secondary);" class="text-sm">Drag and drop or click to browse</p>
-                                <p class="text-xs mt-2" style="color: var(--text-secondary);">Supports PDF, DOC, TXT files (Max 20MB)</p>
-                                <input type="file" id="av-file-input" accept=".pdf,.doc,.docx,.txt" class="hidden" />
-                            </div>
-                        </div>
-
-                        <!-- File Preview -->
-                        <div id="av-file-preview" style="display: none;" class="bg-opacity-20 rounded-xl p-4" style="background-color: rgba(168, 85, 247, 0.1);">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-3">
-                                    <span class="text-3xl">📄</span>
-                                    <div>
-                                        <p class="font-semibold" style="color: var(--text-primary);" id="av-file-name"></p>
-                                        <p class="text-sm" style="color: var(--text-secondary);" id="av-file-size"></p>
-                                    </div>
-                                </div>
-                                <button onclick="clearAVFile()" class="text-red-500 hover:text-red-700 font-bold text-xl">✕</button>
-                            </div>
-                        </div>
-
-                        <!-- Conversion Options -->
-                        <div id="av-conversion-options" style="display: none;" class="space-y-4">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <!-- Audio Conversion -->
-                                <div class="card-secondary rounded-xl p-6 border-2 border-blue-500 border-opacity-30">
-                                    <div class="flex items-start justify-between mb-4">
-                                        <div>
-                                            <h5 class="text-lg font-bold flex items-center gap-2" style="color: var(--text-primary);">
-                                                <span>🎵</span> Convert to Audio
-                                            </h5>
-                                            <p class="text-sm mt-2" style="color: var(--text-secondary);">Hear your notes read aloud</p>
-                                        </div>
-                                    </div>
-                                    <div class="space-y-3">
-                                        <div>
-                                            <label class="text-sm font-semibold" style="color: var(--text-primary);">Audio Language</label>
-                                            <select id="av-audio-language" class="w-full card rounded-lg p-2 text-sm mt-1" style="color: var(--text-primary);">
-                                                <option value="en">English</option>
-                                                <option value="fr">Français</option>
-                                                <option value="es">Español</option>
-                                                <option value="de">Deutsch</option>
-                            </select>
-                                        </div>
-                                        <div>
-                                            <label class="text-sm font-semibold" style="color: var(--text-primary);">Playback Speed</label>
-                                            <select id="av-audio-speed" class="w-full card rounded-lg p-2 text-sm mt-1" style="color: var(--text-primary);">
-                                                <option value="0.75">0.75x (Slow)</option>
-                                                <option value="1" selected>1x (Normal)</option>
-                                                <option value="1.25">1.25x (Fast)</option>
-                                                <option value="1.5">1.5x (Very Fast)</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <button onclick="convertToAudio()" class="w-full mt-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg hover:shadow-lg transition-all duration-300 transform hover:scale-105">
-                                        ✨ Generate Audio
-                                    </button>
-                                </div>
-
-                                <!-- Video Conversion -->
-                                <div class="card-secondary rounded-xl p-6 border-2 border-orange-500 border-opacity-30">
-                                    <div class="flex items-start justify-between mb-4">
-                                        <div>
-                                            <h5 class="text-lg font-bold flex items-center gap-2" style="color: var(--text-primary);">
-                                                <span>🎬</span> Convert to Video
-                                            </h5>
-                                            <p class="text-sm mt-2" style="color: var(--text-secondary);">Create engaging video lessons</p>
-                                        </div>
-                                    </div>
-                                    <div class="space-y-3">
-                                        <div>
-                                            <label class="text-sm font-semibold" style="color: var(--text-primary);">Video Style</label>
-                                            <select id="av-video-style" class="w-full card rounded-lg p-2 text-sm mt-1" style="color: var(--text-primary);">
-                                                <option value="slides">📊 Slideshow</option>
-                                                <option value="animated">✨ Animated</option>
-                                                <option value="whiteboard">🎨 Whiteboard</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label class="text-sm font-semibold" style="color: var(--text-primary);">Video Duration</label>
-                                            <select id="av-video-duration" class="w-full card rounded-lg p-2 text-sm mt-1" style="color: var(--text-primary);">
-                                                <option value="short">Short (5-10 min)</option>
-                                                <option value="medium" selected>Medium (10-20 min)</option>
-                                                <option value="long">Long (20+ min)</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <button onclick="convertToVideo()" class="w-full mt-4 py-2 bg-gradient-to-r from-orange-600 to-orange-700 text-white font-semibold rounded-lg hover:shadow-lg transition-all duration-300 transform hover:scale-105">
-                                        🎥 Generate Video
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Community Section -->
-                    <div>
-                        <div class="card-secondary rounded-2xl p-6 shadow-lg border border-opacity-20 h-full flex flex-col" style="border-color: var(--text-secondary);">
-                            <h4 class="text-lg font-bold mb-4 flex items-center gap-2" style="color: var(--text-primary);">
-                                <span>🌐 Community</span>
-                            </h4>
-                            <div class="space-y-3 flex-1">
-                                <p class="text-sm font-medium" style="color: var(--text-secondary);">Connect with learners from</p>
-                                <div class="space-y-2">
-                                    <div class="flex items-center gap-2 p-3 card rounded-lg hover:shadow-md transition-all duration-300">
-                                        <span class="text-xl">🏫</span>
-                                        <div>
-                                            <p class="text-xs" style="color: var(--text-secondary);">University</p>
-                                            <p class="font-semibold text-sm" style="color: var(--text-primary);">University of Ibadan</p>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center gap-2 p-3 card rounded-lg hover:shadow-md transition-all duration-300">
-                                        <span class="text-xl">🌍</span>
-                                        <div>
-                                            <p class="text-xs" style="color: var(--text-secondary);">Country</p>
-                                            <p class="font-semibold text-sm" style="color: var(--text-primary);">Nigeria</p>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center gap-2 p-3 card rounded-lg hover:shadow-md transition-all duration-300">
-                                        <span class="text-xl">📚</span>
-                                        <div>
-                                            <p class="text-xs" style="color: var(--text-secondary);">Level</p>
-                                            <p class="font-semibold text-sm" style="color: var(--text-primary);">Undergraduate</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <button class="w-full mt-4 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all duration-300 transform hover:scale-105" onclick="findStudyBuddies()">
-                                🤝 Find Study Buddies
-                            </button>
-                        </div>
-                    </div>
-                </div>
+      <!-- Community card -->
+      <div class="reveal">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title"><i class="fas fa-globe"></i> Your Community Profile</span>
+            <button class="btn btn-primary btn-sm" onclick="findStudyBuddies()">Find Buddies <i class="fas fa-arrow-right"></i></button>
+          </div>
+          <div class="panel-body">
+            <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+              <div class="info-tag"><i class="fas fa-graduation-cap"></i> {{ user.school }}</div>
+              <div class="info-tag"><i class="fas fa-globe-africa"></i> {{ user.country }}</div>
+              <div class="info-tag"><i class="fas fa-book"></i> {{ user.study_level }}</div>
+              {% if user.profession %}<div class="info-tag"><i class="fas fa-briefcase"></i> {{ user.profession }}</div>{% endif %}
             </div>
+          </div>
         </div>
-
-        <!-- Converted Files Section -->
-        <div class="mb-8" data-aos="fade-up">
-            <div class="card rounded-2xl p-8 shadow-lg">
-                <h3 class="text-2xl font-bold mb-6" style="color: var(--text-primary);">📁 Your Converted Files</h3>
-                <div id="converted-files-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div class="flex items-center justify-center p-12 col-span-full card-secondary rounded-2xl border-2 border-dashed border-opacity-30" style="border-color: var(--text-secondary);">
-                        <div class="text-center">
-                            <p class="text-lg font-semibold mb-2" style="color: var(--text-primary);">📭 No converted files yet</p>
-                            <p style="color: var(--text-secondary);">Upload your notes above to get started!</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
+      </div>
     </div>
 
-    <script>
-        AOS.init({ duration: 1000 });
+    <!-- ======================== UPLOAD / QUIZ SECTION ======================== -->
+    <div class="page-section" id="section-upload">
+      <div class="page-header">
+        <div class="page-eyebrow">Generate</div>
+        <h1 class="page-title">Upload notes,<br>get <em>smart questions</em></h1>
+        <p class="page-subtitle">Powered by Google Gemini 2.5. From PDF to 100 questions in under 30 seconds.</p>
+      </div>
 
-        // Store for chart instance
-        let performanceChart = null;
+      <div class="grid-2-1 reveal">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title"><i class="fas fa-file-pdf"></i> Your PDF Notes</span>
+          </div>
+          <div class="panel-body">
+            <div class="upload-zone" id="upload-zone">
+              <i class="fas fa-cloud-upload-alt"></i>
+              <strong>Drag & drop your PDF here</strong>
+              <span>or click to browse · max 10MB</span>
+              <input type="file" id="pdf-input" accept=".pdf" style="display:none;">
+            </div>
 
-        // ==================== Load Dashboard Data ====================
-        async function loadDashboardData() {
-            try {
-                const response = await fetch('/api/dashboard-stats');
-                const data = await response.json();
+            <div style="margin-top:1.5rem;">
+              <div class="field-row">
+                <div class="field-group">
+                  <label class="field-label">Difficulty Level</label>
+                  <select id="hardness" class="field-select">
+                    <option value="easy">🟢 Easy</option>
+                    <option value="medium" selected>🟡 Medium</option>
+                    <option value="hard">🔴 Hard</option>
+                  </select>
+                </div>
+                <div class="field-group">
+                  <label class="field-label">Number of Questions</label>
+                  <input type="number" id="question-count-upload" min="5" max="100" value="10" class="field-input">
+                </div>
+              </div>
+            </div>
 
-                if (!data.success) {
-                    console.error('Error loading dashboard data');
-                    return;
-                }
+            <button onclick="uploadNotes()" class="btn btn-primary btn-full btn-lg" id="upload-btn" style="margin-top:0.5rem;">
+              <i class="fas fa-bolt"></i> Generate Questions from PDF
+            </button>
+          </div>
+        </div>
 
-                // Update stats
-                document.getElementById('total-quizzes').textContent = data.stats.total_quizzes;
-                document.getElementById('average-score').textContent = data.stats.average_score + '%';
-                document.getElementById('connections').textContent = data.stats.connection_count;
+        <div style="display:flex;flex-direction:column;gap:1.25rem;">
+          <div class="panel">
+            <div class="panel-body" style="padding:1.25rem;">
+              <div style="font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);margin-bottom:0.75rem;">How it works</div>
+              <div style="display:flex;flex-direction:column;gap:0.75rem;">
+                <div style="display:flex;gap:0.75rem;align-items:flex-start;">
+                  <div style="width:24px;height:24px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">
+                    <span style="font-family:'Syne',sans-serif;font-size:0.65rem;font-weight:800;color:#fff;">01</span>
+                  </div>
+                  <div>
+                    <div style="font-size:0.8rem;font-weight:600;color:var(--ink);">Upload your PDF</div>
+                    <div style="font-size:0.75rem;color:var(--muted);">Lecture slides, textbooks, handouts — any PDF works.</div>
+                  </div>
+                </div>
+                <div style="display:flex;gap:0.75rem;align-items:flex-start;">
+                  <div style="width:24px;height:24px;background:var(--blue);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">
+                    <span style="font-family:'Syne',sans-serif;font-size:0.65rem;font-weight:800;color:#fff;">02</span>
+                  </div>
+                  <div>
+                    <div style="font-size:0.8rem;font-weight:600;color:var(--ink);">AI reads the content</div>
+                    <div style="font-size:0.75rem;color:var(--muted);">Gemini 2.5 extracts every key concept.</div>
+                  </div>
+                </div>
+                <div style="display:flex;gap:0.75rem;align-items:flex-start;">
+                  <div style="width:24px;height:24px;background:var(--green);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">
+                    <span style="font-family:'Syne',sans-serif;font-size:0.65rem;font-weight:800;color:#fff;">03</span>
+                  </div>
+                  <div>
+                    <div style="font-size:0.8rem;font-weight:600;color:var(--ink);">Take your quiz</div>
+                    <div style="font-size:0.75rem;color:var(--muted);">Instant feedback and AI explanations.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-                // Update recent activity
-                updateRecentActivity(data.recent_activity);
+          <div class="panel" style="background:linear-gradient(135deg, #0a0a14, #1a0505);">
+            <div class="panel-body" style="padding:1.25rem;">
+              <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-bottom:0.75rem;">Quick stats</div>
+              <div style="font-family:'Syne',sans-serif;font-size:1.75rem;font-weight:800;color:#fff;line-height:1;">50K+</div>
+              <div style="font-size:0.75rem;color:rgba(255,255,255,0.4);margin-bottom:1rem;">active students worldwide</div>
+              <div style="font-family:'Syne',sans-serif;font-size:1.75rem;font-weight:800;color:#fff;line-height:1;">2.5M+</div>
+              <div style="font-size:0.75rem;color:rgba(255,255,255,0.4);">quizzes completed</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-                // Update performance chart
-                updatePerformanceChart(data.performance_data);
-            } catch (error) {
-                console.error('Error fetching dashboard data:', error);
-            }
-        }
+    <!-- ======================== ANALYTICS SECTION ======================== -->
+    <div class="page-section" id="section-analytics">
+      <div class="page-header">
+        <div class="page-eyebrow">Performance</div>
+        <h1 class="page-title">Your <em>analytics</em></h1>
+        <p class="page-subtitle">Track your learning progress over time.</p>
+      </div>
+      <div class="grid-2 mb-6 reveal">
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title"><i class="fas fa-chart-area"></i> Score Trend</span></div>
+          <div class="panel-body"><canvas id="analyticsChart" height="220"></canvas></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title"><i class="fas fa-list-alt"></i> All Activity</span></div>
+          <div class="panel-body" id="all-activity-container">
+            <div class="empty-state"><i class="fas fa-clipboard"></i><strong>No history yet</strong><p>Complete quizzes to see your history.</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-        function updateRecentActivity(activities) {
-            const container = document.getElementById('recent-activity-container');
-            
-            if (activities.length === 0) {
-                container.innerHTML = '<p style="color: var(--text-secondary);" class="text-center py-8">No quiz results yet. Start taking quizzes!</p>';
-                return;
-            }
+    <!-- ======================== MEDIA SECTION ======================== -->
+    <div class="page-section" id="section-media">
+      <div class="page-header">
+        <div class="page-eyebrow">AI Media</div>
+        <h1 class="page-title">Audio &amp; <em>Video</em></h1>
+        <p class="page-subtitle">Transform your notes into engaging audio narrations and AI-powered video lectures.</p>
+      </div>
 
-            container.innerHTML = activities.map(activity => {
-                const scoreColor = activity.score >= 80 ? 'text-green-500' : activity.score >= 60 ? 'text-yellow-500' : 'text-red-500';
-                return `
-                    <div class="flex items-center justify-between p-4 card-secondary rounded-lg">
-                        <div>
-                            <p class="font-semibold" style="color: var(--text-primary);">${activity.quiz_title}</p>
-                            <p class="text-xs" style="color: var(--text-secondary);">${activity.time_ago}</p>
-                        </div>
-                        <span class="text-2xl font-bold ${scoreColor}">${activity.score}%</span>
-                    </div>
-                `;
-            }).join('');
-        }
+      <div class="grid-2-1 mb-6 reveal">
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title"><i class="fas fa-cloud-upload-alt"></i> Upload Notes</span></div>
+          <div class="panel-body">
+            <div class="av-upload-zone" id="av-upload-zone">
+              <i class="fas fa-photo-video"></i>
+              <strong>Upload your notes or PDF</strong>
+              <span>PDF, DOC, TXT · max 20MB · drag & drop or click</span>
+              <input type="file" id="av-file-input" accept=".pdf,.doc,.docx,.txt" style="display:none;">
+            </div>
 
-        function updatePerformanceChart(performanceData) {
-            const ctx = document.getElementById('performanceChart');
-            if (!ctx) return;
+            <div id="av-file-preview" style="display:none;margin-top:1rem;">
+              <div style="display:flex;align-items:center;gap:0.75rem;padding:0.875rem;background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.2);border-radius:var(--radius-sm);">
+                <i class="fas fa-file-alt" style="font-size:1.25rem;color:#a855f7;"></i>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:0.875rem;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="av-file-name"></div>
+                  <div style="font-size:0.75rem;color:var(--muted);" id="av-file-size"></div>
+                </div>
+                <button onclick="clearAVFile()" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:1rem;"><i class="fas fa-times"></i></button>
+              </div>
+            </div>
 
-            const labels = Object.keys(performanceData);
-            const scores = Object.values(performanceData);
+            <div id="av-conversion-options" style="display:none;margin-top:1.5rem;">
+              <div class="grid-2" style="gap:1rem;">
+                <div class="av-option-card">
+                  <div class="av-option-title"><i class="fas fa-music" style="color:var(--blue);"></i> Convert to Audio</div>
+                  <div class="field-group">
+                    <label class="field-label">Language</label>
+                    <select id="av-audio-language" class="field-select">
+                      <option value="en">English</option>
+                      <option value="fr">Français</option>
+                      <option value="es">Español</option>
+                      <option value="de">Deutsch</option>
+                    </select>
+                  </div>
+                  <div class="field-group">
+                    <label class="field-label">Speed</label>
+                    <select id="av-audio-speed" class="field-select">
+                      <option value="0.75">0.75× Slow</option>
+                      <option value="1" selected>1× Normal</option>
+                      <option value="1.25">1.25× Fast</option>
+                      <option value="1.5">1.5× Very Fast</option>
+                    </select>
+                  </div>
+                  <button onclick="convertToAudio()" class="btn btn-blue btn-full btn-sm"><i class="fas fa-headphones"></i> Generate Audio</button>
+                </div>
+                <div class="av-option-card">
+                  <div class="av-option-title"><i class="fas fa-film" style="color:var(--accent);"></i> Convert to Video</div>
+                  <div class="field-group">
+                    <label class="field-label">Style</label>
+                    <select id="av-video-style" class="field-select">
+                      <option value="slides">Slideshow + Character</option>
+                      <option value="animated">Animated</option>
+                      <option value="whiteboard">Whiteboard</option>
+                    </select>
+                  </div>
+                  <div class="field-group">
+                    <label class="field-label">Duration</label>
+                    <select id="av-video-duration" class="field-select">
+                      <option value="short">Short (5–10 min)</option>
+                      <option value="medium" selected>Medium (10–20 min)</option>
+                      <option value="long">Long (20+ min)</option>
+                    </select>
+                  </div>
+                  <button onclick="convertToVideo()" class="btn btn-primary btn-full btn-sm"><i class="fas fa-video"></i> Generate Video</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-            if (performanceChart) {
-                performanceChart.data.labels = labels;
-                performanceChart.data.datasets[0].data = scores;
-                performanceChart.update();
-            } else {
-                performanceChart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Quiz Scores',
-                            data: scores,
-                            borderColor: '#3b82f6',
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                            tension: 0.4,
-                            fill: true,
-                            pointBackgroundColor: '#3b82f6',
-                            pointBorderColor: '#fff',
-                            pointBorderWidth: 2,
-                            pointRadius: 5
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            legend: { display: false }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                max: 100,
-                                ticks: {
-                                    callback: function(value) {
-                                        return value + '%';
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-        }
+        <div class="panel" style="background:linear-gradient(160deg,#0a0a14,#160a1a);">
+          <div class="panel-body" style="padding:1.5rem;">
+            <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:1rem;">Why use AI media?</div>
+            <div style="display:flex;flex-direction:column;gap:1rem;">
+              <div style="display:flex;gap:0.75rem;align-items:flex-start;">
+                <div style="width:32px;height:32px;background:rgba(168,85,247,0.2);border:1px solid rgba(168,85,247,0.3);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-ear-listen" style="color:#a855f7;font-size:0.85rem;"></i></div>
+                <div><div style="font-size:0.8rem;font-weight:600;color:#fff;">Auditory learning</div><div style="font-size:0.75rem;color:rgba(255,255,255,0.4);margin-top:0.1rem;">Listen on the go. Retain 40% more through audio repetition.</div></div>
+              </div>
+              <div style="display:flex;gap:0.75rem;align-items:flex-start;">
+                <div style="width:32px;height:32px;background:rgba(255,79,48,0.15);border:1px solid rgba(255,79,48,0.25);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-play" style="color:var(--accent);font-size:0.85rem;"></i></div>
+                <div><div style="font-size:0.8rem;font-weight:600;color:#fff;">Engaging video format</div><div style="font-size:0.75rem;color:rgba(255,255,255,0.4);margin-top:0.1rem;">AI talking characters make lectures feel alive.</div></div>
+              </div>
+              <div style="display:flex;gap:0.75rem;align-items:flex-start;">
+                <div style="width:32px;height:32px;background:rgba(0,201,141,0.15);border:1px solid rgba(0,201,141,0.25);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-bolt" style="color:var(--green);font-size:0.85rem;"></i></div>
+                <div><div style="font-size:0.8rem;font-weight:600;color:#fff;">Instant generation</div><div style="font-size:0.75rem;color:rgba(255,255,255,0.4);margin-top:0.1rem;">Upload your notes. Audio or video ready in minutes.</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-        // Load data on page load
-        window.addEventListener('load', () => {
-            loadDashboardData();
-            loadConvertedFiles();
-        });
+      <!-- Converted files -->
+      <div class="panel reveal">
+        <div class="panel-head">
+          <span class="panel-title"><i class="fas fa-folder-open"></i> Your Converted Files</span>
+        </div>
+        <div class="panel-body">
+          <div id="converted-files-container">
+            <div class="empty-state">
+              <i class="fas fa-folder"></i>
+              <strong>No converted files yet</strong>
+              <p>Upload your notes above to get started!</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-        // ==================== Theme Toggle ====================
-        const themeToggle = document.getElementById('theme-toggle');
-        const sunIcon = document.getElementById('sun-icon');
-        const moonIcon = document.getElementById('moon-icon');
-        const html = document.documentElement;
+  </main>
+</div>
+</div>
 
-        // Load theme from localStorage
-        const savedTheme = localStorage.getItem('theme') || 'light';
-        if (savedTheme === 'dark') {
-            document.body.classList.add('dark-mode');
-            sunIcon.classList.add('hidden');
-            moonIcon.classList.remove('hidden');
-        }
+<!-- ===================== AI MODAL ===================== -->
+<div class="modal-overlay" id="ai-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeAIModal()"><i class="fas fa-times"></i></button>
+    <div class="modal-title"><i class="fas fa-robot" style="color:var(--green);margin-right:0.5rem;"></i> AI Tutor</div>
+    <div id="ai-conversation" style="max-height:340px;overflow-y:auto;margin-bottom:1.25rem;"></div>
+    <div>
+      <input type="file" id="ai-pdf-input" accept=".pdf" style="display:none;" onchange="handleAIPDFSelect()">
+      <textarea id="ai-question-input" placeholder="Ask anything about your notes…" style="width:100%;padding:0.75rem;border:1.5px solid rgba(0,0,0,0.1);border-radius:var(--radius-sm);background:var(--surface2);color:var(--ink);font-family:'DM Sans',sans-serif;font-size:0.875rem;resize:vertical;min-height:80px;outline:none;transition:border-color 0.2s;" onkeydown="if(event.key==='Enter'&&event.ctrlKey)submitAIQuestion()"></textarea>
+      <div id="ai-pdf-preview" style="margin-top:0.5rem;"></div>
+      <div style="display:flex;gap:0.75rem;margin-top:0.75rem;">
+        <button onclick="document.getElementById('ai-pdf-input').click()" class="btn btn-secondary btn-sm"><i class="fas fa-file-pdf"></i> PDF</button>
+        <button onclick="submitAIQuestion()" class="btn btn-green btn-sm" style="flex:1;"><i class="fas fa-paper-plane"></i> Ask</button>
+        <button onclick="resetAIConversation()" class="btn btn-secondary btn-sm" id="ai-reset-btn" style="display:none;"><i class="fas fa-redo"></i> Reset</button>
+      </div>
+      <p style="font-size:0.72rem;color:var(--muted);margin-top:0.5rem;">Ctrl+Enter to send</p>
+    </div>
+  </div>
+</div>
 
-        themeToggle.addEventListener('click', async () => {
-            const isDark = document.body.classList.toggle('dark-mode');
-            sunIcon.classList.toggle('hidden');
-            moonIcon.classList.toggle('hidden');
+<!-- Sidebar overlay for mobile -->
+<div id="sidebar-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:85;" onclick="closeSidebar()"></div>
 
-            const theme = isDark ? 'dark' : 'light';
-            localStorage.setItem('theme', theme);
-
-            try {
-                await fetch('/toggle_mode', { method: 'POST' });
-            } catch (error) {
-                console.error('Error toggling theme:', error);
-            }
-        });
-
-        // ==================== Tab Switching ====================
-        const tabBtns = document.querySelectorAll('.tab-btn');
-        let selectedQuestionType = 'objective';
-
-        tabBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                tabBtns.forEach(b => {
-                    b.style.backgroundColor = 'transparent';
-                    b.style.color = 'var(--text-secondary)';
-                });
-                btn.style.backgroundColor = 'var(--primary)';
-                btn.style.color = 'white';
-                selectedQuestionType = btn.dataset.tab;
-            });
-        });
-
-        // ==================== File Upload ====================
-        const uploadZone = document.getElementById('upload-zone');
-        const pdfInput = document.getElementById('pdf-input');
-
-        uploadZone.addEventListener('click', () => pdfInput.click());
-        uploadZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadZone.classList.add('dragover');
-        });
-        uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
-        uploadZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadZone.classList.remove('dragover');
-            if (e.dataTransfer.files[0]) {
-                pdfInput.files = e.dataTransfer.files;
-            }
-        });
-
-        pdfInput.addEventListener('change', () => {
-            if (pdfInput.files[0]) {
-                uploadZone.innerHTML = `
-                    <svg class="w-12 h-12 mx-auto mb-3 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                    </svg>
-                    <p class="font-semibold" style="color: var(--text-primary);">${pdfInput.files[0].name}</p>
-                    <p class="text-sm" style="color: var(--text-secondary);">Ready to generate questions!</p>
-                `;
-            }
-        });
-
-        // ==================== Upload Notes Function ====================
- async function uploadNotes() {
-    if (!pdfInput.files[0]) {
-        alert('Please select a PDF file first');
-        return;
+<script>
+  // ===================== THEME =====================
+  let dark = localStorage.getItem('bs-theme') === 'dark';
+  function applyTheme() {
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    document.getElementById('sidebar-theme-icon').className = dark ? 'fas fa-sun' : 'fas fa-moon';
+    document.getElementById('topbar-theme-icon').className = dark ? 'fas fa-sun' : 'fas fa-moon';
+    localStorage.setItem('bs-theme', dark ? 'dark' : 'light');
+    if (performanceChart) {
+      const color = dark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)';
+      performanceChart.options.scales.x.grid.color = color;
+      performanceChart.options.scales.y.grid.color = color;
+      performanceChart.options.scales.x.ticks.color = dark ? '#5a5a70' : '#7a7a8c';
+      performanceChart.options.scales.y.ticks.color = dark ? '#5a5a70' : '#7a7a8c';
+      performanceChart.update('none');
     }
+    fetch('/toggle_mode', { method: 'POST' }).catch(() => {});
+  }
+  applyTheme();
+  function toggleTheme() { dark = !dark; applyTheme(); }
 
-    const file = pdfInput.files[0];
-    if (file.size > 10 * 1024 * 1024) {  // 10MB limit
-        alert('File too large. Max 10MB.');
-        return;
-    }
+  // ===================== SIDEBAR =====================
+  function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    sidebar.classList.toggle('open');
+    overlay.style.display = sidebar.classList.contains('open') ? 'block' : 'none';
+  }
+  function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebar-overlay').style.display = 'none';
+  }
 
-    // Show loading
-    const button = event.target;
-    const originalText = button.innerHTML;
-    button.innerHTML = '<span class="animate-spin">⏳</span> Generating...';
-    button.disabled = true;
+  // ===================== SECTION NAVIGATION =====================
+  function showSection(name, btn) {
+    document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+    document.getElementById('section-' + name).classList.add('active');
+    if (btn) btn.classList.add('active');
+    closeSidebar();
+    // trigger reveals
+    document.querySelectorAll('#section-' + name + ' .reveal').forEach(el => {
+      setTimeout(() => el.classList.add('visible'), 50);
+    });
+  }
 
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('type', selectedQuestionType);
-    formData.append('hardness', document.getElementById('hardness').value);
-    const questionCount = document.getElementById('question-count-upload').value;
-    formData.append('question_count', questionCount);
+  // ===================== SCROLL REVEAL =====================
+  const revealObserver = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); revealObserver.unobserve(e.target); } });
+  }, { threshold: 0.08 });
+  document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
 
+  // ===================== DASHBOARD DATA =====================
+  let performanceChart = null;
+  let analyticsChart = null;
 
+  async function loadDashboardData() {
     try {
-        const response = await fetch('/upload_notes', {
-            method: 'POST',
-            body: formData
-        });
-        
-        const result = await response.json();
-        
-if (result.success) {
-            window.location.href = '/quiz';
-        } else {
-            alert(`❌ Error: ${result.error}`);
+      const response = await fetch('/api/dashboard-stats');
+      const data = await response.json();
+      if (!data.success) return;
+
+      animateCount(document.getElementById('total-quizzes'), data.stats.total_quizzes);
+      document.getElementById('average-score').textContent = data.stats.average_score + '%';
+      animateCount(document.getElementById('connections'), data.stats.connection_count);
+
+      updateRecentActivity(data.recent_activity);
+      updatePerformanceChart(data.performance_data);
+    } catch (err) { console.error('Dashboard data error:', err); }
+  }
+
+  function animateCount(el, target) {
+    let start = 0;
+    const steps = 40;
+    const inc = target / steps;
+    const timer = setInterval(() => {
+      start = Math.min(start + inc, target);
+      el.textContent = Math.floor(start);
+      if (start >= target) clearInterval(timer);
+    }, 25);
+  }
+
+  function updateRecentActivity(activities) {
+    const container = document.getElementById('recent-activity-container');
+    const allContainer = document.getElementById('all-activity-container');
+    if (!activities || activities.length === 0) return;
+    const html = activities.map(a => {
+      const cls = a.score >= 80 ? 'score-high' : a.score >= 60 ? 'score-mid' : 'score-low';
+      return `<div class="activity-item">
+        <div><div class="activity-title">${a.quiz_title}</div><div class="activity-meta">${a.time_ago}</div></div>
+        <span class="score-badge ${cls}">${a.score}%</span>
+      </div>`;
+    }).join('');
+    container.innerHTML = html;
+    if (allContainer) allContainer.innerHTML = html;
+  }
+
+  function updatePerformanceChart(data) {
+    const ctx = document.getElementById('performanceChart');
+    if (!ctx) return;
+    const labels = Object.keys(data);
+    const scores = Object.values(data);
+    const gridColor = dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+    const tickColor = dark ? '#5a5a70' : '#7a7a8c';
+    const cfg = {
+      type: 'line',
+      data: {
+        labels, datasets: [{
+          data: scores,
+          borderColor: '#ff4f30', backgroundColor: 'rgba(255,79,48,0.08)',
+          tension: 0.4, fill: true,
+          pointBackgroundColor: '#ff4f30', pointBorderColor: '#fff',
+          pointBorderWidth: 2, pointRadius: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: gridColor }, ticks: { color: tickColor, font: { family: 'DM Sans', size: 11 } } },
+          y: { beginAtZero: true, max: 100, grid: { color: gridColor }, ticks: { color: tickColor, font: { family: 'DM Sans', size: 11 }, callback: v => v + '%' } }
         }
-    } catch (error) {
-        console.error('Upload error:', error);
-        alert('Network error. Please try again.');
-    } finally {
-        button.innerHTML = originalText;
-        button.disabled = false;
+      }
+    };
+    if (performanceChart) { performanceChart.data.labels = labels; performanceChart.data.datasets[0].data = scores; performanceChart.update(); }
+    else { performanceChart = new Chart(ctx, cfg); }
+
+    // Analytics chart (same data, different canvas)
+    const ctx2 = document.getElementById('analyticsChart');
+    if (ctx2) {
+      if (analyticsChart) { analyticsChart.data.labels = labels; analyticsChart.data.datasets[0].data = scores; analyticsChart.update(); }
+      else { analyticsChart = new Chart(ctx2, { ...cfg, canvas: ctx2 }); }
     }
-}
+  }
 
-        // ==================== Logout Function ====================
-        async function logout() {
-            if (confirm('Are you sure you want to logout?')) {
-                try {
-                    await fetch('/logout', { method: 'POST' });
-                    window.location.href = '/';
-                } catch (error) {
-                    console.error('Logout error:', error);
-                }
-            }
-        }
+  // ===================== FILE UPLOAD =====================
+  const uploadZone = document.getElementById('upload-zone');
+  const pdfInput = document.getElementById('pdf-input');
 
-        // ==================== Find Study Buddies ====================
-        async function findStudyBuddies() {
-            window.location.href = '/study-buddies';
-        }
+  uploadZone.addEventListener('click', () => pdfInput.click());
+  uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+  uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+  uploadZone.addEventListener('drop', e => { e.preventDefault(); uploadZone.classList.remove('dragover'); if (e.dataTransfer.files[0]) { pdfInput.files = e.dataTransfer.files; updateUploadUI(e.dataTransfer.files[0]); } });
+  pdfInput.addEventListener('change', () => { if (pdfInput.files[0]) updateUploadUI(pdfInput.files[0]); });
 
-        // ==================== Connect User ====================
-        async function connectUser(userId) {
-            try {
-                const response = await fetch('/api/connect-user', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId })
-                });
-                const data = await response.json();
+  function updateUploadUI(file) {
+    uploadZone.classList.add('has-file');
+    uploadZone.innerHTML = `<i class="fas fa-check-circle" style="color:var(--green);"></i><strong style="color:var(--green);">${file.name}</strong><span>Ready to generate questions!</span>`;
+  }
 
-                if (data.success) {
-                    alert('Connected! You can now message this user.');
-                    findStudyBuddies(); // Refresh list
-                } else {
-                    alert(data.error || 'Error connecting');
-                }
-            } catch (error) {
-                alert('Error: ' + error.message);
-            }
-        }
+  async function uploadNotes() {
+    if (!pdfInput.files[0]) { alert('Please select a PDF file first.'); return; }
+    if (pdfInput.files[0].size > 10 * 1024 * 1024) { alert('File too large. Max 10MB.'); return; }
+    const btn = document.getElementById('upload-btn');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating…';
+    btn.disabled = true;
+    const formData = new FormData();
+    formData.append('file', pdfInput.files[0]);
+    formData.append('type', 'objective');
+    formData.append('hardness', document.getElementById('hardness').value);
+    formData.append('question_count', document.getElementById('question-count-upload').value);
+    try {
+      const res = await fetch('/upload_notes', { method: 'POST', body: formData });
+      const result = await res.json();
+      if (result.success) window.location.href = '/quiz';
+      else alert('Error: ' + result.error);
+    } catch { alert('Network error. Please try again.'); }
+    finally { btn.innerHTML = orig; btn.disabled = false; }
+  }
 
-        // ==================== Join Discussion ====================
-        async function joinDiscussion() {
-            try {
-                const response = await fetch('/api/discussions');
-                const data = await response.json();
+  // ===================== AV UPLOAD =====================
+  const avZone = document.getElementById('av-upload-zone');
+  const avInput = document.getElementById('av-file-input');
+  let selectedAVFile = null;
 
-                if (!data.success) {
-                    alert('Error loading discussions');
-                    return;
-                }
+  avZone.addEventListener('click', () => avInput.click());
+  avZone.addEventListener('dragover', e => { e.preventDefault(); avZone.classList.add('dragover'); });
+  avZone.addEventListener('dragleave', () => avZone.classList.remove('dragover'));
+  avZone.addEventListener('drop', e => { e.preventDefault(); avZone.classList.remove('dragover'); if (e.dataTransfer.files[0]) { avInput.files = e.dataTransfer.files; handleAVFileSelect(); } });
+  avInput.addEventListener('change', handleAVFileSelect);
 
-                const discussionsHTML = data.discussions.map(disc => `
-                    <div class="p-4 card-secondary rounded-lg mb-3 cursor-pointer hover:shadow-lg transition-all" onclick="enterDiscussion(${disc.id})">
-                        <h4 class="font-bold mb-1" style="color: var(--text-primary);">${disc.title}</h4>
-                        <p class="text-sm mb-2" style="color: var(--text-secondary);">${disc.description}</p>
-                        <div class="flex gap-4 text-xs" style="color: var(--text-secondary);">
-                            <span>👥 ${disc.members} members</span>
-                            <span>💬 ${disc.messages} messages</span>
-                        </div>
-                    </div>
-                `).join('');
+  function handleAVFileSelect() {
+    const file = avInput.files[0]; if (!file) return;
+    if (file.size > 20 * 1024 * 1024) { alert('Max 20MB.'); avInput.value = ''; return; }
+    selectedAVFile = file;
+    document.getElementById('av-file-name').textContent = file.name;
+    document.getElementById('av-file-size').textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+    document.getElementById('av-file-preview').style.display = 'block';
+    document.getElementById('av-conversion-options').style.display = 'block';
+    avZone.style.opacity = '0.5';
+  }
 
-                showModal('Brainstorm Discussions', discussionsHTML);
-            } catch (error) {
-                alert('Error loading discussions: ' + error.message);
-            }
-        }
+  function clearAVFile() {
+    selectedAVFile = null; avInput.value = '';
+    document.getElementById('av-file-preview').style.display = 'none';
+    document.getElementById('av-conversion-options').style.display = 'none';
+    avZone.style.opacity = '1';
+  }
 
-        function enterDiscussion(discussionId) {
-            alert('Opening discussion... (Full chat feature coming soon!)');
-            // In full implementation, would open discussion modal with messages
-        }
+  async function convertToAudio() {
+    if (!selectedAVFile) { alert('Please select a file first.'); return; }
+    const formData = new FormData();
+    formData.append('file', selectedAVFile);
+    formData.append('language', document.getElementById('av-audio-language').value);
+    formData.append('speed', document.getElementById('av-audio-speed').value);
+    formData.append('type', 'audio');
+    const btn = event.target; const orig = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating…'; btn.disabled = true;
+    try {
+      const res = await fetch('/api/convert-to-audio', { method: 'POST', body: formData });
+      const result = await res.json();
+      if (result.success) { alert('Audio generated! Download starts now.'); loadConvertedFiles(); clearAVFile(); }
+      else alert('Error: ' + result.error);
+    } catch { alert('Network error.'); }
+    finally { btn.innerHTML = orig; btn.disabled = false; }
+  }
 
-        // ==================== Ask AI ====================
-        let aiConversationHistory = [];
+  async function convertToVideo() {
+    if (!selectedAVFile) { alert('Please select a file first.'); return; }
+    const formData = new FormData();
+    formData.append('file', selectedAVFile);
+    formData.append('style', document.getElementById('av-video-style').value);
+    formData.append('duration', document.getElementById('av-video-duration').value);
+    formData.append('type', 'video');
+    const btn = event.target; const orig = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating…'; btn.disabled = true;
+    try {
+      const res = await fetch('/api/convert-to-video', { method: 'POST', body: formData });
+      const result = await res.json();
+      if (result.success) { alert('Video generated!'); loadConvertedFiles(); clearAVFile(); }
+      else alert('Error: ' + result.error);
+    } catch { alert('Network error.'); }
+    finally { btn.innerHTML = orig; btn.disabled = false; }
+  }
 
-        function askAI() {
-            aiConversationHistory = [];
-            showAIModal();
-        }
+  async function loadConvertedFiles() {
+    try {
+      const res = await fetch('/api/converted-files');
+      const result = await res.json();
+      const container = document.getElementById('converted-files-container');
+      if (result.success && result.files.length > 0) {
+        container.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem;">` +
+          result.files.map(f => `
+            <div class="file-card">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
+                <span class="file-type-badge ${f.type === 'audio' ? 'file-type-audio' : 'file-type-video'}">
+                  <i class="fas fa-${f.type === 'audio' ? 'headphones' : 'film'}"></i> ${f.type.toUpperCase()}
+                </span>
+                <button onclick="deleteConvertedFile('${f.id}')" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:0.8rem;" title="Delete"><i class="fas fa-trash"></i></button>
+              </div>
+              <div style="font-size:0.8rem;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:0.25rem;">${f.filename}</div>
+              <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.875rem;">${f.created_at}</div>
+              <div style="display:flex;gap:0.5rem;">
+                <button onclick="previewFile('${f.id}')" class="btn btn-secondary btn-sm" style="flex:1;"><i class="fas fa-eye"></i> Preview</button>
+                <button onclick="downloadFile('${f.id}')" class="btn btn-blue btn-sm" style="flex:1;"><i class="fas fa-download"></i></button>
+              </div>
+            </div>`).join('') + `</div>`;
+      }
+    } catch {}
+  }
 
-        function showAIModal() {
-            let conversationHTML = '';
-            if (aiConversationHistory.length > 0) {
-                conversationHTML = '<div style="margin-bottom: 20px; max-height: 350px; overflow-y: auto;">';
-                aiConversationHistory.forEach((exchange, index) => {
-                    conversationHTML += `
-                        <div style="margin-bottom: 15px; border-left: 3px solid var(--blue-500); padding-left: 12px;">
-                            <p style="font-weight: bold; color: var(--blue-500); margin: 0 0 5px 0; font-size: 0.9em;">You:</p>
-                            <p style="margin: 0 0 10px 0; color: var(--text-primary);">${exchange.question}</p>
-                            <p style="font-weight: bold; color: var(--green-500); margin: 0 0 5px 0; font-size: 0.9em;">AI:</p>
-                            <p style="margin: 0; color: var(--text-primary);">${exchange.answer.replace(/\n/g, '<br>')}</p>
-                        </div>
-                    `;
-                });
-                conversationHTML += '</div><hr style="margin: 20px 0; border: none; border-top: 1px solid var(--border-color);">';
-            }
+  async function deleteConvertedFile(id) {
+    if (!confirm('Delete this file?')) return;
+    try { await fetch(`/api/delete-converted-file/${id}`, { method: 'DELETE' }); loadConvertedFiles(); } catch {}
+  }
+  function downloadFile(id) { window.location.href = `/api/download-file/${id}`; }
+  async function previewFile(id) {
+    try {
+      const res = await fetch(`/api/preview-file/${id}`);
+      const r = await res.json();
+      if (r.success) {
+        const content = r.type === 'audio'
+          ? `<audio controls style="width:100%;"><source src="${r.preview_url}" type="audio/mpeg"></audio><p style="font-size:0.8rem;color:var(--muted);margin-top:0.5rem;">${r.duration || ''}</p>`
+          : `<video controls style="width:100%;border-radius:var(--radius-sm);"><source src="${r.preview_url}" type="video/mp4"></video><p style="font-size:0.8rem;color:var(--muted);margin-top:0.5rem;">${r.duration || ''}</p>`;
+        openModal(r.type === 'audio' ? '🎵 Audio Preview' : '🎬 Video Preview', content);
+      }
+    } catch { alert('Error loading preview.'); }
+  }
 
-            const content = `
-                ${conversationHTML}
-                <div style="margin-top: 15px;">
-                    <input type="file" id="ai-pdf-input" accept=".pdf" style="display:none" onchange="handleAIPDFSelect()">
-                    <textarea id="ai-question-input" placeholder="Ask your follow-up question..." style="
-                        width: 100%;
-                        padding: 12px;
-                        border: 2px solid var(--border-color);
-                        border-radius: 8px;
-                        background: var(--bg-secondary);
-                        color: var(--text-primary);
-                        font-family: inherit;
-                        font-size: 1em;
-                        resize: vertical;
-                        min-height: 60px;
-                        box-sizing: border-box;
-                    " onkeydown="if(event.key==='Enter' && event.ctrlKey) submitAIQuestion()"></textarea>
-                    <div id="ai-pdf-preview" style="margin-top: 8px;"></div>
-                    <p style="font-size: 0.85em; color: var(--text-secondary); margin-top: 8px;">💡 Tip: Press Ctrl+Enter to send</p>
-                    <div style="display: flex; gap: 10px; margin-top: 15px;">
-                        <button onclick="document.getElementById('ai-pdf-input').click()" style="
-                            padding: 10px 16px;
-                            background: linear-gradient(135deg, #f97316, #ea580c);
-                            color: white;
-                            border: none;
-                            border-radius: 8px;
-                            font-weight: bold;
-                            cursor: pointer;
-                            transition: all 0.3s;
-                        " onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'" title="Upload a PDF to ask questions about it">
-                            📄 PDF
-                        </button>
+  // ===================== AI TUTOR =====================
+  let aiHistory = [];
 
-                        <button onclick="submitAIQuestion()" style="
-                            flex: 1;
-                            padding: 10px 20px;
-                            background: linear-gradient(135deg, var(--blue-500), var(--blue-600));
-                            color: white;
-                            border: none;
-                            border-radius: 8px;
-                            font-weight: bold;
-                            cursor: pointer;
-                            transition: all 0.3s;
-                        " onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-                            Ask Question
-                        </button>
-                        ${aiConversationHistory.length > 0 ? `
-                            <button onclick="resetAIConversation()" style="
-                                padding: 10px 20px;
-                                background: var(--border-color);
-                                color: var(--text-primary);
-                                border: none;
-                                border-radius: 8px;
-                                cursor: pointer;
-                                transition: all 0.3s;
-                            " title="Start a new conversation">
-                                🔄 Fresh Start
-                            </button>
-                        ` : ''}
-                    </div>
-                </div>
-            `;
+  function showAIModal() {
+    document.getElementById('ai-modal').classList.add('open');
+    renderAIConversation();
+    setTimeout(() => document.getElementById('ai-question-input').focus(), 100);
+  }
+  function closeAIModal() { document.getElementById('ai-modal').classList.remove('open'); }
 
-            showModal('🤖 AI Tutor', content);
-            document.getElementById('ai-question-input').focus();
-        }
+  function renderAIConversation() {
+    const el = document.getElementById('ai-conversation');
+    if (!aiHistory.length) { el.innerHTML = '<p style="font-size:0.82rem;color:var(--muted);text-align:center;padding:1rem 0;">Ask a question and I\'ll help you understand it step by step.</p>'; return; }
+    el.innerHTML = aiHistory.map(ex => `
+      <div class="ai-msg ai-msg-user"><div class="ai-msg-label">You</div><div class="ai-msg-bubble">${ex.question}</div></div>
+      <div class="ai-msg ai-msg-ai"><div class="ai-msg-label">AI Tutor</div><div class="ai-msg-bubble">${ex.answer.replace(/\n/g, '<br>')}</div></div>
+    `).join('');
+    el.scrollTop = el.scrollHeight;
+    document.getElementById('ai-reset-btn').style.display = aiHistory.length ? 'flex' : 'none';
+  }
 
-        function submitAIQuestion() {
-            const input = document.getElementById('ai-question-input');
-            const question = input.value.trim();
-            const pdfInput = document.getElementById('ai-pdf-input');
-            const hasPDF = pdfInput.files && pdfInput.files[0];
+  async function submitAIQuestion() {
+    const input = document.getElementById('ai-question-input');
+    const question = input.value.trim();
+    const pdfInp = document.getElementById('ai-pdf-input');
+    const hasPDF = pdfInp.files && pdfInp.files[0];
+    if (!question && !hasPDF) return;
+    input.value = '';
+    const conv = document.getElementById('ai-conversation');
+    conv.innerHTML += `<div class="ai-msg ai-msg-user"><div class="ai-msg-label">You</div><div class="ai-msg-bubble">${hasPDF ? '📄 ' : ''}${question}</div></div><div class="ai-msg ai-msg-ai"><div class="ai-msg-label">AI Tutor</div><div class="ai-msg-bubble" style="color:var(--muted);font-style:italic;">Thinking…</div></div>`;
+    conv.scrollTop = conv.scrollHeight;
+    let opts;
+    if (hasPDF) {
+      const fd = new FormData(); fd.append('question', question); fd.append('pdf', pdfInp.files[0]);
+      opts = { method: 'POST', body: fd };
+    } else {
+      opts = { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ question }) };
+    }
+    try {
+      const res = await fetch('/api/ask-ai', opts);
+      const data = await res.json();
+      if (data.success) {
+        aiHistory.push({ question: (hasPDF ? '📄 ' : '') + question, answer: data.explanation });
+        clearAIPDFPreview(); renderAIConversation();
+      } else { alert('Error: ' + data.error); renderAIConversation(); }
+    } catch { alert('Network error.'); renderAIConversation(); }
+  }
 
-            if (!question && !hasPDF) return;
+  function handleAIPDFSelect() {
+    const f = document.getElementById('ai-pdf-input').files[0];
+    const prev = document.getElementById('ai-pdf-preview');
+    if (f) prev.innerHTML = `<div style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;background:rgba(255,79,48,0.08);border-radius:var(--radius-sm);font-size:0.8rem;color:var(--ink);"><i class="fas fa-file-pdf" style="color:var(--accent);"></i>${f.name}<button onclick="clearAIPDFPreview()" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--muted);">×</button></div>`;
+  }
+  function clearAIPDFPreview() { document.getElementById('ai-pdf-input').value = ''; document.getElementById('ai-pdf-preview').innerHTML = ''; }
+  function resetAIConversation() { aiHistory = []; fetch('/api/ask-ai', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ reset: true, question: ' ' }) }).catch(()=>{}); renderAIConversation(); }
 
-            // Clear input
-            input.value = '';
+  // ===================== GENERIC MODAL =====================
+  function openModal(title, content) {
+    let modal = document.getElementById('generic-modal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'generic-modal';
+      modal.className = 'modal-overlay';
+      modal.innerHTML = `<div class="modal"><button class="modal-close" onclick="closeGenericModal()"><i class="fas fa-times"></i></button><div class="modal-title" id="generic-modal-title"></div><div id="generic-modal-body"></div></div>`;
+      document.body.appendChild(modal);
+      modal.addEventListener('click', e => { if (e.target === modal) closeGenericModal(); });
+    }
+    document.getElementById('generic-modal-title').textContent = title;
+    document.getElementById('generic-modal-body').innerHTML = content;
+    modal.classList.add('open');
+  }
+  function closeGenericModal() { document.getElementById('generic-modal')?.classList.remove('open'); }
+  document.getElementById('ai-modal').addEventListener('click', e => { if (e.target === document.getElementById('ai-modal')) closeAIModal(); });
 
-            // Show loading
-            showModal('🤖 AI Tutor', '<p style="color: var(--text-primary); text-align: center; padding: 20px;">⏳ Generating explanation...</p>');
+  // ===================== NAVIGATION =====================
+  async function findStudyBuddies() { window.location.href = '/study-buddies'; }
+  async function logout() {
+    if (confirm('Sign out of Brainspark?')) {
+      await fetch('/logout', { method: 'POST' }).catch(() => {});
+      window.location.href = '/';
+    }
+  }
 
-            let requestOptions;
-            if (hasPDF) {
-                const formData = new FormData();
-                formData.append('question', question);
-                formData.append('pdf', pdfInput.files[0]);
-                requestOptions = {
-                    method: 'POST',
-                    body: formData
-                };
-            } else {
-                requestOptions = {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ question })
-                };
-            }
-
-            fetch('/api/ask-ai', requestOptions)
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    aiConversationHistory.push({
-                        question: hasPDF ? '📄 ' + question : question,
-                        answer: data.explanation
-                    });
-                    clearAIPDFPreview();
-                    showAIModal();
-                } else {
-                    alert('Error: ' + data.error);
-                    showAIModal();
-                }
-            })
-            .catch(error => {
-                alert('Error: ' + error.message);
-                showAIModal();
-            });
-        }
-
-        function handleAIPDFSelect() {
-            const pdfInput = document.getElementById('ai-pdf-input');
-            const preview = document.getElementById('ai-pdf-preview');
-            if (pdfInput.files && pdfInput.files[0]) {
-                const file = pdfInput.files[0];
-                preview.innerHTML = `
-                    <div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: rgba(249, 115, 22, 0.1); border: 1px solid rgba(249, 115, 22, 0.3); border-radius: 8px;">
-                        <span style="font-size: 1.2em;">📄</span>
-                        <span style="font-weight: 500; color: var(--text-primary); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${file.name}</span>
-                        <button onclick="clearAIPDFPreview()" style="background: none; border: none; cursor: pointer; font-size: 1.1em; padding: 0 4px;" title="Remove PDF">✕</button>
-                    </div>
-                `;
-            }
-        }
-
-        function clearAIPDFPreview() {
-            const pdfInput = document.getElementById('ai-pdf-input');
-            const preview = document.getElementById('ai-pdf-preview');
-            if (pdfInput) pdfInput.value = '';
-            if (preview) preview.innerHTML = '';
-        }
-
-
-        function resetAIConversation() {
-            aiConversationHistory = [];
-            fetch('/api/ask-ai', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ reset: true, question: " " })
-            });
-            showAIModal();
-        }
-
-        // ==================== Audio & Video Conversion ====================
-        const avUploadZone = document.getElementById('av-upload-zone');
-        const avFileInput = document.getElementById('av-file-input');
-        const avFilePreview = document.getElementById('av-file-preview');
-        const avConversionOptions = document.getElementById('av-conversion-options');
-        let selectedAVFile = null;
-
-        // Upload zone drag & drop
-        avUploadZone.addEventListener('click', () => avFileInput.click());
-        avUploadZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            avUploadZone.style.borderColor = 'var(--primary)';
-            avUploadZone.style.background = 'rgba(168, 85, 247, 0.15)';
-        });
-        avUploadZone.addEventListener('dragleave', () => {
-            avUploadZone.style.borderColor = null;
-            avUploadZone.style.background = null;
-        });
-        avUploadZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            avUploadZone.style.borderColor = null;
-            avUploadZone.style.background = null;
-            if (e.dataTransfer.files[0]) {
-                avFileInput.files = e.dataTransfer.files;
-                handleAVFileSelect();
-            }
-        });
-
-        avFileInput.addEventListener('change', handleAVFileSelect);
-
-        function handleAVFileSelect() {
-            const file = avFileInput.files[0];
-            if (!file) return;
-
-            // Validate file size (20MB max)
-            if (file.size > 20 * 1024 * 1024) {
-                alert('File too large. Maximum size is 20MB.');
-                avFileInput.value = '';
-                return;
-            }
-
-            selectedAVFile = file;
-            
-            // Show preview
-            document.getElementById('av-file-name').textContent = file.name;
-            document.getElementById('av-file-size').textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
-            avFilePreview.style.display = 'block';
-            avConversionOptions.style.display = 'block';
-            avUploadZone.style.opacity = '0.5';
-        }
-
-        function clearAVFile() {
-            selectedAVFile = null;
-            avFileInput.value = '';
-            avFilePreview.style.display = 'none';
-            avConversionOptions.style.display = 'none';
-            avUploadZone.style.opacity = '1';
-        }
-
-        async function convertToAudio() {
-            if (!selectedAVFile) {
-                alert('Please select a file first');
-                return;
-            }
-
-            const language = document.getElementById('av-audio-language').value;
-            const speed = document.getElementById('av-audio-speed').value;
-            
-            const formData = new FormData();
-            formData.append('file', selectedAVFile);
-            formData.append('language', language);
-            formData.append('speed', speed);
-            formData.append('type', 'audio');
-
-            const btn = event.target;
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<span class="animate-spin">⏳</span> Generating...';
-            btn.disabled = true;
-
-            try {
-                const response = await fetch('/api/convert-to-audio', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    alert('✅ Audio generated successfully! Download will start automatically.');
-                    loadConvertedFiles();
-                    clearAVFile();
-                } else {
-                    alert(`❌ Error: ${result.error}`);
-                }
-            } catch (error) {
-                console.error('Audio conversion error:', error);
-                alert('❌ Network error. Please try again.');
-            } finally {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            }
-        }
-
-        async function convertToVideo() {
-            if (!selectedAVFile) {
-                alert('Please select a file first');
-                return;
-            }
-
-            const style = document.getElementById('av-video-style').value;
-            const duration = document.getElementById('av-video-duration').value;
-            
-            const formData = new FormData();
-            formData.append('file', selectedAVFile);
-            formData.append('style', style);
-            formData.append('duration', duration);
-            formData.append('type', 'video');
-
-            const btn = event.target;
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<span class="animate-spin">⏳</span> Generating...';
-            btn.disabled = true;
-
-            try {
-                const response = await fetch('/api/convert-to-video', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    alert('✅ Video generated successfully! Download will start automatically.');
-                    loadConvertedFiles();
-                    clearAVFile();
-                } else {
-                    alert(`❌ Error: ${result.error}`);
-                }
-            } catch (error) {
-                console.error('Video conversion error:', error);
-                alert('❌ Network error. Please try again.');
-            } finally {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            }
-        }
-
-        async function loadConvertedFiles() {
-            try {
-                const response = await fetch('/api/converted-files');
-                const result = await response.json();
-
-                if (result.success && result.files.length > 0) {
-                    const container = document.getElementById('converted-files-container');
-                    container.innerHTML = result.files.map(file => `
-                        <div class="card-secondary rounded-xl p-6 shadow-md hover:shadow-lg transition-all duration-300 border border-opacity-20" style="border-color: var(--text-secondary);">
-                            <div class="flex items-start justify-between mb-3">
-                                <div class="flex-1">
-                                    <div class="flex items-center gap-2 mb-2">
-                                        ${file.type === 'audio' ? '<span class="text-2xl">🎵</span>' : '<span class="text-2xl">🎬</span>'}
-                                        <span class="px-2 py-1 rounded text-xs font-semibold" style="background-color: ${file.type === 'audio' ? 'rgba(59, 130, 246, 0.2); color: #3b82f6;' : 'rgba(249, 115, 22, 0.2); color: #f97316;'}">${file.type === 'audio' ? 'AUDIO' : 'VIDEO'}</span>
-                                    </div>
-                                    <p class="font-semibold" style="color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${file.filename}</p>
-                                    <p class="text-xs mt-1" style="color: var(--text-secondary);">${file.created_at}</p>
-                                </div>
-                                <button onclick="deleteConvertedFile('${file.id}')" class="text-red-500 hover:text-red-700 font-bold">✕</button>
-                            </div>
-                            <div class="flex gap-2">
-                                <button onclick="previewFile('${file.id}')" class="flex-1 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm font-semibold rounded-lg hover:shadow-md transition-all duration-300">
-                                    👁️ Preview
-                                </button>
-                                <button onclick="downloadFile('${file.id}')" class="flex-1 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-sm font-semibold rounded-lg hover:shadow-md transition-all duration-300">
-                                    ⬇️ Download
-                                </button>
-                            </div>
-                        </div>
-                    `).join('');
-                }
-            } catch (error) {
-                console.error('Error loading converted files:', error);
-            }
-        }
-
-        async function deleteConvertedFile(fileId) {
-            if (confirm('Are you sure you want to delete this file?')) {
-                try {
-                    const response = await fetch(`/api/delete-converted-file/${fileId}`, {
-                        method: 'DELETE'
-                    });
-                    const result = await response.json();
-                    if (result.success) {
-                        loadConvertedFiles();
-                    }
-                } catch (error) {
-                    console.error('Error deleting file:', error);
-                }
-            }
-        }
-
-        async function downloadFile(fileId) {
-            try {
-                window.location.href = `/api/download-file/${fileId}`;
-            } catch (error) {
-                console.error('Error downloading file:', error);
-            }
-        }
-
-        async function previewFile(fileId) {
-            try {
-                const response = await fetch(`/api/preview-file/${fileId}`);
-                const result = await response.json();
-                
-                if (result.success) {
-                    let content = '';
-                    if (result.type === 'audio') {
-                        content = `
-                            <div class="text-center">
-                                <p class="text-lg font-semibold mb-4" style="color: var(--text-primary);">🎵 Audio Preview</p>
-                                <audio controls class="w-full mb-4" style="height: 40px;">
-                                    <source src="${result.preview_url}" type="audio/mpeg">
-                                    Your browser does not support the audio element.
-                                </audio>
-                                <p class="text-sm" style="color: var(--text-secondary);">Duration: ${result.duration}</p>
-                            </div>
-                        `;
-                    } else {
-                        content = `
-                            <div class="text-center">
-                                <p class="text-lg font-semibold mb-4" style="color: var(--text-primary);">🎬 Video Preview</p>
-                                <video controls class="w-full rounded-lg mb-4" style="max-height: 400px;">
-                                    <source src="${result.preview_url}" type="video/mp4">
-                                    Your browser does not support the video element.
-                                </video>
-                                <p class="text-sm" style="color: var(--text-secondary);">Duration: ${result.duration}</p>
-                            </div>
-                        `;
-                    }
-                    showModal(`${result.type === 'audio' ? '🎵' : '🎬'} Preview`, content);
-                }
-            } catch (error) {
-                alert('Error loading preview: ' + error.message);
-            }
-        }
-
-        function showModal(title, content) {
-            // Create modal if it doesn't exist
-            let modal = document.getElementById('custom-modal');
-            if (!modal) {
-                modal = document.createElement('div');
-                modal.id = 'custom-modal';
-                modal.style.cssText = `
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: rgba(0,0,0,0.7);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    z-index: 9999;
-                `;
-                document.body.appendChild(modal);
-            }
-
-            modal.innerHTML = `
-                <div class="card rounded-2xl p-8 shadow-2xl max-w-2xl w-full mx-4" style="max-height: 80vh; overflow-y: auto; color: var(--text-primary); background: var(--bg-primary);">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-2xl font-bold">${title}</h3>
-                        <button onclick="closeModal()" class="text-2xl font-bold hover:opacity-70">×</button>
-                    </div>
-                    ${content}
-                </div>
-            `;
-            modal.style.display = 'flex';
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) closeModal();
-            });
-        }
-
-        function closeModal() {
-            const modal = document.getElementById('custom-modal');
-            if (modal) {
-                modal.style.display = 'none';
-            }
-        }
-    </script>
-</body>
+  // ===================== INIT =====================
+  window.addEventListener('load', () => {
+    loadDashboardData();
+    loadConvertedFiles();
+    document.querySelectorAll('#section-home .reveal').forEach(el => setTimeout(() => el.classList.add('visible'), 200));
+  });
+</script>
 </body>
 </html>

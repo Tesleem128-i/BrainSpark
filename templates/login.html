@@ -1,179 +1,453 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Brainspark</title>
-    <link rel="icon" type="image/png" href="/static/image/KNOWITNOW.png">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { inter: ['Inter', 'sans-serif'] } } } }
-    </script>
-    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/styles.css">
-    <style>
-        /* Light mode body background */
-        html:not(.dark) body { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); }
-        html.dark body { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In — Brainspark</title>
+  <link rel="icon" type="image/png" href="/static/image/KNOWITNOW.png">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    /* ===================== TOKENS ===================== */
+    :root {
+      --ink: #0a0a14;
+      --ink2: #1c1c2e;
+      --surface: #ffffff;
+      --surface2: #f5f4f0;
+      --muted: #7a7a8c;
+      --accent: #ff4f30;
+      --accent2: #ff8c5a;
+      --gold: #f5c842;
+      --blue: #3b6bff;
+      --green: #00c98d;
+      --radius: 16px;
+      --radius-sm: 8px;
+      --transition: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    [data-theme="dark"] {
+      --ink: #f0efe8;
+      --ink2: #c8c6bc;
+      --surface: #0d0d18;
+      --surface2: #16162a;
+      --muted: #5a5a70;
+      --accent: #ff6244;
+      --accent2: #ffaa6e;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+      transition: background 0.4s, color 0.4s;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+    ::selection { background: var(--accent); color: #fff; }
+    a { text-decoration: none; color: inherit; }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; }
+
+    /* ===================== LEFT PANEL ===================== */
+    .left-panel {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 3rem;
+      overflow: hidden;
+    }
+    .left-panel-bg {
+      position: absolute; inset: 0; z-index: 0;
+    }
+    .left-panel-bg img {
+      width: 100%; height: 100%; object-fit: cover;
+      filter: brightness(0.4);
+    }
+    .left-panel-bg::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(
+        to bottom,
+        rgba(10,10,20,0.1) 0%,
+        rgba(10,10,20,0.0) 40%,
+        rgba(10,10,20,0.7) 70%,
+        rgba(10,10,20,0.98) 100%
+      );
+    }
+    .left-panel-content {
+      position: relative; z-index: 1;
+    }
+    .panel-logo {
+      position: absolute; top: 3rem; left: 3rem; z-index: 2;
+      font-family: 'Syne', sans-serif;
+      font-weight: 800; font-size: 1.5rem;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #ff4f30, #ff8c5a);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .panel-badge {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.35rem 1rem; border-radius: 50px;
+      background: rgba(255,79,48,0.15); border: 1px solid rgba(255,79,48,0.4);
+      color: #ff7a5a; font-size: 0.78rem; font-weight: 500; letter-spacing: 0.05em;
+      text-transform: uppercase; margin-bottom: 1.25rem;
+    }
+    .panel-badge span { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; animation: blink 1.5s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    .panel-heading {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      font-weight: 800; line-height: 1.05;
+      letter-spacing: -0.03em; color: #fff;
+      margin-bottom: 1rem;
+    }
+    .panel-heading em { font-style: normal; color: var(--accent); }
+    .panel-desc {
+      font-size: 1rem; color: rgba(255,255,255,0.6);
+      line-height: 1.65; max-width: 400px; margin-bottom: 2.5rem;
+    }
+    .panel-stats {
+      display: flex; gap: 2rem;
+    }
+    .panel-stat-num {
+      font-family: 'Syne', sans-serif; font-size: 1.5rem; font-weight: 700;
+      color: #fff; line-height: 1; margin-bottom: 0.2rem;
+    }
+    .panel-stat-label { font-size: 0.75rem; color: rgba(255,255,255,0.45); letter-spacing: 0.04em; text-transform: uppercase; }
+    .panel-divider { width: 1px; background: rgba(255,255,255,0.1); align-self: stretch; }
+
+    .panel-testimonial {
+      margin-top: 2.5rem;
+      padding: 1.5rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius);
+      backdrop-filter: blur(10px);
+    }
+    .panel-testimonial p {
+      font-size: 0.9rem; color: rgba(255,255,255,0.7);
+      line-height: 1.6; margin-bottom: 1rem; font-style: italic;
+    }
+    .panel-testimonial-author {
+      display: flex; align-items: center; gap: 0.75rem;
+    }
+    .panel-testimonial-author img {
+      width: 32px; height: 32px; border-radius: 50%; object-fit: cover;
+      border: 2px solid rgba(255,79,48,0.5);
+    }
+    .panel-testimonial-author strong { font-size: 0.82rem; color: #fff; display: block; }
+    .panel-testimonial-author span { font-size: 0.75rem; color: rgba(255,255,255,0.4); }
+    .stars { color: var(--gold); font-size: 0.7rem; letter-spacing: 2px; margin-bottom: 0.5rem; }
+
+    /* ===================== RIGHT PANEL ===================== */
+    .right-panel {
+      background: var(--surface);
+      display: flex; flex-direction: column; justify-content: center;
+      padding: 4rem 4rem;
+      position: relative;
+      transition: background 0.4s;
+    }
+    .right-panel-inner { max-width: 420px; width: 100%; margin: 0 auto; }
+
+    .form-eyebrow {
+      font-size: 0.78rem; font-weight: 600; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--accent);
+      display: flex; align-items: center; gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+    .form-eyebrow::before { content: ''; width: 20px; height: 2px; background: var(--accent); border-radius: 1px; }
+    .form-title {
+      font-family: 'Syne', sans-serif; font-size: 2.25rem;
+      font-weight: 800; letter-spacing: -0.03em;
+      color: var(--ink); line-height: 1.1; margin-bottom: 0.5rem;
+    }
+    .form-subtitle { font-size: 0.95rem; color: var(--muted); margin-bottom: 2.5rem; }
+    .form-subtitle a { color: var(--accent); font-weight: 500; }
+    .form-subtitle a:hover { color: var(--accent2); }
+
+    .field-group { margin-bottom: 1.5rem; }
+    .field-label {
+      display: block; font-size: 0.82rem; font-weight: 600;
+      color: var(--ink); margin-bottom: 0.5rem; letter-spacing: 0.01em;
+    }
+    .field-input {
+      width: 100%; padding: 0.9rem 1.1rem;
+      border: 1.5px solid rgba(0,0,0,0.1);
+      border-radius: var(--radius-sm);
+      background: var(--surface2);
+      color: var(--ink); font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem; transition: all 0.25s;
+      outline: none;
+    }
+    [data-theme="dark"] .field-input {
+      border-color: rgba(255,255,255,0.08);
+    }
+    .field-input::placeholder { color: var(--muted); }
+    .field-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(255,79,48,0.12);
+      background: var(--surface);
+    }
+    .field-input:hover:not(:focus) { border-color: rgba(255,79,48,0.3); }
+    .field-input-wrap { position: relative; }
+    .field-toggle {
+      position: absolute; right: 1rem; top: 50%; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); font-size: 0.95rem;
+      transition: color 0.2s; padding: 0;
+    }
+    .field-toggle:hover { color: var(--ink); }
+
+    .field-row {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 2rem;
+    }
+    .checkbox-wrap { display: flex; align-items: center; gap: 0.5rem; }
+    .checkbox-wrap input[type="checkbox"] {
+      width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer;
+    }
+    .checkbox-wrap label { font-size: 0.85rem; color: var(--muted); cursor: pointer; }
+    .forgot-link {
+      font-size: 0.85rem; color: var(--accent); font-weight: 500;
+      transition: color 0.2s;
+    }
+    .forgot-link:hover { color: var(--accent2); }
+
+    .btn-submit {
+      width: 100%; padding: 1rem; background: var(--accent);
+      color: #fff; border: none; border-radius: var(--radius-sm);
+      font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700;
+      cursor: pointer; letter-spacing: 0.01em;
+      box-shadow: 0 8px 30px rgba(255,79,48,0.35);
+      transition: all var(--transition);
+      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+    }
+    .btn-submit:hover {
+      background: var(--accent2);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 36px rgba(255,79,48,0.45);
+    }
+    .btn-submit:disabled {
+      opacity: 0.6; cursor: not-allowed; transform: none;
+    }
+    .btn-submit .loading { display: none; }
+
+    .divider {
+      display: flex; align-items: center; gap: 1rem;
+      margin: 1.75rem 0; color: var(--muted); font-size: 0.82rem;
+    }
+    .divider::before, .divider::after {
+      content: ''; flex: 1; height: 1px; background: rgba(0,0,0,0.08);
+    }
+    [data-theme="dark"] .divider::before,
+    [data-theme="dark"] .divider::after { background: rgba(255,255,255,0.07); }
+
+    .form-footer {
+      margin-top: 2rem; text-align: center;
+      font-size: 0.875rem; color: var(--muted);
+    }
+    .form-footer a { color: var(--accent); font-weight: 500; }
+    .form-footer a:hover { color: var(--accent2); }
+
+    /* ===================== TOP BAR ===================== */
+    .top-bar {
+      position: absolute; top: 2rem; right: 2rem;
+      display: flex; align-items: center; gap: 1rem; z-index: 10;
+    }
+    #theme-btn {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--surface2); border: 1px solid rgba(0,0,0,0.08);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: var(--muted); font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+    [data-theme="dark"] #theme-btn { border-color: rgba(255,255,255,0.08); }
+    #theme-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    /* ===================== ALERTS ===================== */
+    .alert {
+      padding: 0.875rem 1rem; border-radius: var(--radius-sm);
+      font-size: 0.875rem; margin-bottom: 1.5rem;
+      display: none; align-items: center; gap: 0.5rem;
+    }
+    .alert.show { display: flex; }
+    .alert-error { background: rgba(255,79,48,0.1); color: #c0280e; border: 1px solid rgba(255,79,48,0.2); }
+    [data-theme="dark"] .alert-error { color: #ff8066; }
+
+    /* ===================== RESPONSIVE ===================== */
+    @media (max-width: 900px) {
+      body { grid-template-columns: 1fr; }
+      .left-panel { min-height: 40vh; }
+      .right-panel { padding: 3rem 2rem; }
+    }
+    @media (max-width: 500px) {
+      .right-panel { padding: 2rem 1.25rem; }
+      .panel-heading { font-size: 1.75rem; }
+    }
+  </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-slate-900">
-    <div class="absolute inset-0 bg-grid-white/[0.03] dark:bg-grid-slate-700/[0.2] bg-[size:80px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_-20%,white,transparent)]"></div>
-    
-    <div class="relative z-10 flex min-h-screen items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div class="max-w-4xl w-full space-y-8">
-            <div>
-                <div class="mx-auto h-24 w-24 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-2xl mb-8">
-                    <img src="/static/image/KNOWITNOW.png" alt="Logo" class="h-16 w-16">
-                </div>
-                <h2 class="mt-6 text-4xl font-bold text-center text-gray-900 dark:text-white">
-                    Welcome Back
-                </h2>
-                <p class="mt-2 text-lg text-center text-gray-600 dark:text-gray-300 max-w-md mx-auto leading-relaxed">
-                    Log in to access your dashboard, quizzes, and study progress.
-                </p>
-            </div>
+<body>
 
-            <form id="login-form" class="group bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl rounded-3xl p-10 shadow-2xl border border-gray-200/50 dark:border-gray-700/50 hover:shadow-3xl transition-all duration-500" novalidate>
-                <!-- Username -->
-                <div class="mb-8">
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Username *</label>
-                    <input type="text" id="username" name="username" required 
-                           class="input-field w-full px-6 py-5 border-2 border-gray-200/60 dark:border-gray-600/60 rounded-2xl text-lg focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 focus:outline-none transition-all duration-300 shadow-sm hover:shadow-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white" placeholder="Enter your username">
-                </div>
-
-                <!-- Password -->
-                <div class="mb-8">
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Password *</label>
-                    <div class="relative">
-                        <input type="password" id="password" name="password" required minlength="8"
-                               class="input-field w-full px-6 py-5 pr-14 border-2 border-gray-200/60 dark:border-gray-600/60 rounded-2xl text-lg focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 focus:outline-none transition-all duration-300 shadow-sm hover:shadow-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white" placeholder="Enter your password">
-                        <button type="button" id="toggle-password" class="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="flex items-center justify-between mb-8">
-                    <label class="flex items-center cursor-pointer">
-                        <input type="checkbox" id="remember" name="remember" class="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-                        <span class="ml-2 text-sm text-gray-600 dark:text-gray-400">Remember me</span>
-                    </label>
-                    <a href="#" class="text-sm font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">Forgot password?</a>
-                </div>
-
-                <button type="submit" class="w-full py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold text-xl rounded-3xl shadow-2xl hover:shadow-3xl hover:scale-[1.02] transition-all duration-500 transform disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none">
-                    <span class="submit-text">Sign In to Dashboard</span>
-                    <span class="loading-text hidden">Signing In...</span>
-                </button>
-            </form>
-
-            <div class="text-center space-y-4">
-                <p class="text-gray-600 dark:text-gray-400">
-                    Don't have an account? <a href="/signup" class="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">Sign up here</a>
-                </p>
-                <p class="text-xs text-gray-500 dark:text-gray-400">
-                    By signing in, you agree to our <a href="#" class="underline">Terms</a> and <a href="#" class="underline">Privacy Policy</a>
-                </p>
-            </div>
+<!-- ======================== LEFT PANEL ======================== -->
+<div class="left-panel">
+  <div class="left-panel-bg">
+    <img src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=1200&q=80&fit=crop" alt="Students studying">
+  </div>
+  <a href="/" class="panel-logo">Brainspark</a>
+  <div class="left-panel-content">
+    <div class="panel-badge">
+      <span></span>
+      Powered by Gemini 2.5
+    </div>
+    <h1 class="panel-heading">
+      Welcome<br>back, <em>genius.</em>
+    </h1>
+    <p class="panel-desc">
+      Your notes, your quizzes, your progress — all waiting for you. Sign in and pick up right where you left off.
+    </p>
+    <div class="panel-stats">
+      <div>
+        <div class="panel-stat-num">50K+</div>
+        <div class="panel-stat-label">Active Students</div>
+      </div>
+      <div class="panel-divider"></div>
+      <div>
+        <div class="panel-stat-num">2.5M+</div>
+        <div class="panel-stat-label">Quizzes Taken</div>
+      </div>
+      <div class="panel-divider"></div>
+      <div>
+        <div class="panel-stat-num">98%</div>
+        <div class="panel-stat-label">Success Rate</div>
+      </div>
+    </div>
+    <div class="panel-testimonial">
+      <div class="stars">★★★★★</div>
+      <p>"Brainspark turned my 40-page lecture PDF into 80 targeted questions in under a minute. My grades improved dramatically."</p>
+      <div class="panel-testimonial-author">
+        <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=80&q=75&fit=crop&crop=face" alt="Amara">
+        <div>
+          <strong>Amara Osei</strong>
+          <span>Medicine, Univ. of Ghana</span>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== RIGHT PANEL ======================== -->
+<div class="right-panel">
+  <div class="top-bar">
+    <button id="theme-btn" onclick="toggleTheme()" title="Toggle theme"><i class="fas fa-moon"></i></button>
+  </div>
+
+  <div class="right-panel-inner">
+    <div class="form-eyebrow">Sign in</div>
+    <h2 class="form-title">Your dashboard awaits</h2>
+    <p class="form-subtitle">New here? <a href="/signup">Create a free account →</a></p>
+
+    <div class="alert alert-error" id="error-alert">
+      <i class="fas fa-exclamation-circle"></i>
+      <span id="error-msg">Invalid username or password.</span>
     </div>
 
-    <!-- Theme Toggle -->
-    <button id="theme-toggle" class="fixed top-6 right-6 z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl p-4 rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 border border-gray-200/50 dark:border-gray-700/50 flex items-center justify-center group" aria-label="Toggle theme">
-        <svg id="sun-icon" class="w-6 h-6 text-yellow-500 group-hover:rotate-12 transition-transform duration-300 hidden" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 3v1m0 16v1m9-9h-1m-16 0H1m15.364 1.636l.707.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
-        </svg>
-        <svg id="moon-icon" class="w-6 h-6 text-blue-400 group-hover:rotate-12 transition-transform duration-300" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-        </svg>
-    </button>
+    <form id="login-form" novalidate>
+      <div class="field-group">
+        <label class="field-label" for="username">Username</label>
+        <input type="text" id="username" name="username" class="field-input" placeholder="Enter your username" required autocomplete="username">
+      </div>
 
-    <a href="/" class="fixed top-6 left-6 z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl p-4 rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 border border-gray-200/50 dark:border-gray-700/50">
-        ← Back to Home
-    </a>
+      <div class="field-group">
+        <label class="field-label" for="password">Password</label>
+        <div class="field-input-wrap">
+          <input type="password" id="password" name="password" class="field-input" placeholder="Enter your password" required autocomplete="current-password" style="padding-right: 2.75rem;">
+          <button type="button" class="field-toggle" id="toggle-password">
+            <i class="fas fa-eye" id="eye-icon"></i>
+          </button>
+        </div>
+      </div>
 
-    <script>
-        // Theme handling
-        const serverTheme = '{{ theme }}';
-        const savedTheme = localStorage.getItem('theme') || serverTheme || 'light';
-        const html = document.documentElement;
-        html.setAttribute('data-theme', savedTheme);
-        if (savedTheme === 'dark') html.classList.add('dark');
+      <div class="field-row">
+        <label class="checkbox-wrap">
+          <input type="checkbox" id="remember" name="remember">
+          <label for="remember">Remember me</label>
+        </label>
+        <a href="#" class="forgot-link">Forgot password?</a>
+      </div>
 
-        const themeToggle = document.getElementById('theme-toggle');
-        const sunIcon = document.getElementById('sun-icon');
-        const moonIcon = document.getElementById('moon-icon');
+      <button type="submit" class="btn-submit" id="submit-btn">
+        <span class="label"><i class="fas fa-bolt"></i> Sign In to Dashboard</span>
+        <span class="loading"><i class="fas fa-spinner fa-spin"></i> Signing in…</span>
+      </button>
+    </form>
 
-        function updateIcons(theme) {
-            if (theme === 'dark') {
-                sunIcon.classList.remove('hidden');
-                moonIcon.classList.add('hidden');
-            } else {
-                sunIcon.classList.add('hidden');
-                moonIcon.classList.remove('hidden');
-            }
-        }
-        updateIcons(savedTheme);
+    <div class="form-footer">
+      By signing in you agree to our <a href="#">Terms</a> &amp; <a href="#">Privacy Policy</a>.
+    </div>
+  </div>
+</div>
 
-        themeToggle.addEventListener('click', () => {
-            const isDark = html.classList.toggle('dark');
-            const newTheme = isDark ? 'dark' : 'light';
-            html.setAttribute('data-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
-            updateIcons(newTheme);
-            fetch('/toggle_mode', { method: 'POST' }).catch(() => {});
-        });
+<script>
+  // Theme
+  let dark = localStorage.getItem('bs-theme') === 'dark';
+  function applyTheme() {
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    document.getElementById('theme-btn').innerHTML = dark ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+    localStorage.setItem('bs-theme', dark ? 'dark' : 'light');
+  }
+  applyTheme();
+  function toggleTheme() { dark = !dark; applyTheme(); }
 
-        AOS.init({ duration: 1000 });
-        
-        // Password toggle
-        document.getElementById('toggle-password').addEventListener('click', function() {
-            const passwordInput = document.getElementById('password');
-            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-            passwordInput.setAttribute('type', type);
-            this.classList.toggle('text-gray-600');
-        });
+  // Password toggle
+  document.getElementById('toggle-password').addEventListener('click', function() {
+    const input = document.getElementById('password');
+    const icon = document.getElementById('eye-icon');
+    if (input.type === 'password') {
+      input.type = 'text';
+      icon.classList.replace('fa-eye', 'fa-eye-slash');
+    } else {
+      input.type = 'password';
+      icon.classList.replace('fa-eye-slash', 'fa-eye');
+    }
+  });
 
-        // Form submission
-        document.getElementById('login-form').addEventListener('submit', async e => {
-            e.preventDefault();
-            const formData = new FormData(e.target);
-            
-            const btn = e.target.querySelector('button[type="submit"]');
-            const submitText = btn.querySelector('.submit-text');
-            const loadingText = btn.querySelector('.loading-text');
-            
-            submitText.classList.add('hidden');
-            loadingText.classList.remove('hidden');
-            btn.disabled = true;
-            
-            try {
-                const response = await fetch('/login', {
-                    method: 'POST',
-                    body: formData
-                });
-                const result = await response.json();
-                
-                if (result.success) {
-                    window.location.href = '/dashboard';
-                } else {
-                    alert(result.error || 'Login failed');
-                }
-            } catch (error) {
-                alert('Network error. Please try again.');
-            } finally {
-                submitText.classList.remove('hidden');
-                loadingText.classList.add('hidden');
-                btn.disabled = false;
-            }
-        });
-    </script>
+  // Form submit
+  document.getElementById('login-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = document.getElementById('submit-btn');
+    const alert = document.getElementById('error-alert');
+    alert.classList.remove('show');
+    btn.querySelector('.label').style.display = 'none';
+    btn.querySelector('.loading').style.display = 'flex';
+    btn.disabled = true;
+
+    try {
+      const formData = new FormData(e.target);
+      const response = await fetch('/login', { method: 'POST', body: formData });
+      const result = await response.json();
+      if (result.success) {
+        window.location.href = '/dashboard';
+      } else {
+        document.getElementById('error-msg').textContent = result.error || 'Invalid username or password.';
+        alert.classList.add('show');
+      }
+    } catch {
+      document.getElementById('error-msg').textContent = 'Network error. Please try again.';
+      alert.classList.add('show');
+    } finally {
+      btn.querySelector('.label').style.display = 'flex';
+      btn.querySelector('.loading').style.display = 'none';
+      btn.disabled = false;
+    }
+  });
+</script>
 </body>
 </html>

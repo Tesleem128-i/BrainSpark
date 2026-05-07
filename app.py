@@ -402,7 +402,11 @@ def upload_notes():
         # Get parameters
         question_type = request.form.get('type', 'objective')
         hardness = request.form.get('hardness', 'medium')
-        question_count = min(int(request.form.get('question_count', 10)), 100)  # Max 100
+        # Enforce min/max question counts
+        question_count = int(request.form.get('question_count', 50))
+        question_count = max(question_count, 50)
+        question_count = min(question_count, 100)  # Max 100
+
 
         
         # Extract main topics/sections from the PDF text
@@ -455,6 +459,11 @@ Rules:
         session['question_type'] = question_type
         session['hardness'] = hardness
         session['question_count'] = question_count
+
+        # Source hash for deduplication (same user + same PDF content)
+        source_hash = hashlib.sha256(text.encode('utf-8', errors='ignore')).hexdigest()
+        session['pdf_source_hash'] = source_hash
+
         session.modified = True
         
         logger.info(f"✅ SUCCESS: Stored PDF text and {len(topics)} topics in session")
@@ -501,11 +510,22 @@ def dashboard():
     if 'user_id' not in session:
         flash('Please login first')
         return redirect(url_for('index'))
-    
+
     user_id = session['user_id']
     user = User.query.get(user_id)
     theme = session.get('theme', 'light')
-    return render_template('dashboard.html', user=user, theme=theme)
+
+    # Used by dashboard.html top greeting
+    current_hour = datetime.utcnow().hour
+    if 5 <= current_hour < 12:
+        time_of_day = 'Morning'
+    elif 12 <= current_hour < 18:
+        time_of_day = 'Afternoon'
+    else:
+        time_of_day = 'Evening'
+
+    return render_template('dashboard.html', user=user, theme=theme, time_of_day=time_of_day)
+
 
 @app.route('/quiz')
 def quiz():
@@ -531,16 +551,28 @@ def study_buddies():
 
 @app.route('/api/get-quiz-questions')
 def get_quiz_questions():
-    """Fetch quiz questions from session"""
+    """Fetch quiz questions from session (stored as JSON string)"""
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
-    
-    questions = session.get('quiz_questions')
-    
-    if not questions:
+
+    quiz_questions_raw = session.get('quiz_questions')
+    if not quiz_questions_raw:
         return jsonify({'error': 'No quiz data found. Please upload a PDF again.'}), 400
-    
-    return jsonify({'success': True, 'questions': questions})
+
+    try:
+        # Stored in /api/generate-questions as: json.dumps({"questions": unique_new_questions})
+        if isinstance(quiz_questions_raw, str):
+            quiz_questions = json.loads(quiz_questions_raw)
+        else:
+            quiz_questions = quiz_questions_raw
+
+        # Frontend expects an array it can parse (it later handles {questions: ...} too)
+        questions = quiz_questions.get('questions', []) if isinstance(quiz_questions, dict) else quiz_questions
+
+        return jsonify({'success': True, 'questions': questions})
+    except Exception as e:
+        logger.error(f'Error parsing quiz_questions from session: {str(e)}', exc_info=True)
+        return jsonify({'success': False, 'error': 'Invalid quiz data in session. Please upload the PDF again.'}), 500
 
 @app.route('/api/get-quiz-topics')
 def get_quiz_topics():
@@ -572,6 +604,15 @@ def generate_questions():
     
     data = request.json or {}
     selected_topics = data.get('selected_topics', 'all')
+
+    # Enforce min/max again on generate (client can tamper)
+    try:
+        requested_count = int(session.get('question_count', 50) or 50)
+    except Exception:
+        requested_count = 50
+    requested_count = max(requested_count, 50)
+    requested_count = min(requested_count, 100)
+
     
     pdf_text = session.get('pdf_text')
     if not pdf_text:
@@ -579,12 +620,29 @@ def generate_questions():
     
     question_type = session.get('question_type', 'objective')
     hardness = session.get('hardness', 'medium')
-    question_count = session.get('question_count', 10)
+    question_count = requested_count
+
     
     try:
+        # Source hash deduplication for this PDF/user
+        pdf_source_hash = session.get('pdf_source_hash')
+        if not pdf_source_hash:
+            pdf_source_hash = hashlib.sha256(pdf_text.encode('utf-8', errors='ignore')).hexdigest()
+            session['pdf_source_hash'] = pdf_source_hash
+
+        # Load already-generated questions for dedup (same user + same PDF)
+        existing_rows = GeneratedQuestion.query.filter_by(
+            user_id=session['user_id'],
+            source_hash=pdf_source_hash
+        ).all()
+        existing_question_texts = set()
+        for row in existing_rows:
+            if row.question_text:
+                existing_question_texts.add(str(row.question_text).strip().lower())
+
         # Build prompt based on selection
         if selected_topics == 'all' or not selected_topics:
-            prompt = f"""Generate EXACTLY {question_count} {question_type} questions from this text:
+            prompt = f"""Generate UNIQUE questions (no repeats) for this text:
 
 {pdf_text[:3000]}
 
@@ -592,13 +650,14 @@ def generate_questions():
 {{"questions": [{{"question": "...", "options": ["A", "B", "C", "D"], "answer": "A", "explanation": "..."}}, ...]}}
 
 Rules:
-- Exactly 4 options (A,B,C,D format)
-- "answer" = exactly one option letter (A,B,C,or D)
-- {hardness} difficulty
-- No duplicate questions"""
+- Generate EXACTLY {question_count} questions.
+- Exactly 4 options (A,B,C,D).
+- "answer" must be exactly one option letter: A, B, C, or D.
+- Difficulty: {hardness}
+- All questions must have unique question text (no duplicates within this response)."""
         else:
             topics_str = ', '.join(selected_topics) if isinstance(selected_topics, list) else str(selected_topics)
-            prompt = f"""Generate EXACTLY {question_count} {question_type} questions from this text, focusing ONLY on these topics: {topics_str}
+            prompt = f"""Generate UNIQUE questions (no repeats) from this text, focusing ONLY on these topics: {topics_str}
 
 Text:
 {pdf_text[:3000]}
@@ -607,16 +666,18 @@ Text:
 {{"questions": [{{"question": "...", "options": ["A", "B", "C", "D"], "answer": "A", "explanation": "..."}}, ...]}}
 
 Rules:
+- Generate EXACTLY {question_count} questions.
 - Focus questions ONLY on the specified topics: {topics_str}
-- Exactly 4 options (A,B,C,D format)
-- "answer" = exactly one option letter (A,B,C,or D)
-- {hardness} difficulty
-- No duplicate questions"""
-        
-        logger.info(f"Generating {question_count} {question_type} questions for topics: {selected_topics}")
-        
+- Exactly 4 options (A,B,C,D).
+- "answer" must be exactly one option letter: A, B, C, or D.
+- Difficulty: {hardness}
+- All questions must have unique question text (no duplicates within this response)."""
+
+        logger.info(f"Generating {question_count} {question_type} questions for topics: {selected_topics} (dedup enabled)")
+
         response = model.generate_content(prompt)
         questions_text = response.text.strip()
+
         
         logger.info(f"Gemini response length: {len(questions_text)} chars")
         
@@ -634,16 +695,145 @@ Rules:
             return jsonify({'success': False, 'error': 'Failed to parse AI response. Try again.'}), 500
         
         questions = questions_data.get('questions', [])
-        
+
         if not questions:
             return jsonify({'success': False, 'error': 'No questions generated. Try selecting different topics or upload a different PDF.'}), 400
-        
+
+        # Normalize + dedupe against DB for never-repeat behavior
+        def _norm_q(t):
+            return str(t).strip().lower()
+
+        unique_new_questions = []
+        for q in questions:
+            q_text = _norm_q(q.get('question', ''))
+            if not q_text:
+                continue
+            if q_text in existing_question_texts:
+                continue
+            if any(_norm_q(existing.get('question')) == q_text for existing in unique_new_questions):
+                continue
+
+            unique_new_questions.append(q)
+            existing_question_texts.add(q_text)
+
+        # If we didn't reach requested_count, attempt one more generation with a stricter instruction.
+        attempts = 0
+        while len(unique_new_questions) < question_count and attempts < 2:
+            attempts += 1
+            already = list(existing_question_texts)[:50]  # keep prompt short
+            if selected_topics == 'all' or not selected_topics:
+                follow_prompt = f"""You previously generated some questions, but many were duplicates.
+Generate MORE UNIQUE new questions (do NOT repeat any question text from the list below).
+
+Already used question texts (lowercased samples):
+{already}
+
+Text:
+{pdf_text[:3000]}
+
+**OUTPUT ONLY VALID JSON**:
+{{"questions": [{{"question": "...", "options": ["A","B","C","D"], "answer": "A", "explanation": "..."}}]}}
+
+Rules:
+- Generate exactly {question_count - len(unique_new_questions)} new questions.
+- No repeats of question text.
+- Exactly 4 options.
+- answer is A/B/C/D.
+- Difficulty: {hardness}"""
+            else:
+                topics_str = ', '.join(selected_topics) if isinstance(selected_topics, list) else str(selected_topics)
+                follow_prompt = f"""You previously generated some questions, but many were duplicates.
+Generate MORE UNIQUE new questions (do NOT repeat any question text from the list below) focusing ONLY on these topics: {topics_str}
+
+Already used question texts (lowercased samples):
+{already}
+
+Text:
+{pdf_text[:3000]}
+
+**OUTPUT ONLY VALID JSON**:
+{{"questions": [{{"question": "...", "options": ["A","B","C","D"], "answer": "A", "explanation": "..."}}]}}
+
+Rules:
+- Generate exactly {question_count - len(unique_new_questions)} new questions.
+- No repeats of question text.
+- Exactly 4 options.
+- answer is A/B/C/D.
+- Difficulty: {hardness}"""
+
+            follow_resp = model.generate_content(follow_prompt)
+            follow_text = follow_resp.text.strip()
+            try:
+                start = follow_text.find('{')
+                end = follow_text.rfind('}') + 1
+                json_str = follow_text[start:end] if start != -1 and end > start else follow_text
+                follow_data = json.loads(json_str)
+            except Exception:
+                break
+
+            follow_questions = follow_data.get('questions', []) if isinstance(follow_data, dict) else []
+            for q in follow_questions:
+                q_text = _norm_q(q.get('question', ''))
+                if not q_text:
+                    continue
+                if q_text in existing_question_texts:
+                    continue
+                if any(_norm_q(existing.get('question')) == q_text for existing in unique_new_questions):
+                    continue
+                unique_new_questions.append(q)
+                existing_question_texts.add(q_text)
+                if len(unique_new_questions) >= question_count:
+                    break
+
+        # Final trim (must not repeat within this user's PDF)
+        unique_new_questions = unique_new_questions[:question_count]
+
+        if len(unique_new_questions) < 50:
+            # If we still can't get 50 unique questions, return what we have clearly.
+            return jsonify({'success': False, 'error': f'Could only generate {len(unique_new_questions)} unique questions without repetition. Try generating again.'}), 400
+
+        # Persist newly generated questions for future dedup
+        for q in unique_new_questions:
+            try:
+                GeneratedQuestion(
+                    user_id=session['user_id'],
+                    question_text=q.get('question', ''),
+                    options=json.dumps(q.get('options', [])),
+                    correct_answer=str(q.get('answer', '')), 
+                    explanation=q.get('explanation', ''),
+                    source_hash=pdf_source_hash,
+                    difficulty=hardness,
+                    question_type=question_type
+                )
+                
+            except Exception:
+                continue
+
+        # Actually add instances (need object refs)
+        for q in unique_new_questions:
+            try:
+                db.session.add(GeneratedQuestion(
+                    user_id=session['user_id'],
+                    question_text=q.get('question', ''),
+                    options=json.dumps(q.get('options', [])),
+                    correct_answer=str(q.get('answer', '')), 
+                    explanation=q.get('explanation', ''),
+                    source_hash=pdf_source_hash,
+                    difficulty=hardness,
+                    question_type=question_type
+                ))
+            except Exception:
+                continue
+
+        db.session.commit()
+
         # Store in session
-        session['quiz_questions'] = json.dumps({"questions": questions[:question_count]})
+        session['quiz_questions'] = json.dumps({"questions": unique_new_questions})
         session.modified = True
-        
-        logger.info(f"✅ SUCCESS: Generated and stored {len(questions)} questions")
-        return jsonify({'success': True, 'count': len(questions)})
+
+        logger.info(f"✅ SUCCESS: Generated and stored {len(unique_new_questions)} UNIQUE questions (dedup enforced)")
+        return jsonify({'success': True, 'count': len(unique_new_questions)})
+
         
     except Exception as e:
         logger.error(f"Generate questions error: {str(e)}", exc_info=True)
@@ -2604,13 +2794,16 @@ def create_audio_from_text(text_content, audio_path, language, speed):
 
 def create_video_from_text(text_content, video_path, style, duration_setting):
     """
-    Create a video file from text content using MoviePy + Pillow.
-    No ImageMagick dependency — text is rendered via Pillow into numpy frames.
+    Create an engaging video with animated talking character, narration, and audio.
+    Features: Text-to-speech narration, talking head animations, audio sync.
     """
     try:
         import numpy as np
         from PIL import Image, ImageDraw, ImageFont
-        from moviepy.editor import ImageClip, concatenate_videoclips
+        from moviepy.editor import ImageClip, concatenate_videoclips, AudioFileClip, CompositeAudioClip, concatenate_audioclips
+        import pyttsx3
+        import uuid
+        import os
 
         # Duration and chunk settings per style
         duration_map = {'short': (5, 2), 'medium': (15, 3), 'long': (25, 5)}
@@ -2649,55 +2842,134 @@ def create_video_from_text(text_content, video_path, style, duration_setting):
 
         W, H = 1280, 720
         clips = []
+        audio_clips = []
+        audio_dir = 'uploads/converted_audio'
+        os.makedirs(audio_dir, exist_ok=True)
 
-        for chunk in chunks:
+        def draw_talking_head(frame_num, total_frames, bg_col, txt_col):
+            """Draw an animated talking character with mouth movement"""
+            img = Image.new("RGB", (W, H), color=bg_col)
+            draw = ImageDraw.Draw(img)
+            
+            # Character circle (head)
+            head_x, head_y = W // 4, H // 2
+            head_radius = 80
+            draw.ellipse([head_x - head_radius, head_y - head_radius, 
+                         head_x + head_radius, head_y + head_radius], 
+                        fill=(255, 200, 150), outline=txt_col, width=3)
+            
+            # Eyes
+            eye_y = head_y - 30
+            eye_left_x = head_x - 30
+            eye_right_x = head_x + 30
+            draw.ellipse([eye_left_x - 8, eye_y - 8, eye_left_x + 8, eye_y + 8], 
+                        fill='black')
+            draw.ellipse([eye_right_x - 8, eye_y - 8, eye_right_x + 8, eye_y + 8], 
+                        fill='black')
+            
+            # Pupils (looking forward)
+            draw.ellipse([eye_left_x - 4, eye_y - 2, eye_left_x + 4, eye_y + 4], 
+                        fill='white')
+            draw.ellipse([eye_right_x - 4, eye_y - 2, eye_right_x + 4, eye_y + 4], 
+                        fill='white')
+            
+            # Nose
+            nose_x = head_x
+            nose_y = head_y + 5
+            draw.polygon([(nose_x, nose_y - 15), (nose_x - 5, nose_y), (nose_x + 5, nose_y)], 
+                        fill=(255, 180, 140))
+            
+            # Mouth animation (talking effect)
+            mouth_y = head_y + 40
+            mouth_open = (frame_num % 6) > 2  # Alternate mouth open/closed
+            if mouth_open:
+                draw.ellipse([head_x - 20, mouth_y - 10, head_x + 20, mouth_y + 15], 
+                           fill=(100, 50, 50))
+            else:
+                draw.line([(head_x - 20, mouth_y), (head_x + 20, mouth_y)], 
+                         fill=txt_col, width=3)
+            
+            return img
+
+        # Generate audio and video for each chunk
+        for idx, chunk in enumerate(chunks):
             try:
-                # Create a blank PIL image with background colour
-                img = Image.new("RGB", (W, H), color=bg_color)
-                draw = ImageDraw.Draw(img)
-
-                # Try to load a TrueType font; fall back to PIL default
+                # Generate audio narration for this chunk
+                audio_filename = f"narration_{uuid.uuid4().hex}.mp3"
+                audio_path = os.path.join(audio_dir, audio_filename)
+                
+                # Create narration using pyttsx3
+                engine = pyttsx3.init()
+                engine.setProperty('rate', 150)  # Words per minute
+                engine.save_to_file(chunk, audio_path)
+                engine.runAndWait()
+                engine.stop()
+                
+                # Get audio duration
                 try:
-                    font = ImageFont.truetype("arial.ttf", 36)
-                except Exception:
+                    audio_clip = AudioFileClip(audio_path)
+                    audio_duration = audio_clip.duration
+                    audio_clips.append(audio_clip)
+                except Exception as audio_err:
+                    logger.warning(f"Could not load audio {audio_filename}: {str(audio_err)}")
+                    audio_duration = chunk_duration
+                
+                # Create video frames with talking animation
+                frame_duration = 1.0 / 24  # 24 fps
+                num_frames = int(audio_duration * 24)
+                
+                # Create multiple frames for smooth animation
+                frames = []
+                for frame_num in range(max(1, num_frames)):
+                    frame_img = draw_talking_head(frame_num, num_frames, bg_color, text_color)
+                    
+                    # Add text content below character
+                    draw = ImageDraw.Draw(frame_img)
                     try:
-                        # Common fallback paths
-                        import platform
-                        if platform.system() == "Windows":
-                            font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 36)
-                        elif platform.system() == "Darwin":
-                            font = ImageFont.truetype("/Library/Fonts/Arial.ttf", 36)
-                        else:
-                            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 36)
-                    except Exception:
+                        font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf" if os.name == 'nt' 
+                                                 else "/Library/Fonts/Arial.ttf" if os.name == 'posix' 
+                                                 else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 28)
+                    except:
                         font = ImageFont.load_default()
-
-                # Wrap text and draw onto image
-                lines = textwrap.wrap(chunk, width=48)[:6]  # max 6 lines
-                line_height = 50
-                total_text_h = len(lines) * line_height
-                y = (H - total_text_h) // 2
-
-                for line in lines:
-                    # Calculate text width for centering
-                    try:
-                        bbox = draw.textbbox((0, 0), line, font=font)
-                        text_w = bbox[2] - bbox[0]
-                    except AttributeError:
-                        # Older Pillow fallback
-                        text_w, _ = draw.textsize(line, font=font)
-                    x = (W - text_w) // 2
-                    draw.text((x, y), line, fill=text_color, font=font)
-                    y += line_height
-
-                # Convert PIL image → numpy array → MoviePy ImageClip
-                frame = np.array(img)
-                clip = ImageClip(frame).set_duration(chunk_duration)
-                clips.append(clip)
+                    
+                    # Wrap and display text
+                    lines = textwrap.wrap(chunk, width=40)[:4]
+                    text_y = H - 200
+                    for line in lines:
+                        try:
+                            bbox = draw.textbbox((0, 0), line, font=font)
+                            text_w = bbox[2] - bbox[0]
+                        except:
+                            text_w = len(line) * 15
+                        text_x = (W - text_w) // 2
+                        draw.text((text_x, text_y), line, fill=text_color, font=font)
+                        text_y += 40
+                    
+                    frames.append(np.array(frame_img))
+                
+                # Create video clip from frames
+                if frames:
+                    # Use the audio duration to determine clip duration
+                    frame_clip = ImageClip(frames[0]).set_duration(audio_duration)
+                    clips.append(frame_clip)
+                else:
+                    # Fallback clip
+                    img = Image.new("RGB", (W, H), color=bg_color)
+                    frame = np.array(img)
+                    clips.append(ImageClip(frame).set_duration(chunk_duration))
 
             except Exception as clip_error:
-                logger.warning(f"Error creating clip for chunk: {str(clip_error)}")
-                continue
+                logger.warning(f"Error creating clip for chunk {idx}: {str(clip_error)}")
+                # Create fallback clip
+                img = Image.new("RGB", (W, H), color=bg_color)
+                draw = ImageDraw.Draw(img)
+                try:
+                    font = ImageFont.load_default()
+                    draw.text((50, H // 2), chunk[:100], fill=text_color, font=font)
+                except:
+                    pass
+                frame = np.array(img)
+                clips.append(ImageClip(frame).set_duration(chunk_duration))
 
         # Fallback: solid colour clip if all chunks failed
         if not clips:
@@ -2711,23 +2983,42 @@ def create_video_from_text(text_content, video_path, style, duration_setting):
             frame = np.array(img)
             clips = [ImageClip(frame).set_duration(5)]
 
-        # Concatenate all clips and write the video file
+        # Concatenate all video clips
         final_video = concatenate_videoclips(clips)
+        
+        # Add audio to video if audio clips exist
+        if audio_clips:
+            try:
+                final_audio = concatenate_audioclips(audio_clips)
+                final_video = final_video.set_audio(final_audio)
+            except Exception as audio_merge_err:
+                logger.warning(f"Could not merge audio with video: {str(audio_merge_err)}")
+
+        # Write the final video file
         final_video.write_videofile(
             video_path,
             fps=24,
             codec='libx264',
-            audio=False,
+            audio_codec='aac',
             verbose=False,
             logger=None,
             preset='ultrafast',
         )
 
-        logger.info(f"Video file created successfully: {video_path}")
+        # Clean up temporary audio files
+        for audio_file in audio_clips:
+            try:
+                if hasattr(audio_file, 'filename'):
+                    if os.path.exists(audio_file.filename):
+                        os.remove(audio_file.filename)
+            except:
+                pass
+
+        logger.info(f"Video with narration created successfully: {video_path}")
         return True
 
     except Exception as e:
-        logger.error(f"Error creating video: {str(e)}", exc_info=True)
+        logger.error(f"Error creating video with narration: {str(e)}", exc_info=True)
         raise
 
 

@@ -139,8 +139,8 @@
         <!-- Topic Selection Screen (Hidden initially) -->
         <div id="topic-selection-screen" style="display: none;">
             <div class="card rounded-2xl p-6 sm:p-12 shadow-lg">
-                <h2 style="color: var(--text-primary);" class="text-xl sm:text-3xl font-bold mb-2 text-center">📑 Select Topics</h2>
-                <p style="color: var(--text-secondary);" class="text-center mb-6 sm:mb-8">Choose which parts of your notes to test, or cover all slides</p>
+                <h2 style="color: var(--text-primary);" class="text-xl sm:text-3xl font-bold mb-2 text-center">🧠 Select Knowledge Areas</h2>
+                <p style="color: var(--text-secondary);" class="text-center mb-6 sm:mb-8">Where do you want to test your knowledge? Choose topics below or cover all slides.</p>
                 
                 <!-- Cover All Slides Button -->
                 <div class="mb-6">
@@ -176,11 +176,11 @@
                 <div class="mb-8 sm:mb-12">
                     <p style="color: var(--text-primary);" class="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">📝 How many questions?</p>
                     <div class="flex items-center gap-3 sm:gap-4">
-                        <input type="number" id="question-count-input" min="1" max="100" value="10" 
+                        <input type="number" id="question-count-input" min="50" max="100" value="50" 
                             class="card rounded-lg p-2 sm:p-4 text-center font-bold text-base sm:text-lg w-24 sm:w-32" 
                             style="color: var(--primary); border: 2px solid var(--primary);"
                             onchange="selectQuestionCount(this.value)" oninput="handleQuestionInput(event)">
-                        <span style="color: var(--text-secondary);" class="text-base sm:text-lg">(max 100)</span>
+                        <span style="color: var(--text-secondary);" class="text-base sm:text-lg">(min 50, max 100)</span>
                     </div>
 
 
@@ -383,7 +383,7 @@
                     }
                 };
                 topicDiv.innerHTML = `
-                    <input type="checkbox" id="topic-${index}" class="w-5 h-5 rounded cursor-pointer" style="accent-color: var(--primary);" onchange="toggleTopic(${index}, '${topic.replace(/'/g, "\\'")}')">
+                <input type="checkbox" id="topic-${index}" class="w-5 h-5 rounded cursor-pointer" style="accent-color: var(--primary);" onchange="toggleTopic(${index}, '${topic.replace(/'/g, "\\'")}')">
                     <label for="topic-${index}" class="flex-1 cursor-pointer font-medium" style="color: var(--text-primary);">${topic}</label>
                 `;
                 container.appendChild(topicDiv);
@@ -409,13 +409,21 @@
 
         function selectAllTopics() {
             selectedTopics = 'all';
+            updateGenerateButton();
             generateQuestions();
         }
 
+
         function updateGenerateButton() {
             const btn = document.getElementById('generate-btn');
-            btn.disabled = selectedTopics.length === 0 || selectedTopics === [];
+            // selectedTopics can be an array or string 'all'
+            if (selectedTopics === 'all') {
+                btn.disabled = false;
+                return;
+            }
+            btn.disabled = !Array.isArray(selectedTopics) || selectedTopics.length === 0;
         }
+
 
         function generateQuestions() {
             const btn = document.getElementById('generate-btn');
@@ -500,7 +508,7 @@
             questionInputTimeout = setTimeout(() => {
                 let parsed = parseInt(event.target.value);
                 if (!isNaN(parsed)) {
-                    if (parsed < 1) parsed = 1;
+                    if (parsed < 50) parsed = 50;
                     if (parsed > 100) parsed = 100;
                     selectedQuestionCount = parsed;
                     enableStartButton();
@@ -511,7 +519,7 @@
 
         function selectQuestionCount(count) {
             let parsed = parseInt(count);
-            if (isNaN(parsed) || parsed < 1) parsed = 1;
+            if (isNaN(parsed) || parsed < 50) parsed = 50;
             if (parsed > 100) parsed = 100;
             selectedQuestionCount = parsed;
             const input = document.getElementById('question-count-input');
@@ -659,59 +667,83 @@
         }
 
         function calculateScore() {
-            let correctCount = 0;
-            const totalTime = Math.floor((Date.now() - startTime) / 1000);
+            try {
+                let correctCount = 0;
+                const totalTime = Math.floor((Date.now() - startTime) / 1000);
 
-            quizData.forEach((question, index) => {
-                if (answers[index] !== undefined) {
-                    // Compare answer with correct option
-                    const selectedOptionIndex = answers[index];
-                    const selectedOption = question.options[selectedOptionIndex];
-                    const correctAnswer = question.answer;
+                quizData.forEach((question, index) => {
+                    const selectedIndex = answers[index];
+                    if (selectedIndex === undefined || selectedIndex === null) return;
 
-                    const selectedLetter = getOptionLetter(selectedOption);
-                    const correctAnswerLetter = getOptionLetter(correctAnswer);
-                    const correctAnswerNum = parseInt(correctAnswer);
+                    const options = Array.isArray(question.options) ? question.options : [];
+                    const selectedOption = (selectedIndex >= 0 && selectedIndex < options.length) ? options[selectedIndex] : null;
+                    const correctRaw = question.answer;
 
-                    // Compare selected letter with correct answer letter
-                    if (selectedLetter === correctAnswer || 
-                        selectedOption === correctAnswer || 
-                        selectedLetter === correctAnswerLetter ||
-                        (!isNaN(correctAnswerNum) && selectedOptionIndex === correctAnswerNum)) {
-                        correctCount++;
+                    const selectedLetter = normalizeAnswerToLetter(selectedOption);
+                    const correctLetter = normalizeAnswerToLetter(correctRaw);
+
+                    if (selectedLetter && correctLetter) {
+                        if (selectedLetter === correctLetter) correctCount++;
+                        return;
                     }
 
+                    // Fallback exact string compare
+                    if (selectedOption !== null && correctRaw !== null && String(selectedOption).trim() === String(correctRaw).trim()) {
+                        correctCount++;
+                    }
+                });
+
+                const score = Math.round((correctCount / Math.max(1, quizData.length)) * 100);
+
+                // Display results
+                document.getElementById('final-score').textContent = score;
+                document.getElementById('correct-count').textContent = correctCount;
+                document.getElementById('incorrect-count').textContent = quizData.length - correctCount;
+                document.getElementById('time-taken').textContent = formatTime(totalTime);
+
+                if (score >= 80) {
+                    document.getElementById('result-title').textContent = '🎉 Excellent!';
+                    document.getElementById('result-message').textContent = "You've mastered this topic!";
+                } else if (score >= 60) {
+                    document.getElementById('result-title').textContent = '👍 Good Job!';
+                    document.getElementById('result-message').textContent = 'Keep practicing to improve further!';
+                } else {
+                    document.getElementById('result-title').textContent = '💪 Keep Learning!';
+                    document.getElementById('result-message').textContent = 'Review the topic and try again!';
                 }
-            });
 
-            const score = Math.round((correctCount / quizData.length) * 100);
+                generateReview(correctCount);
+                saveQuizResult(score, totalTime);
 
-            // Display results
-            document.getElementById('final-score').textContent = score;
-            document.getElementById('correct-count').textContent = correctCount;
-            document.getElementById('incorrect-count').textContent = quizData.length - correctCount;
-            document.getElementById('time-taken').textContent = formatTime(totalTime);
-
-            // Set message based on score
-            if (score >= 80) {
-                document.getElementById('result-title').textContent = '🎉 Excellent!';
-                document.getElementById('result-message').textContent = 'You\'ve mastered this topic!';
-            } else if (score >= 60) {
-                document.getElementById('result-title').textContent = '👍 Good Job!';
-                document.getElementById('result-message').textContent = 'Keep practicing to improve further!';
-            } else {
-                document.getElementById('result-title').textContent = '💪 Keep Learning!';
-                document.getElementById('result-message').textContent = 'Review the topic and try again!';
+                document.getElementById('quiz-container').style.display = 'none';
+                document.getElementById('results-screen').style.display = 'block';
+            } catch (e) {
+                console.error('calculateScore error:', e);
+                // Fail safely: still show results screen
+                document.getElementById('result-title').textContent = '⚠️ Results ready';
+                document.getElementById('result-message').textContent = 'We finished the quiz, but scoring had an issue. Please try again.';
+                document.getElementById('final-score').textContent = '0';
+                document.getElementById('correct-count').textContent = '0';
+                document.getElementById('incorrect-count').textContent = String((quizData && quizData.length) ? quizData.length : 0);
+                document.getElementById('time-taken').textContent = formatTime(Math.floor((Date.now() - startTime) / 1000));
+                document.getElementById('quiz-container').style.display = 'none';
+                document.getElementById('results-screen').style.display = 'block';
             }
+        }
 
-            // Generate review
-            generateReview(correctCount);
+        function normalizeAnswerToLetter(raw) {
+            if (raw === undefined || raw === null) return null;
+            const trimmed = String(raw).trim();
 
-            // Save result to database
-            saveQuizResult(score, totalTime);
+            // Exact A-D
+            const exact = trimmed.match(/^([A-D])$/i);
+            if (exact) return exact[1].toUpperCase();
 
-            document.getElementById('quiz-container').style.display = 'none';
-            document.getElementById('results-screen').style.display = 'block';
+            // A. text / A) text / A: text
+            const prefix = trimmed.match(/^([A-D])[\.\)\:]\s*/i);
+            if (prefix) return prefix[1].toUpperCase();
+
+            return getOptionLetter(trimmed);
         }
 
         async function saveQuizResult(score, timeTaken) {
@@ -764,40 +796,47 @@
         }
 
         function generateReview(correctCount) {
-            const reviewContainer = document.getElementById('review-answers');
-            let reviewHTML = '<h3 style="color: var(--text-primary);" class="text-lg font-bold mb-4">Review Your Answers</h3>';
+            try {
+                const reviewContainer = document.getElementById('review-answers');
+                let reviewHTML = '<h3 style="color: var(--text-primary);" class="text-lg font-bold mb-4">Review Your Answers</h3>';
 
-            quizData.forEach((question, index) => {
-                const selectedIndex = answers[index];
-                const selectedOption = selectedIndex !== undefined ? question.options[selectedIndex] : 'Not answered';
-                const correctAnswer = question.answer;
+                quizData.forEach((question, index) => {
+                    const options = Array.isArray(question.options) ? question.options : [];
+                    const selectedIndex = answers[index];
+                    const selectedOption = (selectedIndex !== undefined && selectedIndex !== null && selectedIndex >= 0 && selectedIndex < options.length)
+                        ? options[selectedIndex]
+                        : 'Not answered';
 
-                const selectedLetter = getOptionLetter(selectedOption);
-                const correctAnswerLetter = getOptionLetter(correctAnswer);
-                const correctAnswerNum = parseInt(correctAnswer);
-                
-                const isCorrect = selectedLetter === correctAnswer || 
-                                 selectedOption === correctAnswer || 
-                                 selectedLetter === correctAnswerLetter ||
-                                 (!isNaN(correctAnswerNum) && selectedIndex === correctAnswerNum);
+                    const correctAnswer = question.answer;
 
-                const statusColor = isCorrect ? 'text-green-500' : 'text-red-500';
+                    const selectedLetter = normalizeAnswerToLetter(selectedOption);
+                    const correctLetter = normalizeAnswerToLetter(correctAnswer);
 
-                reviewHTML += `
-                    <div class="card-secondary rounded-lg p-4 mb-3">
-                        <div class="flex items-start justify-between">
-                            <div style="flex: 1; color: var(--text-primary);">
-                                <p class="font-semibold mb-2">${question.question}</p>
-                                <p style="color: var(--text-secondary);" class="text-sm">Your answer: ${selectedOption}</p>
-                                <p class="text-sm"><strong>Correct answer:</strong> ${correctAnswer}</p>
-                                ${question.explanation ? `<p style="color: var(--text-secondary);" class="text-sm mt-2"><em>${question.explanation}</em></p>` : ''}
+                    const isCorrect = (selectedLetter && correctLetter) ? (selectedLetter === correctLetter)
+                        : (String(selectedOption).trim() === String(correctAnswer).trim());
+
+                    const statusColor = isCorrect ? 'text-green-500' : 'text-red-500';
+
+                    reviewHTML += `
+                        <div class="card-secondary rounded-lg p-4 mb-3">
+                            <div class="flex items-start justify-between">
+                                <div style="flex: 1; color: var(--text-primary);">
+                                    <p class="font-semibold mb-2">${question.question}</p>
+                                    <p style="color: var(--text-secondary);" class="text-sm">Your answer: ${selectedOption}</p>
+                                    <p class="text-sm"><strong>Correct answer:</strong> ${correctAnswer}</p>
+                                    ${question.explanation ? `<p style="color: var(--text-secondary);" class="text-sm mt-2"><em>${question.explanation}</em></p>` : ''}
+                                </div>
+                                <span class="${statusColor} ml-4 font-bold">${isCorrect ? '✓' : '✗'}</span>
                             </div>
-                            <span class="${statusColor} ml-4 font-bold">${isCorrect ? '✓' : '✗'}</span>
-                        </div>
-                `;
-            });
+                    `;
+                });
 
-            reviewContainer.innerHTML = reviewHTML;
+                reviewContainer.innerHTML = reviewHTML;
+            } catch (e) {
+                console.error('generateReview error:', e);
+                const reviewContainer = document.getElementById('review-answers');
+                reviewContainer.innerHTML = '<p style="color: var(--text-secondary);">Review could not be generated.</p>';
+            }
         }
 
         function getOptionLetter(optionText) {
