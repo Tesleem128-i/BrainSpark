@@ -1,1300 +1,1373 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard — Brainspark</title>
-  <link rel="icon" type="image/png" href="/static/image/KNOWITNOW.png">
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard – Brainspark</title>
+    <link rel="icon" type="image/png" href="/static/image/KNOWITNOW.png">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link rel="stylesheet" href="/static/css/styles.css">
 
-  <style>
-    /* ===================== TOKENS ===================== */
-    :root {
-      --ink: #0a0a14;
-      --ink2: #1c1c2e;
-      --surface: #ffffff;
-      --surface2: #f5f4f0;
-      --surface3: #eeece8;
-      --muted: #7a7a8c;
-      --accent: #ff4f30;
-      --accent2: #ff8c5a;
-      --blue: #3b6bff;
-      --blue2: #7ba4ff;
-      --green: #00c98d;
-      --gold: #f5c842;
-      --radius: 16px;
-      --radius-sm: 8px;
-      --radius-lg: 24px;
-      --transition: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-      --nav-h: 72px;
-      --sidebar-w: 260px;
-    }
-    [data-theme="dark"] {
-      --ink: #f0efe8;
-      --ink2: #c8c6bc;
-      --surface: #0d0d18;
-      --surface2: #16162a;
-      --surface3: #1e1e32;
-      --muted: #5a5a70;
-      --accent: #ff6244;
-      --accent2: #ffaa6e;
-      --blue: #5580ff;
-      --blue2: #88aaff;
-    }
+    <style>
+        /* ===================== TOKENS ===================== */
+        :root {
+            --ink: #f0efe8;
+            --ink2: #c8c6bc;
+            --surface: #0a0a14;
+            --surface2: #0d0d1a;
+            --surface3: #13131f;
+            --card: rgba(255,255,255,0.04);
+            --card-border: rgba(255,255,255,0.08);
+            --muted: #5a5a70;
+            --accent: #ff4f30;
+            --accent2: #ff8c5a;
+            --gold: #f5c842;
+            --blue: #3b6bff;
+            --blue2: #7ba4ff;
+            --green: #00c98d;
+            --radius: 16px;
+            --radius-sm: 8px;
+            --transition: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        [data-theme="light"] {
+            --ink: #0a0a14;
+            --ink2: #1c1c2e;
+            --surface: #f5f4f0;
+            --surface2: #ffffff;
+            --surface3: #ededea;
+            --card: rgba(0,0,0,0.03);
+            --card-border: rgba(0,0,0,0.07);
+            --muted: #7a7a8c;
+        }
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
-    body {
-      font-family: 'DM Sans', sans-serif;
-      background: var(--surface2);
-      color: var(--ink);
-      min-height: 100vh;
-      transition: background 0.4s, color 0.4s;
-    }
-    ::selection { background: var(--accent); color: #fff; }
-    a { text-decoration: none; color: inherit; }
-    button { font-family: 'DM Sans', sans-serif; }
-    ::-webkit-scrollbar { width: 5px; height: 5px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; }
+        /* ===================== RESET ===================== */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--surface);
+            color: var(--ink);
+            min-height: 100vh;
+            transition: background 0.4s, color 0.4s;
+            overflow-x: hidden;
+        }
+        ::selection { background: var(--accent); color: #fff; }
+        a { text-decoration: none; color: inherit; }
 
-    /* ===================== LAYOUT ===================== */
-    .app-wrap { display: flex; min-height: 100vh; }
+        /* Grain overlay */
+        body::before {
+            content: '';
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            opacity: 0.018;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        }
 
-    /* ===================== SIDEBAR ===================== */
-    .sidebar {
-      width: var(--sidebar-w); flex-shrink: 0;
-      position: fixed; top: 0; left: 0; bottom: 0; z-index: 90;
-      background: var(--surface);
-      border-right: 1px solid rgba(0,0,0,0.06);
-      display: flex; flex-direction: column;
-      transition: background 0.4s, transform 0.4s;
-      overflow: hidden;
-    }
-    [data-theme="dark"] .sidebar { border-color: rgba(255,255,255,0.05); }
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; }
 
-    .sidebar-logo {
-      padding: 1.5rem 1.75rem;
-      border-bottom: 1px solid rgba(0,0,0,0.06);
-      display: flex; align-items: center; gap: 0.75rem;
-      flex-shrink: 0;
-    }
-    [data-theme="dark"] .sidebar-logo { border-color: rgba(255,255,255,0.05); }
-    .sidebar-logo-text {
-      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.25rem;
-      letter-spacing: -0.02em;
-      background: linear-gradient(135deg, #ff4f30, #ff8c5a);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-    }
-    .sidebar-logo-sub { font-size: 0.7rem; color: var(--muted); margin-top: 0.05rem; }
+        /* ===================== NAV ===================== */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            padding: 0 3rem;
+            height: 68px;
+            display: flex; align-items: center; justify-content: space-between;
+            background: rgba(10,10,20,0.75);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--card-border);
+            transition: all 0.4s;
+        }
+        [data-theme="light"] nav {
+            background: rgba(245,244,240,0.85);
+        }
+        .nav-logo {
+            font-family: 'Syne', sans-serif;
+            font-weight: 800; font-size: 1.4rem; letter-spacing: -0.02em;
+            background: linear-gradient(135deg, #ff4f30, #ff8c5a);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .nav-right { display: flex; align-items: center; gap: 1rem; }
+        .nav-links { display: flex; gap: 2rem; list-style: none; }
+        .nav-links a {
+            font-size: 0.875rem; font-weight: 500; color: rgba(255,255,255,0.6);
+            transition: color 0.2s; letter-spacing: 0.01em;
+        }
+        [data-theme="light"] .nav-links a { color: var(--muted); }
+        .nav-links a:hover { color: #fff; }
+        [data-theme="light"] .nav-links a:hover { color: var(--ink); }
 
-    .sidebar-user {
-      padding: 1.25rem 1.75rem;
-      border-bottom: 1px solid rgba(0,0,0,0.06);
-      display: flex; align-items: center; gap: 0.875rem;
-      flex-shrink: 0;
-    }
-    [data-theme="dark"] .sidebar-user { border-color: rgba(255,255,255,0.05); }
-    .sidebar-avatar {
-      width: 40px; height: 40px; border-radius: 10px;
-      object-fit: cover; border: 2px solid rgba(255,79,48,0.3);
-      flex-shrink: 0;
-    }
-    .sidebar-user-name { font-size: 0.875rem; font-weight: 600; color: var(--ink); line-height: 1.3; }
-    .sidebar-user-level { font-size: 0.72rem; color: var(--muted); }
+        .nav-user {
+            display: flex; align-items: center; gap: 0.75rem;
+            padding-left: 1rem; border-left: 1px solid var(--card-border);
+        }
+        .nav-user-text { text-align: right; }
+        .nav-user-text .name { font-size: 0.875rem; font-weight: 600; color: var(--ink); }
+        .nav-user-text .level { font-size: 0.72rem; color: var(--muted); }
+        .nav-avatar {
+            width: 36px; height: 36px; border-radius: 10px; object-fit: cover;
+            border: 2px solid var(--accent);
+        }
+        .icon-btn {
+            width: 36px; height: 36px; border-radius: 9px; border: 1px solid var(--card-border);
+            background: var(--card); display: flex; align-items: center; justify-content: center;
+            cursor: pointer; color: var(--muted); font-size: 0.9rem;
+            transition: all 0.2s; backdrop-filter: blur(10px);
+        }
+        .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
 
-    .sidebar-nav { flex: 1; padding: 1rem 0; overflow-y: auto; }
-    .sidebar-section-label {
-      font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em;
-      text-transform: uppercase; color: var(--muted);
-      padding: 0 1.75rem; margin: 1rem 0 0.4rem;
-    }
-    .sidebar-link {
-      display: flex; align-items: center; gap: 0.75rem;
-      padding: 0.7rem 1.75rem; font-size: 0.875rem; font-weight: 500;
-      color: var(--muted); transition: all 0.2s; cursor: pointer;
-      border: none; background: none; width: 100%; text-align: left;
-      position: relative; border-radius: 0;
-    }
-    .sidebar-link i { width: 18px; text-align: center; font-size: 0.9rem; }
-    .sidebar-link:hover { color: var(--ink); background: var(--surface2); }
-    .sidebar-link.active {
-      color: var(--accent); background: rgba(255,79,48,0.06);
-      font-weight: 600;
-    }
-    .sidebar-link.active::before {
-      content: ''; position: absolute; left: 0; top: 0; bottom: 0;
-      width: 3px; background: var(--accent); border-radius: 0 2px 2px 0;
-    }
-    .sidebar-link .badge {
-      margin-left: auto; background: var(--accent); color: #fff;
-      font-size: 0.65rem; font-weight: 700; padding: 0.15rem 0.45rem;
-      border-radius: 50px; line-height: 1.4;
-    }
+        /* ===================== LAYOUT ===================== */
+        .page-wrap {
+            padding-top: 68px; min-height: 100vh;
+            display: flex;
+        }
 
-    .sidebar-footer {
-      padding: 1rem 1.75rem 1.5rem;
-      border-top: 1px solid rgba(0,0,0,0.06);
-      display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0;
-    }
-    [data-theme="dark"] .sidebar-footer { border-color: rgba(255,255,255,0.05); }
-    .sidebar-footer-btn {
-      flex: 1; padding: 0.6rem; border-radius: var(--radius-sm);
-      background: var(--surface2); border: 1px solid rgba(0,0,0,0.06);
-      color: var(--muted); font-size: 0.8rem; font-weight: 500;
-      cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.4rem;
-    }
-    [data-theme="dark"] .sidebar-footer-btn { border-color: rgba(255,255,255,0.06); }
-    .sidebar-footer-btn:hover { background: var(--surface3); color: var(--ink); }
-    .sidebar-footer-btn.danger:hover { background: rgba(255,79,48,0.1); color: var(--accent); border-color: rgba(255,79,48,0.2); }
-    #theme-btn-sidebar {
-      width: 36px; height: 36px; flex-shrink: 0;
-      background: var(--surface2); border: 1px solid rgba(0,0,0,0.06);
-      border-radius: var(--radius-sm); color: var(--muted); cursor: pointer;
-      display: flex; align-items: center; justify-content: center; font-size: 0.875rem;
-      transition: all 0.2s;
-    }
-    [data-theme="dark"] #theme-btn-sidebar { border-color: rgba(255,255,255,0.06); }
-    #theme-btn-sidebar:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+        /* ===================== SIDEBAR ===================== */
+        .sidebar {
+            width: 240px; flex-shrink: 0;
+            position: fixed; top: 68px; left: 0; bottom: 0;
+            background: rgba(10,10,20,0.6);
+            border-right: 1px solid var(--card-border);
+            backdrop-filter: blur(20px);
+            padding: 2rem 1.25rem;
+            display: flex; flex-direction: column; gap: 0.5rem;
+            overflow-y: auto; z-index: 50;
+            transition: transform 0.3s;
+        }
+        [data-theme="light"] .sidebar { background: rgba(255,255,255,0.85); }
+        .sidebar-label {
+            font-size: 0.68rem; font-weight: 600; letter-spacing: 0.1em;
+            text-transform: uppercase; color: var(--muted);
+            padding: 1rem 0.75rem 0.5rem; margin-top: 0.5rem;
+        }
+        .sidebar-link {
+            display: flex; align-items: center; gap: 0.75rem;
+            padding: 0.65rem 0.85rem; border-radius: var(--radius-sm);
+            font-size: 0.875rem; font-weight: 500; color: var(--muted);
+            transition: all 0.2s; cursor: pointer; border: none; background: none;
+            width: 100%; text-align: left;
+        }
+        .sidebar-link:hover { background: var(--card); color: var(--ink); }
+        .sidebar-link.active { background: rgba(255,79,48,0.12); color: var(--accent); }
+        .sidebar-link i { width: 16px; text-align: center; font-size: 0.875rem; }
 
-    /* ===================== MAIN ===================== */
-    .main-wrap {
-      margin-left: var(--sidebar-w);
-      flex: 1; min-height: 100vh;
-      display: flex; flex-direction: column;
-    }
+        /* ===================== MAIN CONTENT ===================== */
+        .main {
+            flex: 1; margin-left: 240px;
+            padding: 2.5rem 2.5rem;
+            min-height: calc(100vh - 68px);
+        }
 
-    /* Top bar */
-    .topbar {
-      position: sticky; top: 0; z-index: 80;
-      height: var(--nav-h);
-      background: var(--surface);
-      border-bottom: 1px solid rgba(0,0,0,0.06);
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0 2.5rem;
-      transition: background 0.4s;
-    }
-    [data-theme="dark"] .topbar { border-color: rgba(255,255,255,0.05); }
-    .topbar-greeting {
-      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem;
-      color: var(--ink); letter-spacing: -0.01em;
-    }
-    .topbar-greeting span { color: var(--accent); }
-    .topbar-right { display: flex; align-items: center; gap: 0.75rem; }
-    .topbar-btn {
-      width: 36px; height: 36px; border-radius: var(--radius-sm);
-      background: var(--surface2); border: 1px solid rgba(0,0,0,0.06);
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer; color: var(--muted); font-size: 0.875rem; transition: all 0.2s;
-    }
-    [data-theme="dark"] .topbar-btn { border-color: rgba(255,255,255,0.06); }
-    .topbar-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
-    .hamburger-btn { display: none; }
+        /* ===================== HERO GREETING ===================== */
+        .greeting-hero {
+            position: relative; border-radius: 24px; overflow: hidden;
+            padding: 3rem; margin-bottom: 2rem;
+            min-height: 200px;
+            display: flex; align-items: flex-end;
+        }
+        .greeting-hero-bg {
+            position: absolute; inset: 0;
+        }
+        .greeting-hero-bg img {
+            width: 100%; height: 100%; object-fit: cover; filter: brightness(0.3) saturate(1.4);
+        }
+        .greeting-hero-bg::after {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(135deg, rgba(255,79,48,0.2) 0%, rgba(10,10,20,0.7) 60%, rgba(10,10,20,0.95) 100%);
+        }
+        .greeting-content { position: relative; z-index: 1; }
+        .greeting-badge {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            padding: 0.3rem 0.85rem; border-radius: 50px;
+            background: rgba(255,79,48,0.15); border: 1px solid rgba(255,79,48,0.35);
+            color: #ff7a5a; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em;
+            text-transform: uppercase; margin-bottom: 0.75rem;
+        }
+        .greeting-badge-dot { width: 5px; height: 5px; background: var(--accent); border-radius: 50%; animation: blink 1.5s infinite; }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        .greeting-title {
+            font-family: 'Syne', sans-serif; font-size: 2.2rem; font-weight: 800;
+            color: #fff; line-height: 1.1; letter-spacing: -0.02em; margin-bottom: 0.5rem;
+        }
+        .greeting-title em { font-style: normal; color: var(--accent); }
+        .greeting-sub { font-size: 0.95rem; color: rgba(255,255,255,0.55); }
 
-    /* Main content */
-    .main-content { padding: 2rem 2.5rem; flex: 1; }
+        /* ===================== STAT CARDS ===================== */
+        .stats-row {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: var(--card); border: 1px solid var(--card-border);
+            border-radius: var(--radius); padding: 1.5rem;
+            transition: all var(--transition); position: relative; overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+        .stat-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+            opacity: 0; transition: opacity var(--transition);
+        }
+        .stat-card.blue::before { background: linear-gradient(90deg, var(--blue), var(--blue2)); }
+        .stat-card.green::before { background: linear-gradient(90deg, var(--green), #00e4a0); }
+        .stat-card.orange::before { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+        .stat-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+        .stat-card:hover::before { opacity: 1; }
+        .stat-label { font-size: 0.78rem; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 0.75rem; }
+        .stat-value {
+            font-family: 'Syne', sans-serif; font-size: 2.5rem; font-weight: 800;
+            line-height: 1; margin-bottom: 0.3rem;
+        }
+        .stat-card.blue .stat-value { color: var(--blue2); }
+        .stat-card.green .stat-value { color: var(--green); }
+        .stat-card.orange .stat-value { color: var(--accent2); }
+        .stat-icon {
+            position: absolute; top: 1.5rem; right: 1.5rem;
+            width: 40px; height: 40px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem;
+        }
+        .stat-card.blue .stat-icon { background: rgba(59,107,255,0.12); color: var(--blue2); }
+        .stat-card.green .stat-icon { background: rgba(0,201,141,0.12); color: var(--green); }
+        .stat-card.orange .stat-icon { background: rgba(255,79,48,0.12); color: var(--accent2); }
 
-    /* ===================== PAGE SECTIONS ===================== */
-    .page-section { display: none; }
-    .page-section.active { display: block; }
+        /* ===================== SECTION GRID ===================== */
+        .content-grid {
+            display: grid; grid-template-columns: 1.4fr 1fr; gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .content-grid.full { grid-template-columns: 1fr; }
+        .content-grid.three { grid-template-columns: 1fr 1fr 1fr; }
 
-    /* Page header */
-    .page-header {
-      margin-bottom: 2rem;
-      opacity: 0; transform: translateY(16px);
-      animation: fadeUp 0.5s 0.1s forwards;
-    }
-    .page-eyebrow {
-      font-size: 0.72rem; font-weight: 600; letter-spacing: 0.12em;
-      text-transform: uppercase; color: var(--accent);
-      display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem;
-    }
-    .page-eyebrow::before { content: ''; width: 16px; height: 2px; background: var(--accent); border-radius: 1px; }
-    .page-title {
-      font-family: 'Syne', sans-serif; font-size: clamp(1.5rem, 3vw, 2rem);
-      font-weight: 800; color: var(--ink); letter-spacing: -0.02em; line-height: 1.1;
-    }
-    .page-title em { font-style: normal; color: var(--accent); }
-    .page-subtitle { font-size: 0.9rem; color: var(--muted); margin-top: 0.25rem; }
+        /* ===================== CARDS ===================== */
+        .panel {
+            background: var(--card); border: 1px solid var(--card-border);
+            border-radius: var(--radius); overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+        .panel-header {
+            padding: 1.5rem 1.5rem 0;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .panel-title {
+            font-family: 'Syne', sans-serif; font-size: 1.05rem; font-weight: 700;
+            color: var(--ink);
+        }
+        .panel-body { padding: 1.5rem; }
+        .panel-eyebrow {
+            font-size: 0.68rem; font-weight: 600; letter-spacing: 0.1em;
+            text-transform: uppercase; color: var(--accent);
+            display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.4rem;
+        }
+        .panel-eyebrow::before { content: ''; width: 14px; height: 1.5px; background: var(--accent); border-radius: 1px; }
 
-    @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+        /* ===================== UPLOAD ZONE ===================== */
+        .upload-zone {
+            border: 2px dashed rgba(255,79,48,0.3);
+            border-radius: var(--radius); padding: 2rem;
+            text-align: center; cursor: pointer;
+            transition: all 0.3s; margin-bottom: 1.25rem;
+        }
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: var(--accent);
+            background: rgba(255,79,48,0.04);
+        }
+        .upload-zone-icon { font-size: 2rem; color: var(--accent); margin-bottom: 0.75rem; opacity: 0.7; }
+        .upload-zone p { color: var(--ink); font-weight: 500; margin-bottom: 0.25rem; font-size: 0.95rem; }
+        .upload-zone span { font-size: 0.8rem; color: var(--muted); }
 
-    /* ===================== STAT CARDS ===================== */
-    .stats-row {
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem;
-      margin-bottom: 2rem;
-    }
-    .stat-card {
-      background: var(--surface); border-radius: var(--radius);
-      padding: 1.5rem; border: 1px solid rgba(0,0,0,0.06);
-      transition: all var(--transition); position: relative; overflow: hidden;
-      opacity: 0; transform: translateY(16px);
-    }
-    [data-theme="dark"] .stat-card { border-color: rgba(255,255,255,0.06); }
-    .stat-card.anim-1 { animation: fadeUp 0.5s 0.2s forwards; }
-    .stat-card.anim-2 { animation: fadeUp 0.5s 0.3s forwards; }
-    .stat-card.anim-3 { animation: fadeUp 0.5s 0.4s forwards; }
-    .stat-card:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,0,0,0.08); }
-    .stat-card::before {
-      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-      border-radius: var(--radius) var(--radius) 0 0;
-    }
-    .stat-card.red::before { background: var(--accent); }
-    .stat-card.blue::before { background: var(--blue); }
-    .stat-card.green::before { background: var(--green); }
-    .stat-card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 0.75rem; }
-    .stat-icon {
-      width: 40px; height: 40px; border-radius: var(--radius-sm);
-      display: flex; align-items: center; justify-content: center; font-size: 1rem;
-      flex-shrink: 0;
-    }
-    .stat-icon.red { background: rgba(255,79,48,0.1); color: var(--accent); }
-    .stat-icon.blue { background: rgba(59,107,255,0.1); color: var(--blue); }
-    .stat-icon.green { background: rgba(0,201,141,0.1); color: var(--green); }
-    .stat-num {
-      font-family: 'Syne', sans-serif; font-size: 2rem;
-      font-weight: 800; color: var(--ink); line-height: 1; letter-spacing: -0.02em;
-    }
-    .stat-label { font-size: 0.78rem; color: var(--muted); margin-top: 0.25rem; font-weight: 500; }
-    .stat-delta { font-size: 0.75rem; color: var(--green); display: flex; align-items: center; gap: 0.2rem; margin-top: 0.5rem; }
+        /* ===================== TABS ===================== */
+        .tab-bar {
+            display: flex; gap: 4px; padding: 4px;
+            background: rgba(255,255,255,0.04); border-radius: 10px;
+            margin-bottom: 1.25rem;
+        }
+        .tab-btn {
+            flex: 1; padding: 0.5rem; border-radius: 7px; font-size: 0.82rem;
+            font-weight: 500; border: none; cursor: pointer; transition: all 0.2s;
+            color: var(--muted); background: transparent; font-family: 'DM Sans', sans-serif;
+        }
+        .tab-btn.active { background: var(--accent); color: #fff; }
 
-    /* ===================== CARDS / PANELS ===================== */
-    .panel {
-      background: var(--surface); border-radius: var(--radius);
-      border: 1px solid rgba(0,0,0,0.06);
-      transition: background 0.4s;
-    }
-    [data-theme="dark"] .panel { border-color: rgba(255,255,255,0.06); }
-    .panel-head {
-      padding: 1.5rem 1.75rem; border-bottom: 1px solid rgba(0,0,0,0.06);
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    [data-theme="dark"] .panel-head { border-color: rgba(255,255,255,0.05); }
-    .panel-title {
-      font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700;
-      color: var(--ink); letter-spacing: -0.01em; display: flex; align-items: center; gap: 0.5rem;
-    }
-    .panel-title i { color: var(--accent); }
-    .panel-body { padding: 1.75rem; }
+        /* ===================== SETTINGS ROW ===================== */
+        .settings-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1.25rem; }
+        .field-label { font-size: 0.78rem; font-weight: 600; color: var(--muted); letter-spacing: 0.03em; margin-bottom: 0.4rem; }
+        .field-select, .field-input {
+            width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--card-border);
+            border-radius: var(--radius-sm); padding: 0.6rem 0.85rem;
+            color: var(--ink); font-family: 'DM Sans', sans-serif; font-size: 0.875rem;
+            transition: border-color 0.2s; outline: none;
+        }
+        [data-theme="light"] .field-select,
+        [data-theme="light"] .field-input { background: rgba(0,0,0,0.04); }
+        .field-select:focus, .field-input:focus { border-color: var(--accent); }
 
-    /* ===================== GRID LAYOUTS ===================== */
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
-    .grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; }
-    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
-    .mb-6 { margin-bottom: 1.5rem; }
-    .mb-8 { margin-bottom: 2rem; }
+        /* ===================== BUTTONS ===================== */
+        .btn {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            padding: 0.7rem 1.5rem; border-radius: 50px; border: none;
+            font-family: 'DM Sans', sans-serif; font-size: 0.875rem; font-weight: 600;
+            cursor: pointer; transition: all var(--transition);
+        }
+        .btn-primary {
+            background: var(--accent); color: #fff;
+            box-shadow: 0 4px 20px rgba(255,79,48,0.35);
+        }
+        .btn-primary:hover { background: var(--accent2); transform: translateY(-1px); box-shadow: 0 8px 24px rgba(255,79,48,0.45); }
+        .btn-ghost {
+            background: var(--card); color: var(--ink); border: 1px solid var(--card-border);
+        }
+        .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+        .btn-blue {
+            background: var(--blue); color: #fff;
+            box-shadow: 0 4px 20px rgba(59,107,255,0.3);
+        }
+        .btn-blue:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(59,107,255,0.4); }
+        .btn-orange {
+            background: #f97316; color: #fff;
+            box-shadow: 0 4px 20px rgba(249,115,22,0.3);
+        }
+        .btn-orange:hover { transform: translateY(-1px); }
+        .btn-full { width: 100%; justify-content: center; border-radius: var(--radius-sm); }
+        .btn-sm { padding: 0.45rem 1rem; font-size: 0.8rem; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
 
-    /* ===================== UPLOAD ZONE ===================== */
-    .upload-zone {
-      border: 2px dashed rgba(0,0,0,0.12); border-radius: var(--radius-sm);
-      padding: 2.5rem 1.5rem; text-align: center; cursor: pointer;
-      transition: all 0.25s; background: var(--surface2);
-    }
-    [data-theme="dark"] .upload-zone { border-color: rgba(255,255,255,0.1); }
-    .upload-zone:hover, .upload-zone.dragover {
-      border-color: var(--accent); background: rgba(255,79,48,0.04);
-    }
-    .upload-zone i { font-size: 2.5rem; color: var(--muted); margin-bottom: 0.75rem; display: block; }
-    .upload-zone strong { font-size: 0.925rem; color: var(--ink); display: block; margin-bottom: 0.25rem; }
-    .upload-zone span { font-size: 0.8rem; color: var(--muted); }
-    .upload-zone.has-file i { color: var(--green); }
-    .upload-zone.has-file strong { color: var(--green); }
+        /* ===================== ACTIVITY LIST ===================== */
+        .activity-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0.85rem 0; border-bottom: 1px solid var(--card-border);
+        }
+        .activity-item:last-child { border-bottom: none; }
+        .activity-info h4 { font-size: 0.875rem; font-weight: 600; color: var(--ink); margin-bottom: 0.2rem; }
+        .activity-info span { font-size: 0.75rem; color: var(--muted); }
+        .score-badge {
+            font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 700;
+        }
+        .score-badge.high { color: var(--green); }
+        .score-badge.mid { color: var(--gold); }
+        .score-badge.low { color: var(--accent); }
 
-    /* ===================== FORM ELEMENTS ===================== */
-    .field-group { margin-bottom: 1.25rem; }
-    .field-label {
-      display: block; font-size: 0.8rem; font-weight: 600;
-      color: var(--ink); margin-bottom: 0.4rem;
-    }
-    .field-input, .field-select {
-      width: 100%; padding: 0.75rem 1rem;
-      border: 1.5px solid rgba(0,0,0,0.1); border-radius: var(--radius-sm);
-      background: var(--surface2); color: var(--ink);
-      font-family: 'DM Sans', sans-serif; font-size: 0.9rem;
-      transition: all 0.2s; outline: none;
-    }
-    [data-theme="dark"] .field-input, [data-theme="dark"] .field-select {
-      border-color: rgba(255,255,255,0.08);
-    }
-    .field-input:focus, .field-select:focus {
-      border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,79,48,0.1);
-      background: var(--surface);
-    }
-    .field-select {
-      cursor: pointer;
-      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%237a7a8c' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
-      background-position: right 0.75rem center; background-repeat: no-repeat; background-size: 1.2em;
-      -webkit-appearance: none; padding-right: 2.5rem;
-    }
-    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        /* ===================== COMMUNITY CARD ===================== */
+        .community-item {
+            display: flex; align-items: center; gap: 0.75rem;
+            padding: 0.75rem; background: rgba(255,255,255,0.03);
+            border-radius: var(--radius-sm); margin-bottom: 0.5rem;
+            border: 1px solid var(--card-border);
+        }
+        .community-item-icon { font-size: 1.1rem; }
+        .community-item-text { font-size: 0.875rem; font-weight: 500; color: var(--ink); }
 
-    /* ===================== BUTTONS ===================== */
-    .btn {
-      display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
-      padding: 0.75rem 1.5rem; border-radius: var(--radius-sm);
-      font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 600;
-      cursor: pointer; border: none; transition: all var(--transition); line-height: 1;
-    }
-    .btn-primary {
-      background: var(--accent); color: #fff;
-      box-shadow: 0 6px 20px rgba(255,79,48,0.3);
-    }
-    .btn-primary:hover { background: var(--accent2); transform: translateY(-1px); box-shadow: 0 8px 28px rgba(255,79,48,0.4); }
-    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-    .btn-secondary {
-      background: var(--surface2); color: var(--ink);
-      border: 1px solid rgba(0,0,0,0.08);
-    }
-    [data-theme="dark"] .btn-secondary { border-color: rgba(255,255,255,0.08); }
-    .btn-secondary:hover { background: var(--surface3); }
-    .btn-blue {
-      background: var(--blue); color: #fff;
-      box-shadow: 0 6px 20px rgba(59,107,255,0.25);
-    }
-    .btn-blue:hover { filter: brightness(1.1); transform: translateY(-1px); }
-    .btn-green {
-      background: var(--green); color: #fff;
-      box-shadow: 0 6px 20px rgba(0,201,141,0.25);
-    }
-    .btn-green:hover { filter: brightness(1.08); transform: translateY(-1px); }
-    .btn-full { width: 100%; }
-    .btn-sm { padding: 0.5rem 1rem; font-size: 0.8rem; }
-    .btn-lg { padding: 0.9rem 2rem; font-size: 1rem; font-family: 'Syne', sans-serif; font-weight: 700; }
+        /* ===================== AV SECTION ===================== */
+        .av-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; }
+        .av-tab {
+            padding: 0.5rem 1rem; border-radius: 50px; font-size: 0.8rem; font-weight: 600;
+            border: 1px solid var(--card-border); background: transparent;
+            color: var(--muted); cursor: pointer; transition: all 0.2s; font-family: 'DM Sans', sans-serif;
+        }
+        .av-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 
-    /* ===================== ACTIVITY ITEMS ===================== */
-    .activity-item {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0.875rem 0; border-bottom: 1px solid rgba(0,0,0,0.05);
-    }
-    [data-theme="dark"] .activity-item { border-color: rgba(255,255,255,0.04); }
-    .activity-item:last-child { border-bottom: none; padding-bottom: 0; }
-    .activity-item:first-child { padding-top: 0; }
-    .activity-title { font-size: 0.875rem; font-weight: 500; color: var(--ink); }
-    .activity-meta { font-size: 0.75rem; color: var(--muted); margin-top: 0.1rem; }
-    .score-badge {
-      font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 700;
-      padding: 0.3rem 0.6rem; border-radius: var(--radius-sm); min-width: 56px; text-align: center;
-    }
-    .score-high { background: rgba(0,201,141,0.1); color: var(--green); }
-    .score-mid { background: rgba(245,200,66,0.1); color: #c98800; }
-    .score-low { background: rgba(255,79,48,0.1); color: var(--accent); }
+        .av-card {
+            border: 1px solid var(--card-border); border-radius: var(--radius);
+            padding: 1.25rem; transition: all 0.2s;
+        }
+        .av-card:hover { border-color: rgba(255,79,48,0.3); }
+        .av-card-header { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem; }
+        .av-card-icon {
+            width: 36px; height: 36px; border-radius: 9px;
+            display: flex; align-items: center; justify-content: center; font-size: 1rem;
+        }
+        .av-card.audio-card .av-card-icon { background: rgba(59,107,255,0.12); }
+        .av-card.video-card .av-card-icon { background: rgba(249,115,22,0.12); }
+        .av-card-title { font-family: 'Syne', sans-serif; font-size: 0.95rem; font-weight: 700; color: var(--ink); }
+        .av-card-sub { font-size: 0.75rem; color: var(--muted); }
 
-    /* ===================== COMMUNITY TAGS ===================== */
-    .info-tag {
-      display: flex; align-items: center; gap: 0.6rem;
-      padding: 0.6rem 0.875rem; background: var(--surface2);
-      border-radius: var(--radius-sm); border: 1px solid rgba(0,0,0,0.06);
-      font-size: 0.8rem; font-weight: 500; color: var(--ink);
-      margin-bottom: 0.5rem;
-    }
-    [data-theme="dark"] .info-tag { border-color: rgba(255,255,255,0.06); }
-    .info-tag i { font-size: 0.8rem; color: var(--accent); width: 14px; text-align: center; }
+        /* ===================== FILE GRID ===================== */
+        .file-card {
+            background: rgba(255,255,255,0.03); border: 1px solid var(--card-border);
+            border-radius: var(--radius); padding: 1.25rem;
+            transition: all var(--transition);
+        }
+        .file-card:hover { border-color: rgba(255,79,48,0.3); transform: translateY(-2px); }
+        .file-type-badge {
+            display: inline-flex; align-items: center; gap: 0.35rem;
+            padding: 0.25rem 0.65rem; border-radius: 50px; font-size: 0.7rem; font-weight: 600;
+            letter-spacing: 0.04em; margin-bottom: 0.75rem;
+        }
+        .file-type-badge.audio { background: rgba(59,107,255,0.12); color: var(--blue2); }
+        .file-type-badge.video { background: rgba(249,115,22,0.12); color: #f97316; }
+        .file-name { font-size: 0.875rem; font-weight: 600; color: var(--ink); margin-bottom: 0.25rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .file-meta { font-size: 0.75rem; color: var(--muted); margin-bottom: 1rem; }
+        .file-actions { display: flex; gap: 0.5rem; }
 
-    /* ===================== AV UPLOAD ===================== */
-    .av-upload-zone {
-      border: 2px dashed rgba(168,85,247,0.35); border-radius: var(--radius-sm);
-      padding: 2.5rem 1.5rem; text-align: center; cursor: pointer;
-      background: rgba(168,85,247,0.04); transition: all 0.25s;
-    }
-    .av-upload-zone:hover, .av-upload-zone.dragover {
-      border-color: rgba(168,85,247,0.7); background: rgba(168,85,247,0.08);
-    }
-    .av-upload-zone i { font-size: 2.5rem; color: #a855f7; margin-bottom: 0.75rem; display: block; opacity: 0.7; }
-    .av-upload-zone strong { font-size: 0.9rem; color: var(--ink); display: block; margin-bottom: 0.25rem; }
-    .av-upload-zone span { font-size: 0.78rem; color: var(--muted); }
+        /* ===================== CHART WRAPPER ===================== */
+        .chart-wrap { position: relative; height: 220px; }
 
-    .av-option-card {
-      background: var(--surface2); border-radius: var(--radius-sm);
-      border: 1.5px solid rgba(0,0,0,0.08); padding: 1.25rem;
-      transition: all 0.2s;
-    }
-    [data-theme="dark"] .av-option-card { border-color: rgba(255,255,255,0.08); }
-    .av-option-card:hover { border-color: var(--accent); }
-    .av-option-title { font-size: 0.875rem; font-weight: 700; color: var(--ink); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem; }
+        /* ===================== EMPTY STATE ===================== */
+        .empty-state {
+            text-align: center; padding: 3rem 1rem;
+            color: var(--muted);
+        }
+        .empty-state-icon { font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.4; }
+        .empty-state h4 { font-size: 0.95rem; color: var(--ink); margin-bottom: 0.4rem; }
+        .empty-state p { font-size: 0.82rem; }
 
-    /* ===================== CONVERTED FILES ===================== */
-    .file-card {
-      background: var(--surface2); border-radius: var(--radius-sm);
-      border: 1px solid rgba(0,0,0,0.06); padding: 1.25rem;
-      transition: all 0.2s;
-    }
-    [data-theme="dark"] .file-card { border-color: rgba(255,255,255,0.06); }
-    .file-card:hover { box-shadow: 0 6px 24px rgba(0,0,0,0.07); }
-    .file-type-badge {
-      display: inline-flex; align-items: center; gap: 0.3rem;
-      padding: 0.2rem 0.6rem; border-radius: 50px;
-      font-size: 0.65rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
-    }
-    .file-type-audio { background: rgba(59,107,255,0.12); color: var(--blue); }
-    .file-type-video { background: rgba(255,79,48,0.1); color: var(--accent); }
+        /* ===================== MODAL ===================== */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0; z-index: 9000;
+            background: rgba(0,0,0,0.75); backdrop-filter: blur(8px);
+            align-items: center; justify-content: center;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal {
+            background: var(--surface3); border: 1px solid var(--card-border);
+            border-radius: 20px; padding: 2rem; width: 90%; max-width: 600px;
+            max-height: 85vh; overflow-y: auto;
+        }
+        .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+        .modal-title { font-family: 'Syne', sans-serif; font-size: 1.3rem; font-weight: 700; color: var(--ink); }
+        .modal-close { background: none; border: none; color: var(--muted); font-size: 1.5rem; cursor: pointer; transition: color 0.2s; }
+        .modal-close:hover { color: var(--ink); }
 
-    /* ===================== EMPTY STATE ===================== */
-    .empty-state {
-      padding: 3rem 2rem; text-align: center;
-      border: 2px dashed rgba(0,0,0,0.08); border-radius: var(--radius-sm);
-    }
-    [data-theme="dark"] .empty-state { border-color: rgba(255,255,255,0.07); }
-    .empty-state i { font-size: 2rem; color: var(--muted); margin-bottom: 0.75rem; display: block; opacity: 0.5; }
-    .empty-state p { font-size: 0.875rem; color: var(--muted); }
-    .empty-state strong { color: var(--ink); font-weight: 600; display: block; margin-bottom: 0.25rem; }
+        /* AI Chat */
+        .ai-history { max-height: 300px; overflow-y: auto; margin-bottom: 1rem; }
+        .ai-exchange { padding: 0.75rem 0; border-bottom: 1px solid var(--card-border); }
+        .ai-exchange:last-child { border-bottom: none; }
+        .ai-q { font-size: 0.82rem; font-weight: 600; color: var(--blue2); margin-bottom: 0.4rem; }
+        .ai-a { font-size: 0.875rem; color: var(--ink2); line-height: 1.6; }
+        .ai-input-row { display: flex; gap: 0.5rem; }
+        .ai-textarea {
+            flex: 1; background: rgba(255,255,255,0.05); border: 1px solid var(--card-border);
+            border-radius: var(--radius-sm); padding: 0.65rem 0.9rem;
+            color: var(--ink); font-family: 'DM Sans', sans-serif; font-size: 0.875rem;
+            resize: none; outline: none; min-height: 44px; transition: border-color 0.2s;
+        }
+        .ai-textarea:focus { border-color: var(--accent); }
 
-    /* ===================== MODAL ===================== */
-    .modal-overlay {
-      display: none; position: fixed; inset: 0; z-index: 500;
-      background: rgba(0,0,0,0.65); backdrop-filter: blur(6px);
-      align-items: center; justify-content: center; padding: 1.5rem;
-    }
-    .modal-overlay.open { display: flex; }
-    .modal {
-      background: var(--surface); border-radius: var(--radius-lg);
-      padding: 2.5rem; max-width: 560px; width: 100%;
-      max-height: 80vh; overflow-y: auto;
-      border: 1px solid rgba(0,0,0,0.06);
-      box-shadow: 0 40px 80px rgba(0,0,0,0.2);
-      position: relative;
-    }
-    [data-theme="dark"] .modal { border-color: rgba(255,255,255,0.07); }
-    .modal-close {
-      position: absolute; top: 1.25rem; right: 1.25rem;
-      width: 30px; height: 30px; border-radius: 50%;
-      background: var(--surface2); border: none; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      color: var(--muted); font-size: 0.85rem; transition: all 0.2s;
-    }
-    .modal-close:hover { background: var(--accent); color: #fff; }
-    .modal-title {
-      font-family: 'Syne', sans-serif; font-size: 1.25rem; font-weight: 800;
-      color: var(--ink); margin-bottom: 1.25rem; letter-spacing: -0.02em;
-    }
+        /* File preview badge */
+        .file-preview-badge {
+            display: flex; align-items: center; gap: 0.5rem;
+            padding: 0.5rem 0.75rem; background: rgba(249,115,22,0.08);
+            border: 1px solid rgba(249,115,22,0.2); border-radius: var(--radius-sm);
+            margin-bottom: 0.75rem; font-size: 0.82rem; color: var(--ink);
+        }
+        .file-preview-badge button { background: none; border: none; color: var(--accent); cursor: pointer; margin-left: auto; }
 
-    /* AI chat */
-    .ai-msg { margin-bottom: 1rem; }
-    .ai-msg-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 0.3rem; }
-    .ai-msg-user .ai-msg-label { color: var(--blue); }
-    .ai-msg-ai .ai-msg-label { color: var(--green); }
-    .ai-msg-bubble {
-      padding: 0.75rem 1rem; border-radius: var(--radius-sm);
-      font-size: 0.875rem; line-height: 1.6; color: var(--ink);
-    }
-    .ai-msg-user .ai-msg-bubble { background: rgba(59,107,255,0.08); border-left: 2px solid var(--blue); }
-    .ai-msg-ai .ai-msg-bubble { background: rgba(0,201,141,0.06); border-left: 2px solid var(--green); }
+        /* Progress */
+        .generating-bar {
+            width: 100%; height: 3px; background: var(--card-border);
+            border-radius: 2px; overflow: hidden; margin-top: 0.75rem;
+        }
+        .generating-bar-fill {
+            height: 100%; width: 0%;
+            background: linear-gradient(90deg, var(--accent), var(--accent2));
+            border-radius: 2px; transition: width 0.3s;
+            animation: progress-pulse 1.5s ease-in-out infinite;
+        }
+        @keyframes progress-pulse {
+            0%,100% { opacity: 1; } 50% { opacity: 0.6; }
+        }
 
-    /* ===================== RESPONSIVE ===================== */
-    @media (max-width: 1100px) {
-      .grid-2-1 { grid-template-columns: 1fr; }
-      .stats-row { grid-template-columns: 1fr 1fr 1fr; }
-    }
-    @media (max-width: 900px) {
-      :root { --sidebar-w: 0px; }
-      .sidebar { transform: translateX(-260px); width: 260px; }
-      .sidebar.open { transform: translateX(0); }
-      .main-wrap { margin-left: 0; }
-      .hamburger-btn { display: flex !important; }
-      .grid-2 { grid-template-columns: 1fr; }
-      .stats-row { grid-template-columns: 1fr 1fr; }
-    }
-    @media (max-width: 600px) {
-      .main-content { padding: 1.5rem 1rem; }
-      .stats-row { grid-template-columns: 1fr; }
-      .grid-3 { grid-template-columns: 1fr; }
-      .field-row { grid-template-columns: 1fr; }
-    }
+        /* Tag pills */
+        .tag-pill {
+            display: inline-flex; align-items: center; gap: 0.35rem;
+            padding: 0.25rem 0.65rem; border-radius: 50px;
+            font-size: 0.72rem; font-weight: 500;
+            background: rgba(255,79,48,0.08); color: var(--accent);
+            border: 1px solid rgba(255,79,48,0.2);
+        }
 
-    /* ===================== REVEAL ===================== */
-    .reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.6s ease, transform 0.6s ease; }
-    .reveal.visible { opacity: 1; transform: translateY(0); }
-  </style>
+        /* ===================== REVEAL ===================== */
+        .reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.6s ease, transform 0.6s ease; }
+        .reveal.visible { opacity: 1; transform: translateY(0); }
+
+        /* ===================== RESPONSIVE ===================== */
+        @media (max-width: 1100px) {
+            .content-grid { grid-template-columns: 1fr; }
+            .content-grid.three { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .main { margin-left: 0; padding: 1.25rem; }
+            .stats-row { grid-template-columns: 1fr; }
+            nav { padding: 0 1.25rem; }
+            .nav-links { display: none; }
+            .content-grid.three { grid-template-columns: 1fr; }
+        }
+    </style>
 </head>
 <body>
 
-<!-- ===================== SIDEBAR ===================== -->
-<div class="app-wrap">
-<aside class="sidebar" id="sidebar">
-  <div class="sidebar-logo">
-    <img src="/static/image/KNOWITNOW.png" alt="Logo" style="width:32px;height:32px;border-radius:8px;object-fit:cover;" onerror="this.style.display='none'">
-    <div>
-      <div class="sidebar-logo-text">Brainspark</div>
-      <div class="sidebar-logo-sub">Challenge. Learn. Connect.</div>
+<!-- ======================== NAV ======================== -->
+<nav id="main-nav">
+    <div style="display:flex;align-items:center;gap:1.5rem;">
+        <button class="icon-btn" id="sidebar-toggle" onclick="toggleSidebar()" style="display:none">
+            <i class="fas fa-bars"></i>
+        </button>
+        <a href="/" class="nav-logo">Brainspark</a>
     </div>
-  </div>
-
-  <div class="sidebar-user">
-    <img src="{{ user.get_profile_pic_url() }}" alt="{{ user.name }}" class="sidebar-avatar" onerror="this.src='https://ui-avatars.com/api/?name={{ user.name }}&background=ff4f30&color=fff'">
-    <div>
-      <div class="sidebar-user-name">{{ user.name }}</div>
-      <div class="sidebar-user-level">{{ user.study_level }}</div>
+    <ul class="nav-links">
+        <li><a href="#upload-section">Upload Notes</a></li>
+        <li><a href="#av-section">Audio & Video</a></li>
+        <li><a href="#performance-section">Analytics</a></li>
+    </ul>
+    <div class="nav-right">
+        <button class="icon-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">
+            <i class="fas fa-moon" id="theme-icon"></i>
+        </button>
+        <button class="icon-btn" onclick="openAIModal()" title="Ask AI">
+            <i class="fas fa-robot"></i>
+        </button>
+        <button class="icon-btn" onclick="logout()" title="Logout" style="color:#ff4f30">
+            <i class="fas fa-sign-out-alt"></i>
+        </button>
+        <div class="nav-user">
+            <div class="nav-user-text">
+                <div class="name">{{ user.name }}</div>
+                <div class="level">{{ user.study_level }}</div>
+            </div>
+            <img src="{{ user.get_profile_pic_url() }}" alt="{{ user.name }}" class="nav-avatar">
+        </div>
     </div>
-  </div>
+</nav>
 
-  <nav class="sidebar-nav">
-    <div class="sidebar-section-label">Main</div>
-    <button class="sidebar-link active" onclick="showSection('home', this)">
-      <i class="fas fa-home"></i> Overview
+<!-- ======================== SIDEBAR ======================== -->
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-label">Main</div>
+    <button class="sidebar-link active" onclick="scrollTo('top')">
+        <i class="fas fa-house"></i> Dashboard
     </button>
-    <button class="sidebar-link" onclick="showSection('upload', this)">
-      <i class="fas fa-file-pdf"></i> Generate Quiz
+    <button class="sidebar-link" onclick="scrollTo('upload-section')">
+        <i class="fas fa-file-upload"></i> Upload Notes
     </button>
-    <button class="sidebar-link" onclick="showSection('analytics', this)">
-      <i class="fas fa-chart-line"></i> Analytics
+    <button class="sidebar-link" onclick="scrollTo('av-section')">
+        <i class="fas fa-film"></i> Audio & Video
+    </button>
+    <button class="sidebar-link" onclick="scrollTo('performance-section')">
+        <i class="fas fa-chart-line"></i> Analytics
     </button>
 
-    <div class="sidebar-section-label">Connect</div>
+    <div class="sidebar-label">Connect</div>
     <button class="sidebar-link" onclick="findStudyBuddies()">
-      <i class="fas fa-users"></i> Study Buddies
+        <i class="fas fa-users"></i> Study Buddies
     </button>
-    <button class="sidebar-link" onclick="showSection('media', this)">
-      <i class="fas fa-photo-video"></i> Audio & Video
+    <button class="sidebar-link" onclick="openAIModal()">
+        <i class="fas fa-robot"></i> Ask AI
     </button>
 
-    <div class="sidebar-section-label">Tools</div>
-    <button class="sidebar-link" onclick="showAIModal()">
-      <i class="fas fa-robot"></i> AI Tutor
-    </button>
-  </nav>
+    <div style="flex:1"></div>
 
-  <div class="sidebar-footer">
-    <button id="theme-btn-sidebar" onclick="toggleTheme()" title="Toggle theme">
-      <i class="fas fa-moon" id="sidebar-theme-icon"></i>
+    <div class="sidebar-label">Account</div>
+    <button class="sidebar-link" onclick="logout()" style="color:#ff4f30">
+        <i class="fas fa-sign-out-alt"></i> Logout
     </button>
-    <button class="sidebar-footer-btn danger" onclick="logout()">
-      <i class="fas fa-sign-out-alt"></i> Sign out
-    </button>
-  </div>
-</aside>
+</div>
 
-<!-- ===================== MAIN ===================== -->
-<div class="main-wrap">
-  <header class="topbar">
-    <div style="display:flex;align-items:center;gap:1rem;">
-      <button class="topbar-btn hamburger-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
-      <div class="topbar-greeting">
-        Good {{ time_of_day }}, <span>{{ user.name.split(' ')[0] }}</span> 👋
-      </div>
+<!-- ======================== PAGE WRAP ======================== -->
+<div class="page-wrap">
+<div class="main">
+
+    <!-- GREETING HERO -->
+    <div class="greeting-hero reveal" id="top">
+        <div class="greeting-hero-bg">
+            <img src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=1400&q=70&fit=crop" alt="">
+        </div>
+        <div class="greeting-content">
+            <div class="greeting-badge">
+                <div class="greeting-badge-dot"></div>
+                Powered by Gemini 2.5
+            </div>
+            <h1 class="greeting-title">
+                Welcome back, <em>{{ user.name }}</em>! 👋
+            </h1>
+            <p class="greeting-sub">{{ time_of_day }} – Ready to challenge yourself today?</p>
+        </div>
     </div>
-    <div class="topbar-right">
-      <button class="topbar-btn" onclick="toggleTheme()" title="Toggle theme" id="theme-btn-topbar">
-        <i class="fas fa-moon" id="topbar-theme-icon"></i>
-      </button>
-      <img src="{{ user.get_profile_pic_url() }}" alt="{{ user.name }}" style="width:36px;height:36px;border-radius:8px;object-fit:cover;border:2px solid rgba(255,79,48,0.3);" onerror="this.src='https://ui-avatars.com/api/?name={{ user.name }}&background=ff4f30&color=fff'">
+
+    <!-- STAT CARDS -->
+    <div class="stats-row reveal">
+        <div class="stat-card blue">
+            <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+            <div class="stat-label">Total Quizzes</div>
+            <div class="stat-value" id="total-quizzes">–</div>
+        </div>
+        <div class="stat-card green">
+            <div class="stat-icon"><i class="fas fa-bolt"></i></div>
+            <div class="stat-label">Average Score</div>
+            <div class="stat-value" id="average-score">–</div>
+        </div>
+        <div class="stat-card orange">
+            <div class="stat-icon"><i class="fas fa-users"></i></div>
+            <div class="stat-label">Connections</div>
+            <div class="stat-value" id="connections">–</div>
+        </div>
     </div>
-  </header>
 
-  <main class="main-content">
+    <!-- UPLOAD + COMMUNITY -->
+    <div class="content-grid reveal" id="upload-section">
 
-    <!-- ======================== HOME SECTION ======================== -->
-    <div class="page-section active" id="section-home">
-      <div class="page-header">
-        <div class="page-eyebrow">Dashboard</div>
-        <h1 class="page-title">Your learning <em>snapshot</em></h1>
-        <p class="page-subtitle">Track your progress and keep the momentum going.</p>
-      </div>
+        <!-- UPLOAD PANEL -->
+        <div class="panel">
+            <div class="panel-header">
+                <div>
+                    <div class="panel-eyebrow">Generate Quiz</div>
+                    <div class="panel-title">Upload Your Notes</div>
+                </div>
+            </div>
+            <div class="panel-body">
 
-      <!-- Stats row -->
-      <div class="stats-row">
-        <div class="stat-card red anim-1">
-          <div class="stat-card-top">
+                <!-- Question type tabs -->
+                <div class="tab-bar">
+                    <button class="tab-btn active" data-tab="objective" onclick="setTab(this,'objective')">📋 Objective</button>
+                    <button class="tab-btn" data-tab="theory" onclick="setTab(this,'theory')">✍️ Theory</button>
+                </div>
+
+                <!-- Drop zone -->
+                <div class="upload-zone" id="upload-zone" onclick="document.getElementById('pdf-input').click()">
+                    <div class="upload-zone-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                    <p>Drag & drop your PDF here</p>
+                    <span>or click to browse · Max 10MB</span>
+                    <input type="file" id="pdf-input" accept=".pdf" style="display:none">
+                </div>
+
+                <!-- Settings -->
+                <div class="settings-row">
+                    <div>
+                        <div class="field-label">Difficulty Level</div>
+                        <select id="hardness" class="field-select">
+                            <option value="easy">🟢 Easy</option>
+                            <option value="medium" selected>🟡 Medium</option>
+                            <option value="hard">🔴 Hard</option>
+                        </select>
+                    </div>
+                    <div>
+                        <div class="field-label">Number of Questions</div>
+                        <input type="number" id="question-count-upload" min="5" max="100" value="10" class="field-input">
+                    </div>
+                </div>
+
+                <button class="btn btn-primary btn-full" onclick="uploadNotes()" id="upload-btn">
+                    <i class="fas fa-rocket"></i> Generate Questions from PDF
+                </button>
+                <div class="generating-bar" id="upload-progress" style="display:none">
+                    <div class="generating-bar-fill" id="upload-progress-fill"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- COMMUNITY PANEL -->
+        <div class="panel">
+            <div class="panel-header">
+                <div>
+                    <div class="panel-eyebrow">Community</div>
+                    <div class="panel-title">Your Network</div>
+                </div>
+            </div>
+            <div class="panel-body">
+                <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1rem;">Connect with learners who match your profile</p>
+                <div class="community-item">
+                    <div class="community-item-icon">🏫</div>
+                    <div class="community-item-text">{{ user.school }}</div>
+                </div>
+                <div class="community-item">
+                    <div class="community-item-icon">🌍</div>
+                    <div class="community-item-text">{{ user.country }}</div>
+                </div>
+                <div class="community-item">
+                    <div class="community-item-icon">📚</div>
+                    <div class="community-item-text">{{ user.study_level }}</div>
+                </div>
+                <button class="btn btn-primary btn-full" style="margin-top:1.25rem;" onclick="findStudyBuddies()">
+                    <i class="fas fa-search"></i> Find Study Buddies
+                </button>
+                <button class="btn btn-ghost btn-full" style="margin-top:0.5rem;" onclick="openAIModal()">
+                    <i class="fas fa-robot"></i> Ask AI Tutor
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PERFORMANCE + ACTIVITY -->
+    <div class="content-grid reveal" id="performance-section">
+        <div class="panel">
+            <div class="panel-header">
+                <div>
+                    <div class="panel-eyebrow">Analytics</div>
+                    <div class="panel-title">Performance Trend</div>
+                </div>
+            </div>
+            <div class="panel-body">
+                <div class="chart-wrap">
+                    <canvas id="performanceChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <div>
+                    <div class="panel-eyebrow">History</div>
+                    <div class="panel-title">Recent Activity</div>
+                </div>
+            </div>
+            <div class="panel-body">
+                <div id="recent-activity-container">
+                    <div class="empty-state">
+                        <div class="empty-state-icon"><i class="fas fa-spinner fa-spin"></i></div>
+                        <p>Loading activity…</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AUDIO & VIDEO SECTION -->
+    <div class="panel reveal" id="av-section" style="margin-bottom:1.5rem;">
+        <div class="panel-header" style="padding:1.5rem;">
             <div>
-              <div class="stat-num" id="total-quizzes">—</div>
-              <div class="stat-label">Total Quizzes</div>
-              <div class="stat-delta"><i class="fas fa-arrow-up" style="font-size:0.65rem;"></i> All time</div>
+                <div class="panel-eyebrow">AI Conversion</div>
+                <div class="panel-title">Learn Better with Audio & Video</div>
             </div>
-            <div class="stat-icon red"><i class="fas fa-layer-group"></i></div>
-          </div>
         </div>
-        <div class="stat-card blue anim-2">
-          <div class="stat-card-top">
+        <div class="panel-body" style="padding-top:0;">
+
+            <!-- AV Upload zone -->
+            <div class="upload-zone" id="av-upload-zone" onclick="document.getElementById('av-file-input').click()" style="margin-bottom:1rem;">
+                <div class="upload-zone-icon"><i class="fas fa-file-import"></i></div>
+                <p>Upload Notes or PDF</p>
+                <span>PDF, DOC, TXT files · Max 20MB</span>
+                <input type="file" id="av-file-input" accept=".pdf,.doc,.docx,.txt" style="display:none">
+            </div>
+
+            <!-- File preview -->
+            <div id="av-file-preview" class="file-preview-badge" style="display:none;">
+                <span>📄</span>
+                <span id="av-file-name" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+                <span id="av-file-size" style="color:var(--muted);font-size:0.75rem;white-space:nowrap;"></span>
+                <button onclick="clearAVFile()" title="Remove">✕</button>
+            </div>
+
+            <!-- Conversion cards -->
+            <div class="content-grid" id="av-conversion-options" style="display:none;grid-template-columns:1fr 1fr;">
+
+                <!-- Audio card -->
+                <div class="av-card audio-card">
+                    <div class="av-card-header">
+                        <div class="av-card-icon" style="color:var(--blue2);">🎵</div>
+                        <div>
+                            <div class="av-card-title">Convert to Audio</div>
+                            <div class="av-card-sub">Hear your notes read aloud</div>
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem;">
+                        <div>
+                            <div class="field-label">Language</div>
+                            <select id="av-audio-language" class="field-select" style="font-size:0.8rem;padding:0.5rem 0.7rem;">
+                                <option value="en">English</option>
+                                <option value="fr">Français</option>
+                                <option value="es">Español</option>
+                                <option value="de">Deutsch</option>
+                            </select>
+                        </div>
+                        <div>
+                            <div class="field-label">Speed</div>
+                            <select id="av-audio-speed" class="field-select" style="font-size:0.8rem;padding:0.5rem 0.7rem;">
+                                <option value="0.75">0.75x</option>
+                                <option value="1" selected>1x Normal</option>
+                                <option value="1.25">1.25x</option>
+                                <option value="1.5">1.5x</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="btn btn-blue btn-full btn-sm" onclick="convertToAudio()" id="audio-btn">
+                        <i class="fas fa-magic"></i> Generate Audio
+                    </button>
+                    <div class="generating-bar" id="audio-progress" style="display:none;margin-top:0.75rem;">
+                        <div class="generating-bar-fill"></div>
+                    </div>
+                </div>
+
+                <!-- Video card -->
+                <div class="av-card video-card">
+                    <div class="av-card-header">
+                        <div class="av-card-icon" style="color:#f97316;">🎬</div>
+                        <div>
+                            <div class="av-card-title">Convert to Video</div>
+                            <div class="av-card-sub">Talking characters + AI narration</div>
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem;">
+                        <div>
+                            <div class="field-label">Style</div>
+                            <select id="av-video-style" class="field-select" style="font-size:0.8rem;padding:0.5rem 0.7rem;">
+                                <option value="slides">📊 Slideshow</option>
+                                <option value="animated">✨ Animated</option>
+                                <option value="whiteboard">🎨 Whiteboard</option>
+                            </select>
+                        </div>
+                        <div>
+                            <div class="field-label">Duration</div>
+                            <select id="av-video-duration" class="field-select" style="font-size:0.8rem;padding:0.5rem 0.7rem;">
+                                <option value="short">⏱ Short (5-10m)</option>
+                                <option value="medium" selected>⏱ Medium (10-20m)</option>
+                                <option value="long">⏱ Long (20m+)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="btn btn-orange btn-full btn-sm" onclick="convertToVideo()" id="video-btn">
+                        <i class="fas fa-video"></i> Generate Video
+                    </button>
+                    <div class="generating-bar" id="video-progress" style="display:none;margin-top:0.75rem;">
+                        <div class="generating-bar-fill"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONVERTED FILES -->
+    <div class="panel reveal" style="margin-bottom:2rem;">
+        <div class="panel-header">
             <div>
-              <div class="stat-num" id="average-score">—</div>
-              <div class="stat-label">Average Score</div>
-              <div class="stat-delta"><i class="fas fa-bolt" style="font-size:0.65rem;"></i> Keep it up</div>
+                <div class="panel-eyebrow">Your Library</div>
+                <div class="panel-title">Converted Files</div>
             </div>
-            <div class="stat-icon blue"><i class="fas fa-chart-bar"></i></div>
-          </div>
-        </div>
-        <div class="stat-card green anim-3">
-          <div class="stat-card-top">
-            <div>
-              <div class="stat-num" id="connections">—</div>
-              <div class="stat-label">Connections</div>
-              <div class="stat-delta"><i class="fas fa-globe" style="font-size:0.65rem;"></i> Worldwide</div>
-            </div>
-            <div class="stat-icon green"><i class="fas fa-users"></i></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Chart + Activity -->
-      <div class="grid-2 mb-6 reveal">
-        <div class="panel">
-          <div class="panel-head">
-            <span class="panel-title"><i class="fas fa-chart-line"></i> Performance Trend</span>
-          </div>
-          <div class="panel-body">
-            <canvas id="performanceChart" height="200"></canvas>
-          </div>
-        </div>
-        <div class="panel">
-          <div class="panel-head">
-            <span class="panel-title"><i class="fas fa-history"></i> Recent Activity</span>
-          </div>
-          <div class="panel-body" id="recent-activity-container">
-            <div class="empty-state">
-              <i class="fas fa-clock"></i>
-              <strong>No quizzes yet</strong>
-              <p>Generate and take your first quiz!</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Community card -->
-      <div class="reveal">
-        <div class="panel">
-          <div class="panel-head">
-            <span class="panel-title"><i class="fas fa-globe"></i> Your Community Profile</span>
-            <button class="btn btn-primary btn-sm" onclick="findStudyBuddies()">Find Buddies <i class="fas fa-arrow-right"></i></button>
-          </div>
-          <div class="panel-body">
-            <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
-              <div class="info-tag"><i class="fas fa-graduation-cap"></i> {{ user.school }}</div>
-              <div class="info-tag"><i class="fas fa-globe-africa"></i> {{ user.country }}</div>
-              <div class="info-tag"><i class="fas fa-book"></i> {{ user.study_level }}</div>
-              {% if user.profession %}<div class="info-tag"><i class="fas fa-briefcase"></i> {{ user.profession }}</div>{% endif %}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ======================== UPLOAD / QUIZ SECTION ======================== -->
-    <div class="page-section" id="section-upload">
-      <div class="page-header">
-        <div class="page-eyebrow">Generate</div>
-        <h1 class="page-title">Upload notes,<br>get <em>smart questions</em></h1>
-        <p class="page-subtitle">Powered by Google Gemini 2.5. From PDF to 100 questions in under 30 seconds.</p>
-      </div>
-
-      <div class="grid-2-1 reveal">
-        <div class="panel">
-          <div class="panel-head">
-            <span class="panel-title"><i class="fas fa-file-pdf"></i> Your PDF Notes</span>
-          </div>
-          <div class="panel-body">
-            <div class="upload-zone" id="upload-zone">
-              <i class="fas fa-cloud-upload-alt"></i>
-              <strong>Drag & drop your PDF here</strong>
-              <span>or click to browse · max 10MB</span>
-              <input type="file" id="pdf-input" accept=".pdf" style="display:none;">
-            </div>
-
-            <div style="margin-top:1.5rem;">
-              <div class="field-row">
-                <div class="field-group">
-                  <label class="field-label">Difficulty Level</label>
-                  <select id="hardness" class="field-select">
-                    <option value="easy">🟢 Easy</option>
-                    <option value="medium" selected>🟡 Medium</option>
-                    <option value="hard">🔴 Hard</option>
-                  </select>
-                </div>
-                <div class="field-group">
-                  <label class="field-label">Number of Questions</label>
-                  <input type="number" id="question-count-upload" min="5" max="100" value="10" class="field-input">
-                </div>
-              </div>
-            </div>
-
-            <button onclick="uploadNotes()" class="btn btn-primary btn-full btn-lg" id="upload-btn" style="margin-top:0.5rem;">
-              <i class="fas fa-bolt"></i> Generate Questions from PDF
-            </button>
-          </div>
-        </div>
-
-        <div style="display:flex;flex-direction:column;gap:1.25rem;">
-          <div class="panel">
-            <div class="panel-body" style="padding:1.25rem;">
-              <div style="font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);margin-bottom:0.75rem;">How it works</div>
-              <div style="display:flex;flex-direction:column;gap:0.75rem;">
-                <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-                  <div style="width:24px;height:24px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">
-                    <span style="font-family:'Syne',sans-serif;font-size:0.65rem;font-weight:800;color:#fff;">01</span>
-                  </div>
-                  <div>
-                    <div style="font-size:0.8rem;font-weight:600;color:var(--ink);">Upload your PDF</div>
-                    <div style="font-size:0.75rem;color:var(--muted);">Lecture slides, textbooks, handouts — any PDF works.</div>
-                  </div>
-                </div>
-                <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-                  <div style="width:24px;height:24px;background:var(--blue);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">
-                    <span style="font-family:'Syne',sans-serif;font-size:0.65rem;font-weight:800;color:#fff;">02</span>
-                  </div>
-                  <div>
-                    <div style="font-size:0.8rem;font-weight:600;color:var(--ink);">AI reads the content</div>
-                    <div style="font-size:0.75rem;color:var(--muted);">Gemini 2.5 extracts every key concept.</div>
-                  </div>
-                </div>
-                <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-                  <div style="width:24px;height:24px;background:var(--green);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">
-                    <span style="font-family:'Syne',sans-serif;font-size:0.65rem;font-weight:800;color:#fff;">03</span>
-                  </div>
-                  <div>
-                    <div style="font-size:0.8rem;font-weight:600;color:var(--ink);">Take your quiz</div>
-                    <div style="font-size:0.75rem;color:var(--muted);">Instant feedback and AI explanations.</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="panel" style="background:linear-gradient(135deg, #0a0a14, #1a0505);">
-            <div class="panel-body" style="padding:1.25rem;">
-              <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-bottom:0.75rem;">Quick stats</div>
-              <div style="font-family:'Syne',sans-serif;font-size:1.75rem;font-weight:800;color:#fff;line-height:1;">50K+</div>
-              <div style="font-size:0.75rem;color:rgba(255,255,255,0.4);margin-bottom:1rem;">active students worldwide</div>
-              <div style="font-family:'Syne',sans-serif;font-size:1.75rem;font-weight:800;color:#fff;line-height:1;">2.5M+</div>
-              <div style="font-size:0.75rem;color:rgba(255,255,255,0.4);">quizzes completed</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ======================== ANALYTICS SECTION ======================== -->
-    <div class="page-section" id="section-analytics">
-      <div class="page-header">
-        <div class="page-eyebrow">Performance</div>
-        <h1 class="page-title">Your <em>analytics</em></h1>
-        <p class="page-subtitle">Track your learning progress over time.</p>
-      </div>
-      <div class="grid-2 mb-6 reveal">
-        <div class="panel">
-          <div class="panel-head"><span class="panel-title"><i class="fas fa-chart-area"></i> Score Trend</span></div>
-          <div class="panel-body"><canvas id="analyticsChart" height="220"></canvas></div>
-        </div>
-        <div class="panel">
-          <div class="panel-head"><span class="panel-title"><i class="fas fa-list-alt"></i> All Activity</span></div>
-          <div class="panel-body" id="all-activity-container">
-            <div class="empty-state"><i class="fas fa-clipboard"></i><strong>No history yet</strong><p>Complete quizzes to see your history.</p></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ======================== MEDIA SECTION ======================== -->
-    <div class="page-section" id="section-media">
-      <div class="page-header">
-        <div class="page-eyebrow">AI Media</div>
-        <h1 class="page-title">Audio &amp; <em>Video</em></h1>
-        <p class="page-subtitle">Transform your notes into engaging audio narrations and AI-powered video lectures.</p>
-      </div>
-
-      <div class="grid-2-1 mb-6 reveal">
-        <div class="panel">
-          <div class="panel-head"><span class="panel-title"><i class="fas fa-cloud-upload-alt"></i> Upload Notes</span></div>
-          <div class="panel-body">
-            <div class="av-upload-zone" id="av-upload-zone">
-              <i class="fas fa-photo-video"></i>
-              <strong>Upload your notes or PDF</strong>
-              <span>PDF, DOC, TXT · max 20MB · drag & drop or click</span>
-              <input type="file" id="av-file-input" accept=".pdf,.doc,.docx,.txt" style="display:none;">
-            </div>
-
-            <div id="av-file-preview" style="display:none;margin-top:1rem;">
-              <div style="display:flex;align-items:center;gap:0.75rem;padding:0.875rem;background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.2);border-radius:var(--radius-sm);">
-                <i class="fas fa-file-alt" style="font-size:1.25rem;color:#a855f7;"></i>
-                <div style="flex:1;min-width:0;">
-                  <div style="font-size:0.875rem;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="av-file-name"></div>
-                  <div style="font-size:0.75rem;color:var(--muted);" id="av-file-size"></div>
-                </div>
-                <button onclick="clearAVFile()" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:1rem;"><i class="fas fa-times"></i></button>
-              </div>
-            </div>
-
-            <div id="av-conversion-options" style="display:none;margin-top:1.5rem;">
-              <div class="grid-2" style="gap:1rem;">
-                <div class="av-option-card">
-                  <div class="av-option-title"><i class="fas fa-music" style="color:var(--blue);"></i> Convert to Audio</div>
-                  <div class="field-group">
-                    <label class="field-label">Language</label>
-                    <select id="av-audio-language" class="field-select">
-                      <option value="en">English</option>
-                      <option value="fr">Français</option>
-                      <option value="es">Español</option>
-                      <option value="de">Deutsch</option>
-                    </select>
-                  </div>
-                  <div class="field-group">
-                    <label class="field-label">Speed</label>
-                    <select id="av-audio-speed" class="field-select">
-                      <option value="0.75">0.75× Slow</option>
-                      <option value="1" selected>1× Normal</option>
-                      <option value="1.25">1.25× Fast</option>
-                      <option value="1.5">1.5× Very Fast</option>
-                    </select>
-                  </div>
-                  <button onclick="convertToAudio()" class="btn btn-blue btn-full btn-sm"><i class="fas fa-headphones"></i> Generate Audio</button>
-                </div>
-                <div class="av-option-card">
-                  <div class="av-option-title"><i class="fas fa-film" style="color:var(--accent);"></i> Convert to Video</div>
-                  <div class="field-group">
-                    <label class="field-label">Style</label>
-                    <select id="av-video-style" class="field-select">
-                      <option value="slides">Slideshow + Character</option>
-                      <option value="animated">Animated</option>
-                      <option value="whiteboard">Whiteboard</option>
-                    </select>
-                  </div>
-                  <div class="field-group">
-                    <label class="field-label">Duration</label>
-                    <select id="av-video-duration" class="field-select">
-                      <option value="short">Short (5–10 min)</option>
-                      <option value="medium" selected>Medium (10–20 min)</option>
-                      <option value="long">Long (20+ min)</option>
-                    </select>
-                  </div>
-                  <button onclick="convertToVideo()" class="btn btn-primary btn-full btn-sm"><i class="fas fa-video"></i> Generate Video</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="panel" style="background:linear-gradient(160deg,#0a0a14,#160a1a);">
-          <div class="panel-body" style="padding:1.5rem;">
-            <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:1rem;">Why use AI media?</div>
-            <div style="display:flex;flex-direction:column;gap:1rem;">
-              <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-                <div style="width:32px;height:32px;background:rgba(168,85,247,0.2);border:1px solid rgba(168,85,247,0.3);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-ear-listen" style="color:#a855f7;font-size:0.85rem;"></i></div>
-                <div><div style="font-size:0.8rem;font-weight:600;color:#fff;">Auditory learning</div><div style="font-size:0.75rem;color:rgba(255,255,255,0.4);margin-top:0.1rem;">Listen on the go. Retain 40% more through audio repetition.</div></div>
-              </div>
-              <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-                <div style="width:32px;height:32px;background:rgba(255,79,48,0.15);border:1px solid rgba(255,79,48,0.25);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-play" style="color:var(--accent);font-size:0.85rem;"></i></div>
-                <div><div style="font-size:0.8rem;font-weight:600;color:#fff;">Engaging video format</div><div style="font-size:0.75rem;color:rgba(255,255,255,0.4);margin-top:0.1rem;">AI talking characters make lectures feel alive.</div></div>
-              </div>
-              <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-                <div style="width:32px;height:32px;background:rgba(0,201,141,0.15);border:1px solid rgba(0,201,141,0.25);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-bolt" style="color:var(--green);font-size:0.85rem;"></i></div>
-                <div><div style="font-size:0.8rem;font-weight:600;color:#fff;">Instant generation</div><div style="font-size:0.75rem;color:rgba(255,255,255,0.4);margin-top:0.1rem;">Upload your notes. Audio or video ready in minutes.</div></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Converted files -->
-      <div class="panel reveal">
-        <div class="panel-head">
-          <span class="panel-title"><i class="fas fa-folder-open"></i> Your Converted Files</span>
         </div>
         <div class="panel-body">
-          <div id="converted-files-container">
-            <div class="empty-state">
-              <i class="fas fa-folder"></i>
-              <strong>No converted files yet</strong>
-              <p>Upload your notes above to get started!</p>
+            <div id="converted-files-container" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;">
+                <div class="empty-state" style="grid-column:1/-1;">
+                    <div class="empty-state-icon">📭</div>
+                    <h4>No converted files yet</h4>
+                    <p>Upload your notes above to get started</p>
+                </div>
             </div>
-          </div>
         </div>
-      </div>
     </div>
 
-  </main>
-</div>
-</div>
+</div><!-- /main -->
+</div><!-- /page-wrap -->
 
-<!-- ===================== AI MODAL ===================== -->
+<!-- ======================== AI MODAL ======================== -->
 <div class="modal-overlay" id="ai-modal">
-  <div class="modal">
-    <button class="modal-close" onclick="closeAIModal()"><i class="fas fa-times"></i></button>
-    <div class="modal-title"><i class="fas fa-robot" style="color:var(--green);margin-right:0.5rem;"></i> AI Tutor</div>
-    <div id="ai-conversation" style="max-height:340px;overflow-y:auto;margin-bottom:1.25rem;"></div>
-    <div>
-      <input type="file" id="ai-pdf-input" accept=".pdf" style="display:none;" onchange="handleAIPDFSelect()">
-      <textarea id="ai-question-input" placeholder="Ask anything about your notes…" style="width:100%;padding:0.75rem;border:1.5px solid rgba(0,0,0,0.1);border-radius:var(--radius-sm);background:var(--surface2);color:var(--ink);font-family:'DM Sans',sans-serif;font-size:0.875rem;resize:vertical;min-height:80px;outline:none;transition:border-color 0.2s;" onkeydown="if(event.key==='Enter'&&event.ctrlKey)submitAIQuestion()"></textarea>
-      <div id="ai-pdf-preview" style="margin-top:0.5rem;"></div>
-      <div style="display:flex;gap:0.75rem;margin-top:0.75rem;">
-        <button onclick="document.getElementById('ai-pdf-input').click()" class="btn btn-secondary btn-sm"><i class="fas fa-file-pdf"></i> PDF</button>
-        <button onclick="submitAIQuestion()" class="btn btn-green btn-sm" style="flex:1;"><i class="fas fa-paper-plane"></i> Ask</button>
-        <button onclick="resetAIConversation()" class="btn btn-secondary btn-sm" id="ai-reset-btn" style="display:none;"><i class="fas fa-redo"></i> Reset</button>
-      </div>
-      <p style="font-size:0.72rem;color:var(--muted);margin-top:0.5rem;">Ctrl+Enter to send</p>
+    <div class="modal">
+        <div class="modal-header">
+            <div class="modal-title">🤖 AI Tutor</div>
+            <button class="modal-close" onclick="closeModal('ai-modal')">×</button>
+        </div>
+        <div class="ai-history" id="ai-history"></div>
+        <div id="ai-pdf-preview-wrap"></div>
+        <div class="ai-input-row">
+            <input type="file" id="ai-pdf-input" accept=".pdf" style="display:none" onchange="handleAIPDFSelect()">
+            <textarea class="ai-textarea" id="ai-question-input" placeholder="Ask a question… (Ctrl+Enter to send)" rows="2"
+                onkeydown="if(event.key==='Enter'&&event.ctrlKey){submitAIQuestion();}"></textarea>
+            <button class="btn btn-ghost btn-sm icon-btn" onclick="document.getElementById('ai-pdf-input').click()" title="Attach PDF" style="width:40px;height:40px;border-radius:9px;flex-shrink:0;">
+                <i class="fas fa-paperclip"></i>
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="submitAIQuestion()" style="border-radius:9px;flex-shrink:0;padding:0 1rem;">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:0.75rem;align-items:center;">
+            <span style="font-size:0.75rem;color:var(--muted);">💡 Ctrl+Enter to send · attach a PDF for context</span>
+            <button class="btn btn-ghost btn-sm" onclick="resetAIConversation()" style="font-size:0.75rem;">🔄 Fresh Start</button>
+        </div>
     </div>
-  </div>
 </div>
 
-<!-- Sidebar overlay for mobile -->
-<div id="sidebar-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:85;" onclick="closeSidebar()"></div>
+<!-- ======================== PREVIEW MODAL ======================== -->
+<div class="modal-overlay" id="preview-modal">
+    <div class="modal">
+        <div class="modal-header">
+            <div class="modal-title" id="preview-modal-title">Preview</div>
+            <button class="modal-close" onclick="closeModal('preview-modal')">×</button>
+        </div>
+        <div id="preview-modal-content"></div>
+    </div>
+</div>
 
+<!-- ======================== SCRIPTS ======================== -->
 <script>
-  // ===================== THEME =====================
-  let dark = localStorage.getItem('bs-theme') === 'dark';
-  function applyTheme() {
-    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-    document.getElementById('sidebar-theme-icon').className = dark ? 'fas fa-sun' : 'fas fa-moon';
-    document.getElementById('topbar-theme-icon').className = dark ? 'fas fa-sun' : 'fas fa-moon';
-    localStorage.setItem('bs-theme', dark ? 'dark' : 'light');
-    if (performanceChart) {
-      const color = dark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)';
-      performanceChart.options.scales.x.grid.color = color;
-      performanceChart.options.scales.y.grid.color = color;
-      performanceChart.options.scales.x.ticks.color = dark ? '#5a5a70' : '#7a7a8c';
-      performanceChart.options.scales.y.ticks.color = dark ? '#5a5a70' : '#7a7a8c';
-      performanceChart.update('none');
-    }
-    fetch('/toggle_mode', { method: 'POST' }).catch(() => {});
-  }
-  applyTheme();
-  function toggleTheme() { dark = !dark; applyTheme(); }
+// ──────────────────────────────────────────────────────────────
+//  THEME
+// ──────────────────────────────────────────────────────────────
+let isDark = true;
+function toggleTheme() {
+    isDark = !isDark;
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    document.getElementById('theme-icon').className = isDark ? 'fas fa-moon' : 'fas fa-sun';
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    fetch('/toggle_mode', { method: 'POST' });
+}
+// init from storage
+(function(){
+    const saved = localStorage.getItem('theme') || 'dark';
+    isDark = saved === 'dark';
+    document.documentElement.setAttribute('data-theme', saved);
+    document.getElementById('theme-icon').className = isDark ? 'fas fa-moon' : 'fas fa-sun';
+})();
 
-  // ===================== SIDEBAR =====================
-  function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('sidebar-overlay');
-    sidebar.classList.toggle('open');
-    overlay.style.display = sidebar.classList.contains('open') ? 'block' : 'none';
-  }
-  function closeSidebar() {
-    document.getElementById('sidebar').classList.remove('open');
-    document.getElementById('sidebar-overlay').style.display = 'none';
-  }
+// ──────────────────────────────────────────────────────────────
+//  SIDEBAR
+// ──────────────────────────────────────────────────────────────
+function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+}
+// Show hamburger on mobile
+if (window.innerWidth < 769) {
+    document.getElementById('sidebar-toggle').style.display = 'flex';
+}
 
-  // ===================== SECTION NAVIGATION =====================
-  function showSection(name, btn) {
-    document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
-    document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
-    document.getElementById('section-' + name).classList.add('active');
-    if (btn) btn.classList.add('active');
-    closeSidebar();
-    // trigger reveals
-    document.querySelectorAll('#section-' + name + ' .reveal').forEach(el => {
-      setTimeout(() => el.classList.add('visible'), 50);
+// ──────────────────────────────────────────────────────────────
+//  SCROLL HELPERS
+// ──────────────────────────────────────────────────────────────
+function scrollTo(id) {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ──────────────────────────────────────────────────────────────
+//  REVEAL
+// ──────────────────────────────────────────────────────────────
+const revealObserver = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+        if (e.isIntersecting) { e.target.classList.add('visible'); revealObserver.unobserve(e.target); }
     });
-  }
+}, { threshold: 0.08 });
+document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
 
-  // ===================== SCROLL REVEAL =====================
-  const revealObserver = new IntersectionObserver(entries => {
-    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); revealObserver.unobserve(e.target); } });
-  }, { threshold: 0.08 });
-  document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+// ──────────────────────────────────────────────────────────────
+//  MODAL HELPERS
+// ──────────────────────────────────────────────────────────────
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m => {
+    m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
 
-  // ===================== DASHBOARD DATA =====================
-  let performanceChart = null;
-  let analyticsChart = null;
+// ──────────────────────────────────────────────────────────────
+//  DASHBOARD STATS
+// ──────────────────────────────────────────────────────────────
+let performanceChart = null;
 
-  async function loadDashboardData() {
+async function loadDashboardData() {
     try {
-      const response = await fetch('/api/dashboard-stats');
-      const data = await response.json();
-      if (!data.success) return;
+        const res  = await fetch('/api/dashboard-stats');
+        const data = await res.json();
+        if (!data.success) return;
 
-      animateCount(document.getElementById('total-quizzes'), data.stats.total_quizzes);
-      document.getElementById('average-score').textContent = data.stats.average_score + '%';
-      animateCount(document.getElementById('connections'), data.stats.connection_count);
+        document.getElementById('total-quizzes').textContent = data.stats.total_quizzes || 0;
+        document.getElementById('average-score').textContent = (data.stats.average_score || 0) + '%';
+        document.getElementById('connections').textContent   = data.stats.connection_count || 0;
 
-      updateRecentActivity(data.recent_activity);
-      updatePerformanceChart(data.performance_data);
-    } catch (err) { console.error('Dashboard data error:', err); }
-  }
+        renderActivity(data.recent_activity || []);
+        renderChart(data.performance_data   || {});
+    } catch(e) { console.error(e); }
+}
 
-  function animateCount(el, target) {
-    let start = 0;
-    const steps = 40;
-    const inc = target / steps;
-    const timer = setInterval(() => {
-      start = Math.min(start + inc, target);
-      el.textContent = Math.floor(start);
-      if (start >= target) clearInterval(timer);
-    }, 25);
-  }
-
-  function updateRecentActivity(activities) {
-    const container = document.getElementById('recent-activity-container');
-    const allContainer = document.getElementById('all-activity-container');
-    if (!activities || activities.length === 0) return;
-    const html = activities.map(a => {
-      const cls = a.score >= 80 ? 'score-high' : a.score >= 60 ? 'score-mid' : 'score-low';
-      return `<div class="activity-item">
-        <div><div class="activity-title">${a.quiz_title}</div><div class="activity-meta">${a.time_ago}</div></div>
-        <span class="score-badge ${cls}">${a.score}%</span>
-      </div>`;
+function renderActivity(activities) {
+    const c = document.getElementById('recent-activity-container');
+    if (!activities.length) {
+        c.innerHTML = `<div class="empty-state">
+            <div class="empty-state-icon"><i class="fas fa-trophy"></i></div>
+            <h4>No quizzes yet</h4>
+            <p>Start taking quizzes to see your history!</p>
+        </div>`;
+        return;
+    }
+    c.innerHTML = activities.map(a => {
+        const cls = a.score >= 80 ? 'high' : a.score >= 60 ? 'mid' : 'low';
+        return `<div class="activity-item">
+            <div class="activity-info">
+                <h4>${a.quiz_title}</h4>
+                <span>${a.time_ago}</span>
+            </div>
+            <div class="score-badge ${cls}">${a.score}%</div>
+        </div>`;
     }).join('');
-    container.innerHTML = html;
-    if (allContainer) allContainer.innerHTML = html;
-  }
+}
 
-  function updatePerformanceChart(data) {
+function renderChart(data) {
     const ctx = document.getElementById('performanceChart');
     if (!ctx) return;
     const labels = Object.keys(data);
     const scores = Object.values(data);
-    const gridColor = dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
-    const tickColor = dark ? '#5a5a70' : '#7a7a8c';
-    const cfg = {
-      type: 'line',
-      data: {
-        labels, datasets: [{
-          data: scores,
-          borderColor: '#ff4f30', backgroundColor: 'rgba(255,79,48,0.08)',
-          tension: 0.4, fill: true,
-          pointBackgroundColor: '#ff4f30', pointBorderColor: '#fff',
-          pointBorderWidth: 2, pointRadius: 4
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { grid: { color: gridColor }, ticks: { color: tickColor, font: { family: 'DM Sans', size: 11 } } },
-          y: { beginAtZero: true, max: 100, grid: { color: gridColor }, ticks: { color: tickColor, font: { family: 'DM Sans', size: 11 }, callback: v => v + '%' } }
-        }
-      }
-    };
-    if (performanceChart) { performanceChart.data.labels = labels; performanceChart.data.datasets[0].data = scores; performanceChart.update(); }
-    else { performanceChart = new Chart(ctx, cfg); }
+    const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark';
+    const gridColor = isDarkTheme ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+    const textColor = isDarkTheme ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)';
 
-    // Analytics chart (same data, different canvas)
-    const ctx2 = document.getElementById('analyticsChart');
-    if (ctx2) {
-      if (analyticsChart) { analyticsChart.data.labels = labels; analyticsChart.data.datasets[0].data = scores; analyticsChart.update(); }
-      else { analyticsChart = new Chart(ctx2, { ...cfg, canvas: ctx2 }); }
+    if (performanceChart) {
+        performanceChart.data.labels = labels;
+        performanceChart.data.datasets[0].data = scores;
+        performanceChart.update(); return;
     }
-  }
+    performanceChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Score',
+                data: scores,
+                borderColor: '#ff4f30',
+                backgroundColor: 'rgba(255,79,48,0.08)',
+                tension: 0.4, fill: true,
+                pointBackgroundColor: '#ff4f30',
+                pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 4
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, max: 100,
+                    grid: { color: gridColor },
+                    ticks: { color: textColor, callback: v => v + '%' } },
+                x: { grid: { color: gridColor }, ticks: { color: textColor } }
+            }
+        }
+    });
+}
 
-  // ===================== FILE UPLOAD =====================
-  const uploadZone = document.getElementById('upload-zone');
-  const pdfInput = document.getElementById('pdf-input');
+// ──────────────────────────────────────────────────────────────
+//  TABS (question type)
+// ──────────────────────────────────────────────────────────────
+let selectedQuestionType = 'objective';
+function setTab(btn, type) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedQuestionType = type;
+}
 
-  uploadZone.addEventListener('click', () => pdfInput.click());
-  uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
-  uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
-  uploadZone.addEventListener('drop', e => { e.preventDefault(); uploadZone.classList.remove('dragover'); if (e.dataTransfer.files[0]) { pdfInput.files = e.dataTransfer.files; updateUploadUI(e.dataTransfer.files[0]); } });
-  pdfInput.addEventListener('change', () => { if (pdfInput.files[0]) updateUploadUI(pdfInput.files[0]); });
+// ──────────────────────────────────────────────────────────────
+//  PDF UPLOAD ZONE
+// ──────────────────────────────────────────────────────────────
+const uploadZone = document.getElementById('upload-zone');
+const pdfInput   = document.getElementById('pdf-input');
 
-  function updateUploadUI(file) {
-    uploadZone.classList.add('has-file');
-    uploadZone.innerHTML = `<i class="fas fa-check-circle" style="color:var(--green);"></i><strong style="color:var(--green);">${file.name}</strong><span>Ready to generate questions!</span>`;
-  }
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', e => {
+    e.preventDefault(); uploadZone.classList.remove('dragover');
+    if (e.dataTransfer.files[0]) { pdfInput.files = e.dataTransfer.files; handlePDFSelect(); }
+});
+pdfInput.addEventListener('change', handlePDFSelect);
 
-  async function uploadNotes() {
-    if (!pdfInput.files[0]) { alert('Please select a PDF file first.'); return; }
-    if (pdfInput.files[0].size > 10 * 1024 * 1024) { alert('File too large. Max 10MB.'); return; }
+function handlePDFSelect() {
+    if (!pdfInput.files[0]) return;
+    const f = pdfInput.files[0];
+    uploadZone.innerHTML = `
+        <div class="upload-zone-icon" style="color:var(--green)"><i class="fas fa-check-circle"></i></div>
+        <p>${f.name}</p>
+        <span>Ready to generate questions!</span>`;
+}
+
+async function uploadNotes() {
+    if (!pdfInput.files[0]) { alert('Please select a PDF file first'); return; }
+    const file = pdfInput.files[0];
+    if (file.size > 10 * 1024 * 1024) { alert('File too large. Max 10MB.'); return; }
+
     const btn = document.getElementById('upload-btn');
-    const orig = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating…';
     btn.disabled = true;
-    const formData = new FormData();
-    formData.append('file', pdfInput.files[0]);
-    formData.append('type', 'objective');
-    formData.append('hardness', document.getElementById('hardness').value);
-    formData.append('question_count', document.getElementById('question-count-upload').value);
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing…';
+    document.getElementById('upload-progress').style.display = 'block';
+    animateBar('upload-progress-fill');
+
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('type', selectedQuestionType);
+    fd.append('hardness', document.getElementById('hardness').value);
+    fd.append('question_count', document.getElementById('question-count-upload').value);
+
     try {
-      const res = await fetch('/upload_notes', { method: 'POST', body: formData });
-      const result = await res.json();
-      if (result.success) window.location.href = '/quiz';
-      else alert('Error: ' + result.error);
-    } catch { alert('Network error. Please try again.'); }
-    finally { btn.innerHTML = orig; btn.disabled = false; }
-  }
+        const res    = await fetch('/upload_notes', { method: 'POST', body: fd });
+        const result = await res.json();
+        if (result.success) {
+            window.location.href = '/quiz';
+        } else {
+            alert('❌ ' + result.error);
+        }
+    } catch(e) {
+        alert('Network error. Please try again.');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-rocket"></i> Generate Questions from PDF';
+        document.getElementById('upload-progress').style.display = 'none';
+    }
+}
 
-  // ===================== AV UPLOAD =====================
-  const avZone = document.getElementById('av-upload-zone');
-  const avInput = document.getElementById('av-file-input');
-  let selectedAVFile = null;
+function animateBar(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    let w = 0;
+    const t = setInterval(() => {
+        w = Math.min(w + (Math.random() * 8), 90);
+        el.style.width = w + '%';
+        if (w >= 90) clearInterval(t);
+    }, 300);
+}
 
-  avZone.addEventListener('click', () => avInput.click());
-  avZone.addEventListener('dragover', e => { e.preventDefault(); avZone.classList.add('dragover'); });
-  avZone.addEventListener('dragleave', () => avZone.classList.remove('dragover'));
-  avZone.addEventListener('drop', e => { e.preventDefault(); avZone.classList.remove('dragover'); if (e.dataTransfer.files[0]) { avInput.files = e.dataTransfer.files; handleAVFileSelect(); } });
-  avInput.addEventListener('change', handleAVFileSelect);
+// ──────────────────────────────────────────────────────────────
+//  AV UPLOAD ZONE
+// ──────────────────────────────────────────────────────────────
+const avUploadZone = document.getElementById('av-upload-zone');
+const avFileInput  = document.getElementById('av-file-input');
+let selectedAVFile = null;
 
-  function handleAVFileSelect() {
-    const file = avInput.files[0]; if (!file) return;
-    if (file.size > 20 * 1024 * 1024) { alert('Max 20MB.'); avInput.value = ''; return; }
+avUploadZone.addEventListener('dragover', e => { e.preventDefault(); avUploadZone.classList.add('dragover'); });
+avUploadZone.addEventListener('dragleave', () => avUploadZone.classList.remove('dragover'));
+avUploadZone.addEventListener('drop', e => {
+    e.preventDefault(); avUploadZone.classList.remove('dragover');
+    if (e.dataTransfer.files[0]) { avFileInput.files = e.dataTransfer.files; handleAVFileSelect(); }
+});
+avFileInput.addEventListener('change', handleAVFileSelect);
+
+function handleAVFileSelect() {
+    const file = avFileInput.files[0];
+    if (!file) return;
+    if (file.size > 20 * 1024 * 1024) { alert('File too large. Maximum size is 20MB.'); avFileInput.value = ''; return; }
     selectedAVFile = file;
     document.getElementById('av-file-name').textContent = file.name;
     document.getElementById('av-file-size').textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
-    document.getElementById('av-file-preview').style.display = 'block';
-    document.getElementById('av-conversion-options').style.display = 'block';
-    avZone.style.opacity = '0.5';
-  }
+    document.getElementById('av-file-preview').style.display = 'flex';
+    document.getElementById('av-conversion-options').style.display = 'grid';
+    avUploadZone.style.opacity = '0.4';
+}
 
-  function clearAVFile() {
-    selectedAVFile = null; avInput.value = '';
+function clearAVFile() {
+    selectedAVFile = null; avFileInput.value = '';
     document.getElementById('av-file-preview').style.display = 'none';
     document.getElementById('av-conversion-options').style.display = 'none';
-    avZone.style.opacity = '1';
-  }
+    avUploadZone.style.opacity = '1';
+}
 
-  async function convertToAudio() {
-    if (!selectedAVFile) { alert('Please select a file first.'); return; }
-    const formData = new FormData();
-    formData.append('file', selectedAVFile);
-    formData.append('language', document.getElementById('av-audio-language').value);
-    formData.append('speed', document.getElementById('av-audio-speed').value);
-    formData.append('type', 'audio');
-    const btn = event.target; const orig = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating…'; btn.disabled = true;
-    try {
-      const res = await fetch('/api/convert-to-audio', { method: 'POST', body: formData });
-      const result = await res.json();
-      if (result.success) { alert('Audio generated! Download starts now.'); loadConvertedFiles(); clearAVFile(); }
-      else alert('Error: ' + result.error);
-    } catch { alert('Network error.'); }
-    finally { btn.innerHTML = orig; btn.disabled = false; }
-  }
+async function convertToAudio() {
+    if (!selectedAVFile) { alert('Please select a file first'); return; }
+    const btn = document.getElementById('audio-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating…';
+    document.getElementById('audio-progress').style.display = 'block';
 
-  async function convertToVideo() {
-    if (!selectedAVFile) { alert('Please select a file first.'); return; }
-    const formData = new FormData();
-    formData.append('file', selectedAVFile);
-    formData.append('style', document.getElementById('av-video-style').value);
-    formData.append('duration', document.getElementById('av-video-duration').value);
-    formData.append('type', 'video');
-    const btn = event.target; const orig = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating…'; btn.disabled = true;
-    try {
-      const res = await fetch('/api/convert-to-video', { method: 'POST', body: formData });
-      const result = await res.json();
-      if (result.success) { alert('Video generated!'); loadConvertedFiles(); clearAVFile(); }
-      else alert('Error: ' + result.error);
-    } catch { alert('Network error.'); }
-    finally { btn.innerHTML = orig; btn.disabled = false; }
-  }
+    const fd = new FormData();
+    fd.append('file', selectedAVFile);
+    fd.append('language', document.getElementById('av-audio-language').value);
+    fd.append('speed', document.getElementById('av-audio-speed').value);
+    fd.append('type', 'audio');
 
-  async function loadConvertedFiles() {
     try {
-      const res = await fetch('/api/converted-files');
-      const result = await res.json();
-      const container = document.getElementById('converted-files-container');
-      if (result.success && result.files.length > 0) {
-        container.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem;">` +
-          result.files.map(f => `
+        const res    = await fetch('/api/convert-to-audio', { method: 'POST', body: fd });
+        const result = await res.json();
+        if (result.success) {
+            alert('✅ Audio generated successfully!');
+            loadConvertedFiles(); clearAVFile();
+        } else {
+            alert('❌ ' + result.error);
+        }
+    } catch(e) {
+        alert('❌ Network error. Please try again.');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-magic"></i> Generate Audio';
+        document.getElementById('audio-progress').style.display = 'none';
+    }
+}
+
+async function convertToVideo() {
+    if (!selectedAVFile) { alert('Please select a file first'); return; }
+    const btn = document.getElementById('video-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating… (this may take a minute)';
+    document.getElementById('video-progress').style.display = 'block';
+
+    const fd = new FormData();
+    fd.append('file', selectedAVFile);
+    fd.append('style', document.getElementById('av-video-style').value);
+    fd.append('duration', document.getElementById('av-video-duration').value);
+    fd.append('type', 'video');
+
+    try {
+        const res    = await fetch('/api/convert-to-video', { method: 'POST', body: fd });
+        const result = await res.json();
+        if (result.success) {
+            alert('✅ Video generated successfully!');
+            loadConvertedFiles(); clearAVFile();
+        } else {
+            alert('❌ ' + result.error);
+        }
+    } catch(e) {
+        alert('❌ Network error. Please try again.');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-video"></i> Generate Video';
+        document.getElementById('video-progress').style.display = 'none';
+    }
+}
+
+async function loadConvertedFiles() {
+    try {
+        const res    = await fetch('/api/converted-files');
+        const result = await res.json();
+        const c      = document.getElementById('converted-files-container');
+        if (!result.success || !result.files.length) {
+            c.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
+                <div class="empty-state-icon">📭</div>
+                <h4>No converted files yet</h4>
+                <p>Upload your notes above to get started</p>
+            </div>`; return;
+        }
+        c.innerHTML = result.files.map(f => `
             <div class="file-card">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
-                <span class="file-type-badge ${f.type === 'audio' ? 'file-type-audio' : 'file-type-video'}">
-                  <i class="fas fa-${f.type === 'audio' ? 'headphones' : 'film'}"></i> ${f.type.toUpperCase()}
-                </span>
-                <button onclick="deleteConvertedFile('${f.id}')" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:0.8rem;" title="Delete"><i class="fas fa-trash"></i></button>
-              </div>
-              <div style="font-size:0.8rem;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:0.25rem;">${f.filename}</div>
-              <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.875rem;">${f.created_at}</div>
-              <div style="display:flex;gap:0.5rem;">
-                <button onclick="previewFile('${f.id}')" class="btn btn-secondary btn-sm" style="flex:1;"><i class="fas fa-eye"></i> Preview</button>
-                <button onclick="downloadFile('${f.id}')" class="btn btn-blue btn-sm" style="flex:1;"><i class="fas fa-download"></i></button>
-              </div>
-            </div>`).join('') + `</div>`;
-      }
-    } catch {}
-  }
+                <div class="file-type-badge ${f.type}">${f.type === 'audio' ? '🎵 AUDIO' : '🎬 VIDEO'}</div>
+                <div class="file-name" title="${f.filename}">${f.filename}</div>
+                <div class="file-meta">${f.created_at}${f.duration ? ' · ' + f.duration : ''}</div>
+                <div class="file-actions">
+                    <button class="btn btn-ghost btn-sm" onclick="previewFile(${f.id})" style="flex:1;border-radius:8px;font-size:0.78rem;">
+                        <i class="fas fa-eye"></i> Preview
+                    </button>
+                    <button class="btn btn-primary btn-sm" onclick="downloadFile(${f.id})" style="flex:1;border-radius:8px;font-size:0.78rem;">
+                        <i class="fas fa-download"></i> Download
+                    </button>
+                    <button class="btn btn-sm" onclick="deleteConvertedFile(${f.id})"
+                        style="background:rgba(255,79,48,0.1);color:var(--accent);border-radius:8px;border:1px solid rgba(255,79,48,0.2);padding:0 0.65rem;">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>`).join('');
+    } catch(e) { console.error(e); }
+}
 
-  async function deleteConvertedFile(id) {
+async function deleteConvertedFile(id) {
     if (!confirm('Delete this file?')) return;
-    try { await fetch(`/api/delete-converted-file/${id}`, { method: 'DELETE' }); loadConvertedFiles(); } catch {}
-  }
-  function downloadFile(id) { window.location.href = `/api/download-file/${id}`; }
-  async function previewFile(id) {
     try {
-      const res = await fetch(`/api/preview-file/${id}`);
-      const r = await res.json();
-      if (r.success) {
-        const content = r.type === 'audio'
-          ? `<audio controls style="width:100%;"><source src="${r.preview_url}" type="audio/mpeg"></audio><p style="font-size:0.8rem;color:var(--muted);margin-top:0.5rem;">${r.duration || ''}</p>`
-          : `<video controls style="width:100%;border-radius:var(--radius-sm);"><source src="${r.preview_url}" type="video/mp4"></video><p style="font-size:0.8rem;color:var(--muted);margin-top:0.5rem;">${r.duration || ''}</p>`;
-        openModal(r.type === 'audio' ? '🎵 Audio Preview' : '🎬 Video Preview', content);
-      }
-    } catch { alert('Error loading preview.'); }
-  }
+        await fetch(`/api/delete-converted-file/${id}`, { method: 'DELETE' });
+        loadConvertedFiles();
+    } catch(e) {}
+}
 
-  // ===================== AI TUTOR =====================
-  let aiHistory = [];
+function downloadFile(id) {
+    window.location.href = `/api/download-file/${id}`;
+}
 
-  function showAIModal() {
+async function previewFile(id) {
+    try {
+        const res    = await fetch(`/api/preview-file/${id}`);
+        const result = await res.json();
+        if (!result.success) { alert('Preview failed'); return; }
+        const content = result.type === 'audio'
+            ? `<div style="text-align:center;padding:1rem;">
+                <p style="font-size:1rem;font-weight:600;color:var(--ink);margin-bottom:1rem;">🎵 ${result.filename}</p>
+                <audio controls style="width:100%;margin-bottom:0.75rem;">
+                    <source src="${result.preview_url}" type="audio/mpeg">
+                </audio>
+                <p style="font-size:0.82rem;color:var(--muted);">Duration: ${result.duration}</p>
+               </div>`
+            : `<div style="text-align:center;padding:1rem;">
+                <p style="font-size:1rem;font-weight:600;color:var(--ink);margin-bottom:1rem;">🎬 ${result.filename}</p>
+                <video controls style="width:100%;border-radius:12px;margin-bottom:0.75rem;max-height:360px;">
+                    <source src="${result.preview_url}" type="video/mp4">
+                </video>
+                <p style="font-size:0.82rem;color:var(--muted);">Duration: ${result.duration}</p>
+               </div>`;
+        document.getElementById('preview-modal-title').textContent = result.type === 'audio' ? '🎵 Audio Preview' : '🎬 Video Preview';
+        document.getElementById('preview-modal-content').innerHTML  = content;
+        document.getElementById('preview-modal').classList.add('open');
+    } catch(e) { alert('Error: ' + e.message); }
+}
+
+// ──────────────────────────────────────────────────────────────
+//  AI TUTOR
+// ──────────────────────────────────────────────────────────────
+let aiHistory = [];
+
+function openAIModal() {
+    renderAIHistory();
     document.getElementById('ai-modal').classList.add('open');
-    renderAIConversation();
-    setTimeout(() => document.getElementById('ai-question-input').focus(), 100);
-  }
-  function closeAIModal() { document.getElementById('ai-modal').classList.remove('open'); }
+    document.getElementById('ai-question-input').focus();
+}
 
-  function renderAIConversation() {
-    const el = document.getElementById('ai-conversation');
-    if (!aiHistory.length) { el.innerHTML = '<p style="font-size:0.82rem;color:var(--muted);text-align:center;padding:1rem 0;">Ask a question and I\'ll help you understand it step by step.</p>'; return; }
-    el.innerHTML = aiHistory.map(ex => `
-      <div class="ai-msg ai-msg-user"><div class="ai-msg-label">You</div><div class="ai-msg-bubble">${ex.question}</div></div>
-      <div class="ai-msg ai-msg-ai"><div class="ai-msg-label">AI Tutor</div><div class="ai-msg-bubble">${ex.answer.replace(/\n/g, '<br>')}</div></div>
-    `).join('');
-    el.scrollTop = el.scrollHeight;
-    document.getElementById('ai-reset-btn').style.display = aiHistory.length ? 'flex' : 'none';
-  }
+function renderAIHistory() {
+    const c = document.getElementById('ai-history');
+    if (!aiHistory.length) { c.innerHTML = '<p style="font-size:0.82rem;color:var(--muted);text-align:center;padding:1rem 0;">Ask me anything about your studies!</p>'; return; }
+    c.innerHTML = aiHistory.map(ex => `
+        <div class="ai-exchange">
+            <div class="ai-q">You: ${ex.question}</div>
+            <div class="ai-a">${ex.answer.replace(/\n/g,'<br>')}</div>
+        </div>`).join('');
+    c.scrollTop = c.scrollHeight;
+}
 
-  async function submitAIQuestion() {
-    const input = document.getElementById('ai-question-input');
+function handleAIPDFSelect() {
+    const f = document.getElementById('ai-pdf-input').files[0];
+    if (!f) return;
+    document.getElementById('ai-pdf-preview-wrap').innerHTML = `
+        <div class="file-preview-badge" style="margin-bottom:0.5rem;">
+            <span>📄</span><span style="flex:1;">${f.name}</span>
+            <button onclick="clearAIPDF()">✕</button>
+        </div>`;
+}
+
+function clearAIPDF() {
+    document.getElementById('ai-pdf-input').value = '';
+    document.getElementById('ai-pdf-preview-wrap').innerHTML = '';
+}
+
+async function submitAIQuestion() {
+    const input    = document.getElementById('ai-question-input');
     const question = input.value.trim();
-    const pdfInp = document.getElementById('ai-pdf-input');
-    const hasPDF = pdfInp.files && pdfInp.files[0];
+    const pdfInp   = document.getElementById('ai-pdf-input');
+    const hasPDF   = pdfInp.files && pdfInp.files[0];
     if (!question && !hasPDF) return;
+
     input.value = '';
-    const conv = document.getElementById('ai-conversation');
-    conv.innerHTML += `<div class="ai-msg ai-msg-user"><div class="ai-msg-label">You</div><div class="ai-msg-bubble">${hasPDF ? '📄 ' : ''}${question}</div></div><div class="ai-msg ai-msg-ai"><div class="ai-msg-label">AI Tutor</div><div class="ai-msg-bubble" style="color:var(--muted);font-style:italic;">Thinking…</div></div>`;
-    conv.scrollTop = conv.scrollHeight;
+    input.disabled = true;
+
     let opts;
     if (hasPDF) {
-      const fd = new FormData(); fd.append('question', question); fd.append('pdf', pdfInp.files[0]);
-      opts = { method: 'POST', body: fd };
+        const fd = new FormData(); fd.append('question', question); fd.append('pdf', pdfInp.files[0]);
+        opts = { method: 'POST', body: fd };
     } else {
-      opts = { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ question }) };
+        opts = { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ question }) };
     }
+
+    // Show loading
+    aiHistory.push({ question: hasPDF ? '📄 ' + question : question, answer: '⏳ Thinking…' });
+    renderAIHistory();
+
     try {
-      const res = await fetch('/api/ask-ai', opts);
-      const data = await res.json();
-      if (data.success) {
-        aiHistory.push({ question: (hasPDF ? '📄 ' : '') + question, answer: data.explanation });
-        clearAIPDFPreview(); renderAIConversation();
-      } else { alert('Error: ' + data.error); renderAIConversation(); }
-    } catch { alert('Network error.'); renderAIConversation(); }
-  }
-
-  function handleAIPDFSelect() {
-    const f = document.getElementById('ai-pdf-input').files[0];
-    const prev = document.getElementById('ai-pdf-preview');
-    if (f) prev.innerHTML = `<div style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;background:rgba(255,79,48,0.08);border-radius:var(--radius-sm);font-size:0.8rem;color:var(--ink);"><i class="fas fa-file-pdf" style="color:var(--accent);"></i>${f.name}<button onclick="clearAIPDFPreview()" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--muted);">×</button></div>`;
-  }
-  function clearAIPDFPreview() { document.getElementById('ai-pdf-input').value = ''; document.getElementById('ai-pdf-preview').innerHTML = ''; }
-  function resetAIConversation() { aiHistory = []; fetch('/api/ask-ai', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ reset: true, question: ' ' }) }).catch(()=>{}); renderAIConversation(); }
-
-  // ===================== GENERIC MODAL =====================
-  function openModal(title, content) {
-    let modal = document.getElementById('generic-modal');
-    if (!modal) {
-      modal = document.createElement('div');
-      modal.id = 'generic-modal';
-      modal.className = 'modal-overlay';
-      modal.innerHTML = `<div class="modal"><button class="modal-close" onclick="closeGenericModal()"><i class="fas fa-times"></i></button><div class="modal-title" id="generic-modal-title"></div><div id="generic-modal-body"></div></div>`;
-      document.body.appendChild(modal);
-      modal.addEventListener('click', e => { if (e.target === modal) closeGenericModal(); });
+        const res  = await fetch('/api/ask-ai', opts);
+        const data = await res.json();
+        aiHistory[aiHistory.length - 1].answer = data.success ? data.explanation : '❌ ' + data.error;
+        clearAIPDF();
+    } catch(e) {
+        aiHistory[aiHistory.length - 1].answer = '❌ Network error';
     }
-    document.getElementById('generic-modal-title').textContent = title;
-    document.getElementById('generic-modal-body').innerHTML = content;
-    modal.classList.add('open');
-  }
-  function closeGenericModal() { document.getElementById('generic-modal')?.classList.remove('open'); }
-  document.getElementById('ai-modal').addEventListener('click', e => { if (e.target === document.getElementById('ai-modal')) closeAIModal(); });
+    input.disabled = false;
+    renderAIHistory();
+    input.focus();
+}
 
-  // ===================== NAVIGATION =====================
-  async function findStudyBuddies() { window.location.href = '/study-buddies'; }
-  async function logout() {
-    if (confirm('Sign out of Brainspark?')) {
-      await fetch('/logout', { method: 'POST' }).catch(() => {});
-      window.location.href = '/';
-    }
-  }
+function resetAIConversation() {
+    aiHistory = [];
+    fetch('/api/ask-ai', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ reset: true, question: ' ' }) });
+    renderAIHistory();
+}
 
-  // ===================== INIT =====================
-  window.addEventListener('load', () => {
+// ──────────────────────────────────────────────────────────────
+//  NAVIGATION
+// ──────────────────────────────────────────────────────────────
+function findStudyBuddies() { window.location.href = '/study-buddies'; }
+
+async function logout() {
+    if (!confirm('Logout?')) return;
+    try { await fetch('/logout', { method: 'POST' }); window.location.href = '/'; } catch(e) {}
+}
+
+// ──────────────────────────────────────────────────────────────
+//  INIT
+// ──────────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
     loadDashboardData();
     loadConvertedFiles();
-    document.querySelectorAll('#section-home .reveal').forEach(el => setTimeout(() => el.classList.add('visible'), 200));
-  });
+});
 </script>
 </body>
 </html>
