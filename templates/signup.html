@@ -197,33 +197,32 @@
     [data-theme="dark"] .modal-alert { color: #ff8066; }
     .modal-alert.show { display: flex; }
 
-    /* FIXED OTP INPUTS - PERFECT SIZE */
-    .otp-row { 
-      display: flex; 
-      gap: 0.6rem; 
-      margin-bottom: 1.75rem; 
-      justify-content: center; 
+    .otp-row {
+      display: flex;
+      gap: 0.6rem;
+      margin-bottom: 1.75rem;
+      justify-content: center;
     }
     .otp-input {
-      flex: 1; 
-      height: 48px; /* Fixed perfect height */
-      max-width: 48px; /* Compact width */
+      flex: 1;
+      height: 48px;
+      max-width: 48px;
       text-align: center;
-      font-family: 'Syne', sans-serif; 
-      font-size: 1.1rem; /* Perfect font size - not too big */
+      font-family: 'Syne', sans-serif;
+      font-size: 1.1rem;
       font-weight: 700;
-      border: 2px solid rgba(0,0,0,0.1); 
+      border: 2px solid rgba(0,0,0,0.1);
       border-radius: var(--radius-sm);
-      background: var(--surface2); 
-      color: var(--ink); 
-      outline: none; 
+      background: var(--surface2);
+      color: var(--ink);
+      outline: none;
       transition: all 0.2s;
     }
     [data-theme="dark"] .otp-input { border-color: rgba(255,255,255,0.1); }
-    .otp-input:focus { 
-      border-color: var(--green); 
-      box-shadow: 0 0 0 3px rgba(0,201,141,0.12); 
-      background: var(--surface); 
+    .otp-input:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(0,201,141,0.12);
+      background: var(--surface);
     }
     .otp-input.filled { border-color: rgba(0,201,141,0.4); }
     .otp-input.err { border-color: var(--accent) !important; box-shadow: 0 0 0 3px rgba(255,79,48,0.1) !important; }
@@ -375,9 +374,8 @@
 
         <div class="form-submit-area">
           <button type="submit" class="btn-submit" id="submit-btn">
-            <i class="fas fa-bolt"></i>
-            <span class="label">Create Account &amp; Send Verification</span>
-            <span class="loading" style="display:none;"><i class="fas fa-spinner fa-spin"></i> Sending code…</span>
+            <i class="fas fa-bolt" id="submit-icon"></i>
+            <span id="submit-label">Create Account &amp; Send Verification</span>
           </button>
         </div>
       </form>
@@ -414,8 +412,7 @@
 
     <button class="btn-verify" id="verify-btn">
       <i class="fas fa-check-circle"></i>
-      <span class="v-label">Verify &amp; Continue</span>
-      <span class="v-loading" style="display:none;"><i class="fas fa-spinner fa-spin"></i> Verifying…</span>
+      <span id="verify-label">Verify &amp; Continue</span>
     </button>
 
     <div class="modal-footer">
@@ -447,13 +444,63 @@
     document.getElementById('error-alert').classList.remove('show');
   }
 
+  // ── Submit button state helpers ────────────────────────────
+  // FIX: Use a single label span + icon, toggle via textContent/innerHTML
+  // instead of nested .label/.loading spans which broke display toggling.
+  const submitBtn   = document.getElementById('submit-btn');
+  const submitLabel = document.getElementById('submit-label');
+  const submitIcon  = document.getElementById('submit-icon');
+
+  function setSubmitLoading(loading) {
+    submitBtn.disabled = loading;
+    if (loading) {
+      submitIcon.className = 'fas fa-spinner fa-spin';
+      submitLabel.textContent = 'Sending code…';
+    } else {
+      submitIcon.className = 'fas fa-bolt';
+      submitLabel.textContent = 'Create Account & Send Verification';
+    }
+  }
+
+  const verifyBtn   = document.getElementById('verify-btn');
+  const verifyLabel = document.getElementById('verify-label');
+
+  function setVerifyLoading(loading) {
+    verifyBtn.disabled = loading;
+    if (loading) {
+      verifyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Verifying…</span>';
+    } else {
+      verifyBtn.innerHTML = '<i class="fas fa-check-circle"></i> <span id="verify-label">Verify &amp; Continue</span>';
+    }
+  }
+
+  // ── Safe JSON fetch ────────────────────────────────────────
+  // FIX: This is the core fix. Handles non-JSON responses (HTML error pages)
+  // gracefully instead of throwing "Unexpected server response".
+  async function safeFetch(url, options) {
+    const res = await fetch(url, options);
+    const contentType = res.headers.get('content-type') || '';
+
+    if (!contentType.includes('application/json')) {
+      // Server returned HTML (likely a Flask 500 error page)
+      const text = await res.text();
+      console.error('Non-JSON response from', url, ':', text.substring(0, 500));
+      throw new Error(`Server error (${res.status}). Please try again.`);
+    }
+
+    const data = await res.json();
+    return { res, data };
+  }
+
   // ── Password ───────────────────────────────────────────────
   document.getElementById('toggle-password').addEventListener('click', () => {
     const input = document.getElementById('password');
     const icon  = document.getElementById('eye-icon');
     input.type  = input.type === 'password' ? 'text' : 'password';
-    icon.classList.toggle('fa-eye'); icon.classList.toggle('fa-eye-slash');
+    icon.classList.toggle('fa-eye');
+    icon.classList.toggle('fa-eye-slash');
   });
+
   document.getElementById('password').addEventListener('input', function() {
     const v = this.value;
     const c = (id, t) => document.getElementById(id).classList.toggle('valid', t);
@@ -469,6 +516,7 @@
   const preview     = document.getElementById('avatar-preview');
   const placeholder = document.getElementById('avatar-placeholder');
   const previewImg  = document.getElementById('preview-img');
+
   zone.addEventListener('click', () => fileInput.click());
   zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragging'); });
   zone.addEventListener('dragleave', () => zone.classList.remove('dragging'));
@@ -478,31 +526,37 @@
     if (file && file.type.startsWith('image/')) showPreview(file);
   });
   fileInput.addEventListener('change', e => { if (e.target.files[0]) showPreview(e.target.files[0]); });
+
   function showPreview(file) {
     if (file.size > 2 * 1024 * 1024) { alert('Max 2MB.'); return; }
     const r = new FileReader();
-    r.onload = e => { previewImg.src = e.target.result; placeholder.style.display='none'; preview.style.display='block'; };
+    r.onload = e => {
+      previewImg.src = e.target.result;
+      placeholder.style.display = 'none';
+      preview.style.display = 'block';
+    };
     r.readAsDataURL(file);
   }
+
   document.getElementById('remove-pic').onclick = e => {
-    e.stopPropagation(); fileInput.value=''; previewImg.src='';
-    preview.style.display='none'; placeholder.style.display='block';
+    e.stopPropagation();
+    fileInput.value = '';
+    previewImg.src = '';
+    preview.style.display = 'none';
+    placeholder.style.display = 'block';
   };
 
   // ── OTP inputs ─────────────────────────────────────────────
   const otpInputs = Array.from(document.querySelectorAll('.otp-input'));
 
   otpInputs.forEach((input, i, arr) => {
-    // FIX: filter non-digits on input, not just length check
     input.addEventListener('input', e => {
-      const raw    = e.target.value;
-      const digits = raw.replace(/\D/g, '');
-      e.target.value = digits.slice(0, 1); // keep only first digit
+      const digits = e.target.value.replace(/\D/g, '');
+      e.target.value = digits.slice(0, 1);
 
       if (e.target.value) {
         e.target.classList.add('filled');
         if (i < arr.length - 1) arr[i + 1].focus();
-        // auto-submit when last box filled
         if (i === arr.length - 1) submitVerification();
       } else {
         e.target.classList.remove('filled');
@@ -520,14 +574,12 @@
       }
     });
 
-    // Paste entire code into any box
     input.addEventListener('paste', e => {
       e.preventDefault();
       const digits = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
       digits.split('').forEach((d, j) => {
         if (arr[j]) { arr[j].value = d; arr[j].classList.add('filled'); }
       });
-      // Focus last filled box
       const lastIdx = Math.min(digits.length - 1, arr.length - 1);
       if (lastIdx >= 0) arr[lastIdx].focus();
       if (digits.length === 6) setTimeout(submitVerification, 80);
@@ -541,32 +593,40 @@
     e.preventDefault();
     hideError();
 
-    const pw = document.getElementById('password').value;
+    // FIX: Client-side validation before hitting server
+    const name       = document.getElementById('name').value.trim();
+    const username   = document.getElementById('username').value.trim();
+    const email      = document.getElementById('email').value.trim();
+    const school     = document.getElementById('school').value.trim();
+    const studyLevel = document.getElementById('study_level').value;
+    const country    = document.getElementById('country').value;
+    const pw         = document.getElementById('password').value;
+
+    if (!name || !username || !email || !school || !studyLevel || !country || !pw) {
+      showError('Please fill in all required fields.');
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      showError('Please enter a valid email address.');
+      return;
+    }
+
     if (!/[A-Z]/.test(pw) || !/\d/.test(pw) || !/[!@#$%^&*(),.?":{}|<>]/.test(pw) || pw.length < 8) {
       showError('Password must be 8+ characters with an uppercase letter, a number, and a special character.');
       return;
     }
 
-    const btn = document.getElementById('submit-btn');
-    btn.querySelector('.label').style.display   = 'none';
-    btn.querySelector('.loading').style.display = 'flex';
-    btn.disabled = true;
+    setSubmitLoading(true);
 
     try {
-      const res    = await fetch('/signup', { method: 'POST', body: new FormData(e.target) });
+      const { res, data } = await safeFetch('/signup', {
+        method: 'POST',
+        body: new FormData(e.target)
+      });
 
-      // FIX: handle non-JSON responses gracefully
-      let result;
-      try {
-        result = await res.json();
-      } catch {
-        showError('Unexpected server response. Please try again.');
-        return;
-      }
-
-      if (result.success) {
-        // FIX: guard against missing email in response
-        verifyEmail = result.email || document.getElementById('email').value.trim().toLowerCase();
+      if (data.success) {
+        verifyEmail = data.email || email.toLowerCase();
         document.getElementById('verify-email-display').textContent = verifyEmail;
 
         // Reset OTP inputs
@@ -576,25 +636,21 @@
         document.getElementById('verify-modal').classList.add('open');
         setTimeout(() => otpInputs[0].focus(), 150);
       } else {
-        // FIX: always show the error message from server
-        showError(result.error || 'Signup failed. Please try again.');
+        showError(data.error || 'Signup failed. Please try again.');
       }
     } catch (err) {
-      showError('Network error. Please check your connection and try again.');
+      // FIX: err.message is now always a human-readable string from safeFetch
+      showError(err.message || 'Network error. Please check your connection and try again.');
     } finally {
-      btn.querySelector('.label').style.display   = 'flex';
-      btn.querySelector('.loading').style.display = 'none';
-      btn.disabled = false;
+      setSubmitLoading(false);
     }
   });
 
   // ── Verify OTP ─────────────────────────────────────────────
-  // FIX: standalone function (was an inline form submit handler; form tag removed from modal)
   async function submitVerification() {
     const code = otpInputs.map(i => i.value).join('');
-    if (code.length !== 6) return; // not complete yet
+    if (code.length !== 6) return;
 
-    // FIX: guard — should never happen but prevents silent failure
     if (!verifyEmail) {
       document.getElementById('modal-error-msg').textContent = 'Email address missing. Please close and try again.';
       document.getElementById('modal-error').classList.add('show');
@@ -604,31 +660,18 @@
     const modalErr = document.getElementById('modal-error');
     modalErr.classList.remove('show');
 
-    const btn = document.getElementById('verify-btn');
-    btn.querySelector('.v-label').style.display   = 'none';
-    btn.querySelector('.v-loading').style.display = 'flex';
-    btn.disabled = true;
+    setVerifyLoading(true);
 
     try {
-      const res = await fetch('/verify', {
-        method:  'POST',
+      const { res, data } = await safeFetch('/verify', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ code, email: verifyEmail })
+        body: JSON.stringify({ code, email: verifyEmail })
       });
 
-      let result;
-      try {
-        result = await res.json();
-      } catch {
-        document.getElementById('modal-error-msg').textContent = 'Unexpected server response. Please try again.';
-        modalErr.classList.add('show');
-        return;
-      }
-
-      if (result.success) {
-        window.location.href = result.redirect || '/login';
+      if (data.success) {
+        window.location.href = data.redirect || '/login';
       } else {
-        // Shake + clear inputs
         document.getElementById('otp-row').classList.add('shake');
         otpInputs.forEach(i => i.classList.add('err'));
         setTimeout(() => {
@@ -636,20 +679,17 @@
           otpInputs.forEach(i => { i.classList.remove('err', 'filled'); i.value = ''; });
           otpInputs[0].focus();
         }, 400);
-        document.getElementById('modal-error-msg').textContent = result.error || 'Invalid code. Please try again.';
+        document.getElementById('modal-error-msg').textContent = data.error || 'Invalid code. Please try again.';
         modalErr.classList.add('show');
       }
-    } catch {
-      document.getElementById('modal-error-msg').textContent = 'Network error. Please try again.';
+    } catch (err) {
+      document.getElementById('modal-error-msg').textContent = err.message || 'Network error. Please try again.';
       modalErr.classList.add('show');
     } finally {
-      btn.querySelector('.v-label').style.display   = 'flex';
-      btn.querySelector('.v-loading').style.display = 'none';
-      btn.disabled = false;
+      setVerifyLoading(false);
     }
   }
 
-  // Manual verify button click
   document.getElementById('verify-btn').addEventListener('click', submitVerification);
 
   // ── Resend code with countdown ─────────────────────────────
@@ -682,21 +722,20 @@
     btn.disabled = true;
     btn.textContent = 'Sending…';
     try {
-      const res    = await fetch('/resend-verification', {
-        method:  'POST',
+      const { data } = await safeFetch('/resend-verification', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ email: verifyEmail })
+        body: JSON.stringify({ email: verifyEmail })
       });
-      const result = await res.json();
-      if (result.success) {
+      if (data.success) {
         startResendCountdown(60);
         document.getElementById('modal-error').classList.remove('show');
       } else {
-        alert(result.error || 'Could not resend. Try again.');
+        alert(data.error || 'Could not resend. Try again.');
         btn.disabled = false;
       }
-    } catch {
-      alert('Network error.');
+    } catch (err) {
+      alert(err.message || 'Network error.');
       btn.disabled = false;
     } finally {
       btn.textContent = 'Resend code';

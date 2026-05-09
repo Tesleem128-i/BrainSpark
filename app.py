@@ -52,17 +52,16 @@ else:
 app.secret_key = os.getenv('SECRET_KEY', 'knowitnow_super_secret_key_change_in_production')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER']         = 'uploads'
-# FIX: unified profile upload path (was 'uploads/profiles' in config but makedirs used 'static/uploads/profiles')
 app.config['PROFILE_UPLOAD_FOLDER'] = 'uploads/profiles'
 app.config['MAX_CONTENT_LENGTH']    = 10 * 1024 * 1024  # 10 MB
 
 # ── Email ─────────────────────────────────────────────────────────────────────
-app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 587      # ← CHANGED: 587 (TLS)
-app.config['MAIL_USE_TLS'] = True  # ← ADDED: TLS
-app.config['MAIL_USE_SSL'] = False # ← CHANGED: False
-app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
-app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+app.config['MAIL_SERVER']         = 'smtp.gmail.com'
+app.config['MAIL_PORT']           = 587
+app.config['MAIL_USE_TLS']        = True
+app.config['MAIL_USE_SSL']        = False
+app.config['MAIL_USERNAME']       = os.getenv('MAIL_USERNAME')
+app.config['MAIL_PASSWORD']       = os.getenv('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_USERNAME')
 
 db.init_app(app)
@@ -76,7 +75,6 @@ genai.configure(api_key=os.getenv('GOOGLE_AI_API_KEY'))
 model = genai.GenerativeModel('gemini-2.5-flash')
 
 # ── Folders ───────────────────────────────────────────────────────────────────
-# FIX: makedirs now matches PROFILE_UPLOAD_FOLDER config above
 os.makedirs('uploads/profiles', exist_ok=True)
 os.makedirs('uploads', exist_ok=True)
 os.makedirs('uploads/converted_audio', exist_ok=True)
@@ -397,121 +395,213 @@ def index():
     return render_template('index.html', theme=theme)
 
 
+# FIX: Entire signup POST is wrapped in a top-level try/except so Flask never
+# returns an HTML 500 error page. All error paths return JSON.
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
-    if request.method == 'POST':
+    if request.method == 'GET':
+        theme = session.get('theme', 'light')
+        return render_template('signup.html', theme=theme)
+
+    # ── POST ──────────────────────────────────────────────────────────────────
+    try:
         name        = request.form.get('name', '').strip()
         username    = request.form.get('username', '').strip()
         email       = request.form.get('email', '').strip().lower()
-        school      = request.form.get('school', '')
-        profession  = request.form.get('profession', '')
-        study_level = request.form.get('study_level', '')
-        country     = request.form.get('country', '')
+        school      = request.form.get('school', '').strip()
+        profession  = request.form.get('profession', '').strip()
+        study_level = request.form.get('study_level', '').strip()
+        country     = request.form.get('country', '').strip()
         password    = request.form.get('password', '')
 
         # ── Validate required fields ──────────────────────────────────────────
-        if not all([name, username, email, study_level, country, password]):
-            return jsonify({'success': False, 'error': 'All required fields must be filled in.'})
+        missing = []
+        if not name:        missing.append('Full Name')
+        if not username:    missing.append('Username')
+        if not email:       missing.append('Email')
+        if not school:      missing.append('School / University')
+        if not study_level: missing.append('Level of Study')
+        if not country:     missing.append('Country')
+        if not password:    missing.append('Password')
 
-        if User.query.filter_by(username=username).first():
-            return jsonify({'success': False, 'error': 'Username already taken.'})
-        if User.query.filter_by(email=email).first():
-            return jsonify({'success': False, 'error': 'Email already registered.'})
+        if missing:
+            return jsonify({
+                'success': False,
+                'error': f"Please fill in: {', '.join(missing)}."
+            })
 
-        # ── Create user but don't commit yet ──────────────────────────────────
+        # ── Basic email format check ──────────────────────────────────────────
+        if '@' not in email or '.' not in email.split('@')[-1]:
+            return jsonify({'success': False, 'error': 'Please enter a valid email address.'})
+
+        # ── Username format: alphanumeric + underscores only ──────────────────
+        import re
+        if not re.match(r'^[a-zA-Z0-9_]{3,50}$', username):
+            return jsonify({
+                'success': False,
+                'error': 'Username must be 3–50 characters and contain only letters, numbers, or underscores.'
+            })
+
+        # ── Check duplicates ──────────────────────────────────────────────────
+        if User.query.filter(db.func.lower(User.username) == username.lower()).first():
+            return jsonify({'success': False, 'error': 'That username is already taken. Please choose another.'})
+
+        if User.query.filter(db.func.lower(User.email) == email).first():
+            return jsonify({'success': False, 'error': 'An account with this email already exists. Try logging in.'})
+
+        # ── Password strength (server-side re-check) ──────────────────────────
+        if len(password) < 8:
+            return jsonify({'success': False, 'error': 'Password must be at least 8 characters.'})
+        if not re.search(r'[A-Z]', password):
+            return jsonify({'success': False, 'error': 'Password must contain at least one uppercase letter.'})
+        if not re.search(r'\d', password):
+            return jsonify({'success': False, 'error': 'Password must contain at least one number.'})
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+            return jsonify({'success': False, 'error': 'Password must contain at least one special character.'})
+
+        # ── Build user object (not yet committed) ─────────────────────────────
         user = User(
-            name=name, username=username, email=email,
-            school=school, profession=profession,
-            study_level=study_level, country=country
+            name=name,
+            username=username,
+            email=email,
+            school=school,
+            profession=profession,
+            study_level=study_level,
+            country=country
         )
         user.set_password(password)
 
-        # Generate verification code before any DB write
+        # Generate 6-digit verification code
         code = ''.join(random.choices('0123456789', k=6))
         user.verification_code = code
 
-        # ── Try sending the email BEFORE committing the user ──────────────────
-        # This ensures we don't save a user we can't email
-        msg = MailMessage(
-            'Brainspark - Verify Your Email',
+        # ── Send verification email BEFORE writing to DB ──────────────────────
+        # If email fails, we don't create a zombie account the user can't verify.
+        email_msg = MailMessage(
+            subject='Brainspark — Verify Your Email',
             recipients=[email]
         )
-        msg.body = (
+        email_msg.body = (
+            f"Hi {name},\n\n"
             f"Your Brainspark verification code is:\n\n"
-            f"{code}\n\n"
-            f"Enter this code on the signup page to verify your account. "
-            f"Code expires in 15 minutes.\n\n"
-            f"Best,\nBrainspark Team"
+            f"    {code}\n\n"
+            f"Enter this code on the signup page to activate your account.\n"
+            f"The code expires in 15 minutes.\n\n"
+            f"If you didn't sign up, you can safely ignore this email.\n\n"
+            f"— The Brainspark Team"
         )
-        try:
-            mail.send(msg)
-        except Exception as e:
-            logger.error(f"Email send failed: {str(e)}", exc_info=True)
-            return jsonify({'success': False, 'error': f'Could not send verification email. Please check your email address and try again. ({str(e)})'})
 
-        # ── Email sent OK — now save the user ─────────────────────────────────
+        try:
+            mail.send(email_msg)
+        except Exception as mail_err:
+            logger.error(f"Email send failed for {email}: {mail_err}", exc_info=True)
+            # Give the user an actionable error message
+            err_str = str(mail_err)
+            if 'Authentication' in err_str or 'credentials' in err_str.lower():
+                user_msg = 'Email service authentication failed. Please contact support.'
+            elif 'Connection' in err_str or 'connect' in err_str.lower():
+                user_msg = 'Could not connect to the email service. Please try again in a moment.'
+            else:
+                user_msg = f'Could not send verification email to {email}. Please check the address and try again.'
+            return jsonify({'success': False, 'error': user_msg})
+
+        # ── Email sent — now persist the user ─────────────────────────────────
         try:
             db.session.add(user)
             db.session.flush()  # get user.id for profile pic filename
 
-            # Handle optional profile picture
-            if 'profile_pic' in request.files and request.files['profile_pic'].filename:
-                file = request.files['profile_pic']
-                if file and allowed_file(file.filename):
-                    ext      = file.filename.rsplit('.', 1)[1].lower()
+            # Optional profile picture
+            profile_file = request.files.get('profile_pic')
+            if profile_file and profile_file.filename and allowed_file(profile_file.filename):
+                try:
+                    ext      = profile_file.filename.rsplit('.', 1)[1].lower()
                     filename = f"{user.id}.{ext}"
-                    filepath = os.path.join(app.config['PROFILE_UPLOAD_FOLDER'], filename)
-                    try:
-                        file.save(filepath)
-                        user.profile_pic = filename
-                    except Exception as pic_err:
-                        logger.warning(f"Profile pic save failed (non-fatal): {pic_err}")
+                    save_dir = app.config['PROFILE_UPLOAD_FOLDER']
+                    os.makedirs(save_dir, exist_ok=True)
+                    profile_file.save(os.path.join(save_dir, filename))
+                    user.profile_pic = filename
+                except Exception as pic_err:
+                    # Non-fatal — account still works without a picture
+                    logger.warning(f"Profile pic save failed (non-fatal): {pic_err}")
 
             db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f"User save failed after email sent: {str(e)}", exc_info=True)
-            return jsonify({'success': False, 'error': 'Account creation failed. Please try again.'})
 
-        logger.info(f"New user created and verification email sent: {email}")
+        except Exception as db_err:
+            db.session.rollback()
+            logger.error(f"DB commit failed after email sent for {email}: {db_err}", exc_info=True)
+            return jsonify({
+                'success': False,
+                'error': 'Account creation failed due to a database error. Please try again.'
+            })
+
+        logger.info(f"New user created: {username} <{email}>")
         return jsonify({'success': True, 'email': email, 'user_id': user.id})
 
-    theme = session.get('theme', 'light')
-    return render_template('signup.html', theme=theme)
+    except Exception as unexpected:
+        # FIX: Catch-all so Flask never serves an HTML 500 page for a JSON endpoint.
+        logger.error(f"Unexpected error in /signup POST: {unexpected}", exc_info=True)
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': 'An unexpected error occurred. Please try again.'
+        }), 500
 
 
 @app.route('/verify', methods=['POST'])
 def verify():
-    data  = request.json
-    code  = data.get('code', '').strip()
-    email = data.get('email', '').strip().lower()
+    try:
+        data  = request.get_json(silent=True) or {}
+        code  = str(data.get('code', '')).strip()
+        email = str(data.get('email', '')).strip().lower()
 
-    if not code or not email:
-        return jsonify({'success': False, 'error': 'Code and email are required.'}), 400
+        if not code or not email:
+            return jsonify({'success': False, 'error': 'Code and email are required.'}), 400
 
-    user = User.query.filter(
-        db.func.lower(User.email) == email,
-        User.verification_code == code,
-        User.is_verified == False
-    ).first()
-
-    if not user:
-        existing_verified = User.query.filter(
-            db.func.lower(User.email) == email, User.is_verified == True
+        user = User.query.filter(
+            db.func.lower(User.email) == email,
+            User.verification_code == code,
+            User.is_verified == False
         ).first()
-        if existing_verified:
-            return jsonify({'success': False, 'error': 'This email is already verified. Please log in.'})
-        existing_user = User.query.filter(
-            db.func.lower(User.email) == email, User.is_verified == False
-        ).first()
-        if existing_user:
-            return jsonify({'success': False, 'error': 'Invalid code. Please check your email and try again, or request a new code.'})
-        return jsonify({'success': False, 'error': 'Invalid or expired code. Please request a new one.'})
 
-    user.is_verified       = True
-    user.verification_code = None
-    db.session.commit()
-    return jsonify({'success': True, 'message': 'Account verified! Redirecting to login...', 'redirect': '/login'})
+        if not user:
+            # Give a specific error based on what we find
+            verified_user = User.query.filter(
+                db.func.lower(User.email) == email,
+                User.is_verified == True
+            ).first()
+            if verified_user:
+                return jsonify({
+                    'success': False,
+                    'error': 'This account is already verified. Please log in.'
+                })
+            unverified_user = User.query.filter(
+                db.func.lower(User.email) == email,
+                User.is_verified == False
+            ).first()
+            if unverified_user:
+                return jsonify({
+                    'success': False,
+                    'error': 'Incorrect code. Please check your email and try again, or request a new code.'
+                })
+            return jsonify({
+                'success': False,
+                'error': 'No account found for this email. Please sign up again.'
+            })
+
+        user.is_verified       = True
+        user.verification_code = None
+        db.session.commit()
+
+        return jsonify({
+            'success':  True,
+            'message':  'Account verified! Redirecting to login…',
+            'redirect': '/login'
+        })
+
+    except Exception as e:
+        logger.error(f"Unexpected error in /verify: {e}", exc_info=True)
+        db.session.rollback()
+        return jsonify({'success': False, 'error': 'Verification failed. Please try again.'}), 500
 
 
 @app.route('/verify-email')
@@ -523,48 +613,75 @@ def verify_email_page():
 
 @app.route('/resend-verification', methods=['POST'])
 def resend_verification():
-    data  = request.json
-    email = data.get('email', '').strip().lower()
-    if not email:
-        return jsonify({'success': False, 'error': 'Email required'}), 400
-    user = User.query.filter(
-        db.func.lower(User.email) == email,
-        User.is_verified == False
-    ).first()
-    if not user:
-        return jsonify({'success': False, 'error': 'User not found or already verified'}), 404
-    code = ''.join(random.choices('0123456789', k=6))
-    user.verification_code = code
-    db.session.commit()
-    msg      = MailMessage('Brainspark - Verify Your Email', recipients=[email])
-    msg.body = (
-        f"Your new Brainspark verification code is:\n\n"
-        f"{code}\n\n"
-        f"Code expires in 15 minutes.\n\n"
-        f"Best,\nBrainspark Team"
-    )
     try:
-        mail.send(msg)
-        return jsonify({'success': True, 'message': 'Code resent successfully'})
+        data  = request.get_json(silent=True) or {}
+        email = str(data.get('email', '')).strip().lower()
+
+        if not email:
+            return jsonify({'success': False, 'error': 'Email is required.'}), 400
+
+        user = User.query.filter(
+            db.func.lower(User.email) == email,
+            User.is_verified == False
+        ).first()
+
+        if not user:
+            # Don't reveal whether the email exists (security best practice)
+            return jsonify({
+                'success': False,
+                'error': 'No unverified account found for this email.'
+            }), 404
+
+        code = ''.join(random.choices('0123456789', k=6))
+        user.verification_code = code
+        db.session.commit()
+
+        msg      = MailMessage(
+            subject='Brainspark — New Verification Code',
+            recipients=[email]
+        )
+        msg.body = (
+            f"Hi {user.name},\n\n"
+            f"Your new Brainspark verification code is:\n\n"
+            f"    {code}\n\n"
+            f"This code expires in 15 minutes.\n\n"
+            f"— The Brainspark Team"
+        )
+
+        try:
+            mail.send(msg)
+            return jsonify({'success': True, 'message': 'A new code has been sent to your email.'})
+        except Exception as mail_err:
+            logger.error(f"Resend email failed for {email}: {mail_err}", exc_info=True)
+            return jsonify({
+                'success': False,
+                'error': 'Could not send the email. Please try again in a moment.'
+            }), 500
+
     except Exception as e:
-        return jsonify({'success': False, 'error': f'Email send failed: {str(e)}'}), 500
+        logger.error(f"Unexpected error in /resend-verification: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'An unexpected error occurred.'}), 500
 
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        user     = User.query.filter_by(username=username).first()
+        try:
+            username = request.form.get('username', '').strip()
+            password = request.form.get('password', '')
+            user     = User.query.filter_by(username=username).first()
 
-        if user and user.check_password(password):
-            if not user.is_verified:
-                return jsonify({'success': False, 'error': 'Please verify your email first'})
-            session['user_id']  = user.id
-            session['username'] = user.username
-            return jsonify({'success': True, 'message': 'Login successful!', 'redirect': '/dashboard'})
-        else:
-            return jsonify({'success': False, 'error': 'Invalid username or password'})
+            if user and user.check_password(password):
+                if not user.is_verified:
+                    return jsonify({'success': False, 'error': 'Please verify your email before logging in.'})
+                session['user_id']  = user.id
+                session['username'] = user.username
+                return jsonify({'success': True, 'message': 'Login successful!', 'redirect': '/dashboard'})
+            else:
+                return jsonify({'success': False, 'error': 'Invalid username or password.'})
+        except Exception as e:
+            logger.error(f"Login error: {e}", exc_info=True)
+            return jsonify({'success': False, 'error': 'Login failed. Please try again.'}), 500
 
     theme = session.get('theme', 'light')
     return render_template('login.html', theme=theme)
