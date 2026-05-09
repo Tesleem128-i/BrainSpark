@@ -45,6 +45,13 @@ if (os.getenv('RENDER') or _db_url) and _db_url:
         _db_url = _db_url.split('?')[0]
     _db_url += '?sslmode=require'
     app.config['SQLALCHEMY_DATABASE_URI'] = _db_url
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_pre_ping': True,
+        'pool_recycle': 300,
+        'pool_timeout': 20,
+        'pool_size': 2,
+        'max_overflow': 3,
+    }
     try:
         _host = _db_url.split('@')[1].split('/')[0] if '@' in _db_url else 'unknown'
         print(f"Using PostgreSQL: {_host}")
