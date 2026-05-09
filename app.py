@@ -1844,7 +1844,8 @@ def debug_db_status():
 
 @app.route('/uploads/<path:filename>')
 def uploaded_file(filename):
-    return send_from_directory('uploads', filename)
+    uploads_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
+    return send_from_directory(uploads_dir, filename)
 @app.route('/legal')
 def legal():
     return render_template('legal.html')
