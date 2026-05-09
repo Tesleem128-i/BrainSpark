@@ -6,6 +6,7 @@ from models import db, User, Quiz, QuizResult, Connection, UserTag, Message, Cha
 import hashlib
 import os
 import subprocess
+import requests as req
 from dotenv import load_dotenv
 import google.generativeai as genai
 from flask_mail import Mail, Message as MailMessage
@@ -23,7 +24,7 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 # ── Startup guard — fail loudly if required env vars are missing ──────────────
-_required_env = ['SECRET_KEY', 'GOOGLE_AI_API_KEY', 'MAIL_USERNAME', 'MAIL_PASSWORD']
+_required_env = ['SECRET_KEY', 'GOOGLE_AI_API_KEY', 'MAIL_USERNAME', 'BREVO_API_KEY']
 _missing_env  = [k for k in _required_env if not os.getenv(k)]
 if _missing_env:
     raise RuntimeError(
@@ -34,8 +35,6 @@ if _missing_env:
 app = Flask(__name__)
 
 # ── Database ──────────────────────────────────────────────────────────────────
-# FIX: Render env var was named DATABASE_UR (missing L). We now check both
-# DATABASE_URL (correct) and DATABASE_UR (typo fallback) so it works either way.
 _db_url = os.getenv('DATABASE_URL') or os.getenv('DATABASE_UR')
 
 if (os.getenv('RENDER') or _db_url) and _db_url:
@@ -71,17 +70,7 @@ app.config['UPLOAD_FOLDER']         = 'uploads'
 app.config['PROFILE_UPLOAD_FOLDER'] = 'uploads/profiles'
 app.config['MAX_CONTENT_LENGTH']    = 10 * 1024 * 1024  # 10 MB
 
-# ── Email ─────────────────────────────────────────────────────────────────────
-# FIX: Use port 465 + SSL (more reliable on Render than 587 + TLS).
-app.config['MAIL_SERVER']   = os.getenv('MAIL_SERVER', 'smtp-relay.brevo.com')
-app.config['MAIL_PORT']     = int(os.getenv('MAIL_PORT', 587))
-app.config['MAIL_USE_TLS']  = os.getenv('MAIL_USE_TLS', 'true').lower() == 'true'
-app.config['MAIL_USE_SSL']  = os.getenv('MAIL_USE_SSL', 'false').lower() == 'true'
-app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
-app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
-
 db.init_app(app)
-mail = Mail(app)
 
 with app.app_context():
     db.create_all()
@@ -95,6 +84,28 @@ os.makedirs('uploads/profiles',        exist_ok=True)
 os.makedirs('uploads',                 exist_ok=True)
 os.makedirs('uploads/converted_audio', exist_ok=True)
 os.makedirs('uploads/converted_video', exist_ok=True)
+
+
+# ── Brevo API Email (replaces Flask-Mail SMTP) ────────────────────────────────
+def send_email_brevo(to_email, to_name, subject, body):
+    """Send email via Brevo API (HTTPS, not SMTP — works on Render free tier)."""
+    response = req.post(
+        'https://api.brevo.com/v3/smtp/email',
+        headers={
+            'api-key': os.getenv('BREVO_API_KEY'),
+            'Content-Type': 'application/json'
+        },
+        json={
+            'sender':      {'name': 'Brainspark', 'email': os.getenv('MAIL_USERNAME')},
+            'to':          [{'email': to_email, 'name': to_name}],
+            'subject':     subject,
+            'textContent': body
+        },
+        timeout=15
+    )
+    if response.status_code not in (200, 201):
+        raise Exception(f"Brevo API error {response.status_code}: {response.text}")
+    return True
 
 
 def allowed_file(filename):
@@ -150,7 +161,6 @@ def extract_pdf_text_simple(filepath):
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _find_font(size=28):
-    """Return a PIL ImageFont, falling back to the built-in default."""
     from PIL import ImageFont
     candidates = [
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
@@ -177,54 +187,45 @@ def _draw_frame(mouth_open, bg_color, text_color, chunk_text, width=1280, height
 
     hx, hy, hr = width // 4, height // 2, 90
 
-    draw.ellipse(
-        [hx - 50, hy + hr - 10, hx + 50, hy + hr + 120],
-        fill=(200, 160, 120), outline=text_color, width=2
-    )
-    draw.ellipse(
-        [hx - hr, hy - hr, hx + hr, hy + hr],
-        fill=(255, 210, 160), outline=text_color, width=3
-    )
-    draw.arc([hx - hr, hy - hr, hx + hr, hy], start=180, end=0, fill=(80, 50, 30), width=8)
-    for ex in [hx - 32, hx + 32]:
-        draw.ellipse([ex - 10, hy - 40, ex + 10, hy - 20], fill="white")
-        draw.ellipse([ex -  6, hy - 37, ex +  6, hy - 24], fill=(60, 60, 80))
-        draw.ellipse([ex -  3, hy - 35, ex +  3, hy - 29], fill="white")
-    for ex in [hx - 32, hx + 32]:
-        draw.line([(ex - 10, hy - 47), (ex + 10, hy - 45)], fill=(80, 50, 30), width=3)
-    draw.polygon([(hx, hy - 8), (hx - 6, hy + 8), (hx + 6, hy + 8)], fill=(240, 180, 140))
+    draw.ellipse([hx-50, hy+hr-10, hx+50, hy+hr+120], fill=(200,160,120), outline=text_color, width=2)
+    draw.ellipse([hx-hr, hy-hr, hx+hr, hy+hr], fill=(255,210,160), outline=text_color, width=3)
+    draw.arc([hx-hr, hy-hr, hx+hr, hy], start=180, end=0, fill=(80,50,30), width=8)
+    for ex in [hx-32, hx+32]:
+        draw.ellipse([ex-10, hy-40, ex+10, hy-20], fill="white")
+        draw.ellipse([ex-6,  hy-37, ex+6,  hy-24], fill=(60,60,80))
+        draw.ellipse([ex-3,  hy-35, ex+3,  hy-29], fill="white")
+    for ex in [hx-32, hx+32]:
+        draw.line([(ex-10, hy-47), (ex+10, hy-45)], fill=(80,50,30), width=3)
+    draw.polygon([(hx, hy-8), (hx-6, hy+8), (hx+6, hy+8)], fill=(240,180,140))
     my = hy + 48
     if mouth_open:
-        draw.ellipse([hx - 22, my - 8, hx + 22, my + 18], fill=(140, 60, 60))
-        draw.rectangle([hx - 18, my - 5, hx + 18, my + 2], fill="white")
+        draw.ellipse([hx-22, my-8, hx+22, my+18], fill=(140,60,60))
+        draw.rectangle([hx-18, my-5, hx+18, my+2], fill="white")
     else:
-        draw.arc([hx - 22, my - 8, hx + 22, my + 10], start=0, end=180, fill=(140, 60, 60), width=3)
+        draw.arc([hx-22, my-8, hx+22, my+10], start=0, end=180, fill=(140,60,60), width=3)
 
     font_large = _find_font(32)
     font_small = _find_font(24)
-
     text_x = width // 2 + 20
     lines  = textwrap.wrap(chunk_text, width=38)[:7]
     text_y = height // 2 - (len(lines) * 42) // 2
-
     for line in lines:
         try:
-            bbox   = draw.textbbox((0, 0), line, font=font_large)
+            bbox   = draw.textbbox((0,0), line, font=font_large)
             text_w = bbox[2] - bbox[0]
         except Exception:
             text_w = len(line) * 18
         draw.text((text_x, text_y), line, fill=text_color, font=font_large)
         text_y += 44
 
-    draw.rectangle([0, height - 44, width, height], fill=(0, 0, 0))
+    draw.rectangle([0, height-44, width, height], fill=(0,0,0))
     footer = "Brainspark AI · Learning Made Visual"
     try:
-        fb = draw.textbbox((0, 0), footer, font=font_small)
+        fb = draw.textbbox((0,0), footer, font=font_small)
         fw = fb[2] - fb[0]
     except Exception:
         fw = len(footer) * 13
-    draw.text(((width - fw) // 2, height - 32), footer, fill=(180, 180, 180), font=font_small)
-
+    draw.text(((width-fw)//2, height-32), footer, fill=(180,180,180), font=font_small)
     return np.array(img)
 
 
@@ -238,16 +239,8 @@ def _tts_chunk(text, wav_path):
         "engine.stop()\n"
     )
     try:
-        result = subprocess.run(
-            ["python3", "-c", script],
-            timeout=60,
-            capture_output=True
-        )
-        return (
-            result.returncode == 0
-            and os.path.exists(wav_path)
-            and os.path.getsize(wav_path) > 0
-        )
+        result = subprocess.run(["python3", "-c", script], timeout=60, capture_output=True)
+        return result.returncode == 0 and os.path.exists(wav_path) and os.path.getsize(wav_path) > 0
     except Exception as e:
         logger.warning(f"_tts_chunk subprocess error: {e}")
         return False
@@ -257,20 +250,17 @@ def create_audio_from_text(text_content, audio_path, language, speed):
     try:
         import pyttsx3
     except ImportError:
-        raise RuntimeError("pyttsx3 is not installed. Run: pip install pyttsx3")
+        raise RuntimeError("pyttsx3 is not installed.")
 
     try:
         speed_multiplier = float(speed) if speed else 1.0
         engine = pyttsx3.init()
         engine.setProperty('rate', int(150 * speed_multiplier))
-
         limited_text = ' '.join(text_content.split()[:1000])
         wav_path = audio_path.replace('.mp3', '.wav')
-
         engine.save_to_file(limited_text, wav_path)
         engine.runAndWait()
         engine.stop()
-
         try:
             from pydub import AudioSegment
             AudioSegment.from_wav(wav_path).export(audio_path, format='mp3')
@@ -279,10 +269,8 @@ def create_audio_from_text(text_content, audio_path, language, speed):
         except Exception:
             if os.path.exists(wav_path):
                 os.rename(wav_path, audio_path)
-
         logger.info(f"Audio created: {audio_path}")
         return True
-
     except Exception as e:
         logger.error(f"create_audio_from_text error: {e}", exc_info=True)
         raise
@@ -293,26 +281,25 @@ def create_video_from_text(text_content, video_path, style, duration_setting):
         import numpy as np
         from PIL import Image
     except ImportError:
-        raise RuntimeError("Pillow and numpy are required. Run: pip install Pillow numpy")
+        raise RuntimeError("Pillow and numpy are required.")
 
     try:
         from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips
     except ImportError:
-        raise RuntimeError("moviepy is required. Run: pip install moviepy")
+        raise RuntimeError("moviepy is required.")
 
     style_map = {
-        'slides':     ((10,  30,  100), (255, 255, 255)),
-        'animated':   ((20,  20,   40), (255, 255, 255)),
-        'whiteboard': ((245, 245, 240), (30,  30,   30)),
+        'slides':     ((10,30,100),   (255,255,255)),
+        'animated':   ((20,20,40),    (255,255,255)),
+        'whiteboard': ((245,245,240), (30,30,30)),
     }
     bg_color, text_color = style_map.get(style, style_map['slides'])
-
     chunk_limits  = {'short': 3, 'medium': 6, 'long': 10}
     fallback_secs = {'short': 4, 'medium': 5, 'long':  7}
     max_chunks    = chunk_limits.get(duration_setting, 6)
     fallback_dur  = fallback_secs.get(duration_setting, 5)
 
-    raw_sentences = [s.strip() for s in text_content[:4000].replace('\n', ' ').split('.') if s.strip()]
+    raw_sentences = [s.strip() for s in text_content[:4000].replace('\n',' ').split('.') if s.strip()]
     chunks, current = [], ""
     for sentence in raw_sentences:
         if len(current) + len(sentence) < 280:
@@ -329,30 +316,25 @@ def create_video_from_text(text_content, video_path, style, duration_setting):
     os.makedirs(audio_dir, exist_ok=True)
     os.makedirs(os.path.dirname(os.path.abspath(video_path)), exist_ok=True)
 
-    clips            = []
-    temp_audio_paths = []
-
+    clips, temp_audio_paths = [], []
     for idx, chunk in enumerate(chunks):
-        logger.info(f"Video chunk {idx + 1}/{len(chunks)}: {chunk[:60]}…")
-
+        logger.info(f"Video chunk {idx+1}/{len(chunks)}: {chunk[:60]}…")
         clip_duration = fallback_dur
         audio_clip    = None
         wav_path      = os.path.join(audio_dir, f"chunk_{idx}_{os.getpid()}.wav")
-
         try:
             if _tts_chunk(chunk, wav_path):
                 audio_clip    = AudioFileClip(wav_path)
                 clip_duration = max(audio_clip.duration, 2.0)
                 temp_audio_paths.append((wav_path, audio_clip))
             else:
-                logger.warning(f"TTS silent for chunk {idx}, using fallback duration")
+                logger.warning(f"TTS silent for chunk {idx}")
         except Exception as tts_err:
             logger.warning(f"TTS error chunk {idx}: {tts_err}")
 
         fps       = 2
         n_frames  = max(2, int(clip_duration * fps))
         frame_dur = clip_duration / n_frames
-
         frame_clips = []
         for fi in range(n_frames):
             mouth_open = (fi % 2 == 0) if audio_clip else False
@@ -360,12 +342,10 @@ def create_video_from_text(text_content, video_path, style, duration_setting):
             frame_clips.append(ImageClip(frame_arr).set_duration(frame_dur))
 
         chunk_video = concatenate_videoclips(frame_clips, method="chain")
-
         if audio_clip is not None:
             if audio_clip.duration > chunk_video.duration:
                 audio_clip = audio_clip.subclip(0, chunk_video.duration)
             chunk_video = chunk_video.set_audio(audio_clip)
-
         clips.append(chunk_video)
 
     if not clips:
@@ -374,29 +354,17 @@ def create_video_from_text(text_content, video_path, style, duration_setting):
 
     final = concatenate_videoclips(clips, method="chain")
     final.write_videofile(
-        video_path,
-        fps=24,
-        codec='libx264',
-        audio_codec='aac',
-        temp_audiofile=video_path + ".temp_audio.m4a",
-        remove_temp=True,
-        verbose=False,
-        logger=None,
-        preset='ultrafast',
+        video_path, fps=24, codec='libx264', audio_codec='aac',
+        temp_audiofile=video_path+".temp_audio.m4a", remove_temp=True,
+        verbose=False, logger=None, preset='ultrafast',
     )
     final.close()
-
     for path, ac in temp_audio_paths:
+        try: ac.close()
+        except: pass
         try:
-            ac.close()
-        except Exception:
-            pass
-        try:
-            if os.path.exists(path):
-                os.remove(path)
-        except Exception:
-            pass
-
+            if os.path.exists(path): os.remove(path)
+        except: pass
     logger.info(f"Video created: {video_path}")
     return True
 
@@ -417,7 +385,6 @@ def signup():
         theme = session.get('theme', 'light')
         return render_template('signup.html', theme=theme)
 
-    # ── POST ──────────────────────────────────────────────────────────────────
     try:
         name        = request.form.get('name', '').strip()
         username    = request.form.get('username', '').strip()
@@ -428,7 +395,6 @@ def signup():
         country     = request.form.get('country', '').strip()
         password    = request.form.get('password', '')
 
-        # ── Validate required fields ──────────────────────────────────────────
         missing = []
         if not name:        missing.append('Full Name')
         if not username:    missing.append('Username')
@@ -439,20 +405,14 @@ def signup():
         if not password:    missing.append('Password')
 
         if missing:
-            return jsonify({
-                'success': False,
-                'error': f"Please fill in: {', '.join(missing)}."
-            })
+            return jsonify({'success': False, 'error': f"Please fill in: {', '.join(missing)}."})
 
         if '@' not in email or '.' not in email.split('@')[-1]:
             return jsonify({'success': False, 'error': 'Please enter a valid email address.'})
 
         import re
         if not re.match(r'^[a-zA-Z0-9_]{3,50}$', username):
-            return jsonify({
-                'success': False,
-                'error': 'Username must be 3–50 characters and contain only letters, numbers, or underscores.'
-            })
+            return jsonify({'success': False, 'error': 'Username must be 3–50 characters and contain only letters, numbers, or underscores.'})
 
         if User.query.filter(db.func.lower(User.username) == username.lower()).first():
             return jsonify({'success': False, 'error': 'That username is already taken. Please choose another.'})
@@ -470,27 +430,17 @@ def signup():
             return jsonify({'success': False, 'error': 'Password must contain at least one special character.'})
 
         user = User(
-            name=name,
-            username=username,
-            email=email,
-            school=school,
-            profession=profession,
-            study_level=study_level,
-            country=country
+            name=name, username=username, email=email,
+            school=school, profession=profession,
+            study_level=study_level, country=country
         )
         user.set_password(password)
-
         code = ''.join(random.choices('0123456789', k=6))
         user.verification_code = code
 
-        # ── Build email message ───────────────────────────────────────────────
+        # ── Send verification email via Brevo API ─────────────────────────────
         try:
-            email_msg = MailMessage(
-                subject='Brainspark — Verify Your Email',
-                recipients=[email],
-                sender=app.config['MAIL_USERNAME']
-            )
-            email_msg.body = (
+            body = (
                 f"Hi {name},\n\n"
                 f"Your Brainspark verification code is:\n\n"
                 f"    {code}\n\n"
@@ -499,24 +449,12 @@ def signup():
                 f"If you didn't sign up, you can safely ignore this email.\n\n"
                 f"— The Brainspark Team"
             )
-            mail.send(email_msg)
+            send_email_brevo(email, name, 'Brainspark — Verify Your Email', body)
         except Exception as mail_err:
             logger.error(f"Email send failed for {email}: {mail_err}", exc_info=True)
-            err_str = str(mail_err).lower()
-            if 'authentication' in err_str or 'credentials' in err_str or '535' in err_str or '534' in err_str:
-                user_msg = (
-                    'Email authentication failed. Make sure MAIL_PASSWORD is a Gmail App Password '
-                    '(not your regular password). Generate one at myaccount.google.com → Security → App Passwords.'
-                )
-            elif 'connection' in err_str or 'connect' in err_str or 'timeout' in err_str:
-                user_msg = 'Could not connect to the email service. Please try again in a moment.'
-            elif 'recipient' in err_str or 'address' in err_str:
-                user_msg = f'Could not send to {email}. Please check the address.'
-            else:
-                user_msg = f'Could not send verification email ({str(mail_err)[:120]}). Please try again.'
-            return jsonify({'success': False, 'error': user_msg})
+            return jsonify({'success': False, 'error': f'Could not send verification email: {str(mail_err)[:200]}. Please try again.'})
 
-        # ── Persist user only after email succeeds ────────────────────────────
+        # ── Persist user after email succeeds ─────────────────────────────────
         try:
             db.session.add(user)
             db.session.flush()
@@ -534,14 +472,10 @@ def signup():
                     logger.warning(f"Profile pic save failed (non-fatal): {pic_err}")
 
             db.session.commit()
-
         except Exception as db_err:
             db.session.rollback()
-            logger.error(f"DB commit failed after email sent for {email}: {db_err}", exc_info=True)
-            return jsonify({
-                'success': False,
-                'error': 'Account creation failed due to a database error. Please try again.'
-            })
+            logger.error(f"DB commit failed for {email}: {db_err}", exc_info=True)
+            return jsonify({'success': False, 'error': 'Account creation failed due to a database error. Please try again.'})
 
         logger.info(f"New user created: {username} <{email}>")
         return jsonify({'success': True, 'email': email, 'user_id': user.id})
@@ -549,10 +483,7 @@ def signup():
     except Exception as unexpected:
         logger.error(f"Unexpected error in /signup POST: {unexpected}", exc_info=True)
         db.session.rollback()
-        return jsonify({
-            'success': False,
-            'error': f'An unexpected error occurred: {str(unexpected)[:200]}'
-        }), 500
+        return jsonify({'success': False, 'error': f'An unexpected error occurred: {str(unexpected)[:200]}'}), 500
 
 
 @app.route('/verify', methods=['POST'])
@@ -572,38 +503,18 @@ def verify():
         ).first()
 
         if not user:
-            verified_user = User.query.filter(
-                db.func.lower(User.email) == email,
-                User.is_verified == True
-            ).first()
+            verified_user = User.query.filter(db.func.lower(User.email) == email, User.is_verified == True).first()
             if verified_user:
-                return jsonify({
-                    'success': False,
-                    'error': 'This account is already verified. Please log in.'
-                })
-            unverified_user = User.query.filter(
-                db.func.lower(User.email) == email,
-                User.is_verified == False
-            ).first()
+                return jsonify({'success': False, 'error': 'This account is already verified. Please log in.'})
+            unverified_user = User.query.filter(db.func.lower(User.email) == email, User.is_verified == False).first()
             if unverified_user:
-                return jsonify({
-                    'success': False,
-                    'error': 'Incorrect code. Please check your email and try again, or request a new code.'
-                })
-            return jsonify({
-                'success': False,
-                'error': 'No account found for this email. Please sign up again.'
-            })
+                return jsonify({'success': False, 'error': 'Incorrect code. Please check your email and try again, or request a new code.'})
+            return jsonify({'success': False, 'error': 'No account found for this email. Please sign up again.'})
 
         user.is_verified       = True
         user.verification_code = None
         db.session.commit()
-
-        return jsonify({
-            'success':  True,
-            'message':  'Account verified! Redirecting to login…',
-            'redirect': '/login'
-        })
+        return jsonify({'success': True, 'message': 'Account verified! Redirecting to login…', 'redirect': '/login'})
 
     except Exception as e:
         logger.error(f"Unexpected error in /verify: {e}", exc_info=True)
@@ -627,42 +538,27 @@ def resend_verification():
         if not email:
             return jsonify({'success': False, 'error': 'Email is required.'}), 400
 
-        user = User.query.filter(
-            db.func.lower(User.email) == email,
-            User.is_verified == False
-        ).first()
-
+        user = User.query.filter(db.func.lower(User.email) == email, User.is_verified == False).first()
         if not user:
-            return jsonify({
-                'success': False,
-                'error': 'No unverified account found for this email.'
-            }), 404
+            return jsonify({'success': False, 'error': 'No unverified account found for this email.'}), 404
 
         code = ''.join(random.choices('0123456789', k=6))
         user.verification_code = code
         db.session.commit()
 
         try:
-            msg = MailMessage(
-                subject='Brainspark — New Verification Code',
-                recipients=[email],
-                sender=app.config['MAIL_USERNAME']
-            )
-            msg.body = (
+            body = (
                 f"Hi {user.name},\n\n"
                 f"Your new Brainspark verification code is:\n\n"
                 f"    {code}\n\n"
                 f"This code expires in 15 minutes.\n\n"
                 f"— The Brainspark Team"
             )
-            mail.send(msg)
+            send_email_brevo(email, user.name, 'Brainspark — New Verification Code', body)
             return jsonify({'success': True, 'message': 'A new code has been sent to your email.'})
         except Exception as mail_err:
             logger.error(f"Resend email failed for {email}: {mail_err}", exc_info=True)
-            return jsonify({
-                'success': False,
-                'error': f'Could not send the email: {str(mail_err)[:120]}. Please try again in a moment.'
-            }), 500
+            return jsonify({'success': False, 'error': f'Could not send the email: {str(mail_err)[:120]}. Please try again.'}), 500
 
     except Exception as e:
         logger.error(f"Unexpected error in /resend-verification: {e}", exc_info=True)
@@ -676,7 +572,6 @@ def login():
             username = request.form.get('username', '').strip()
             password = request.form.get('password', '')
             user     = User.query.filter_by(username=username).first()
-
             if user and user.check_password(password):
                 if not user.is_verified:
                     return jsonify({'success': False, 'error': 'Please verify your email before logging in.'})
@@ -688,7 +583,6 @@ def login():
         except Exception as e:
             logger.error(f"Login error: {e}", exc_info=True)
             return jsonify({'success': False, 'error': 'Login failed. Please try again.'}), 500
-
     theme = session.get('theme', 'light')
     return render_template('login.html', theme=theme)
 
@@ -705,19 +599,18 @@ def toggle_mode():
 def send_email():
     try:
         data = request.json
-        msg  = MailMessage(
-            subject=f"Brainspark Contact: {data.get('name', 'No Name')}",
-            recipients=[os.getenv('MAIL_USERNAME')],
-            body=f"Name: {data.get('name')}\nEmail: {data.get('email')}\nMessage: {data.get('message')}",
-            sender=os.getenv('MAIL_USERNAME')
+        body = f"Name: {data.get('name')}\nEmail: {data.get('email')}\nMessage: {data.get('message')}"
+        send_email_brevo(
+            os.getenv('MAIL_USERNAME'),
+            'Brainspark Admin',
+            f"Brainspark Contact: {data.get('name', 'No Name')}",
+            body
         )
-        mail.send(msg)
         return jsonify({'message': 'Message sent successfully!'})
     except Exception as e:
         return jsonify({'message': f'Error: {str(e)}'}), 500
 
 
-# ── Upload Notes (PDF → Topics) ───────────────────────────────────────────────
 @app.route('/upload_notes', methods=['POST'])
 def upload_notes():
     if 'user_id' not in session:
@@ -731,26 +624,19 @@ def upload_notes():
 
     if file is None:
         return jsonify({'success': False, 'error': 'No file uploaded. Please select a PDF file.'}), 400
-
     if not allowed_file(file.filename):
         return jsonify({'success': False, 'error': 'Only PDF files are allowed'}), 400
 
     try:
         filename = secure_filename(file.filename)
-        filepath = os.path.join(
-            app.config['UPLOAD_FOLDER'],
-            f"temp_{int(datetime.now().timestamp())}_{filename}"
-        )
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], f"temp_{int(datetime.now().timestamp())}_{filename}")
         file.save(filepath)
         text = extract_pdf_text_simple(filepath)
         if os.path.exists(filepath):
             os.remove(filepath)
 
         if not text or len(text.strip()) < 50:
-            return jsonify({
-                'success': False,
-                'error': 'No readable text found in PDF. Try a text-based PDF (not scanned images).'
-            }), 400
+            return jsonify({'success': False, 'error': 'No readable text found in PDF. Try a text-based PDF (not scanned images).'}), 400
 
         question_type  = request.form.get('type', 'objective')
         hardness       = request.form.get('hardness', 'medium')
@@ -899,9 +785,7 @@ def generate_questions():
             pdf_source_hash = hashlib.sha256(pdf_text.encode('utf-8', errors='ignore')).hexdigest()
             session['pdf_source_hash'] = pdf_source_hash
 
-        existing_rows = GeneratedQuestion.query.filter_by(
-            user_id=session['user_id'], source_hash=pdf_source_hash
-        ).all()
+        existing_rows = GeneratedQuestion.query.filter_by(user_id=session['user_id'], source_hash=pdf_source_hash).all()
         existing_question_texts = {str(r.question_text).strip().lower() for r in existing_rows if r.question_text}
 
         if selected_topics == 'all' or not selected_topics:
@@ -969,8 +853,7 @@ Rules:
         while len(unique_new) < question_count and attempts < 2:
             attempts += 1
             already    = list(existing_question_texts)[:50]
-            topics_str = (', '.join(selected_topics) if isinstance(selected_topics, list)
-                          else str(selected_topics)) if selected_topics != 'all' else 'all topics'
+            topics_str = (', '.join(selected_topics) if isinstance(selected_topics, list) else str(selected_topics)) if selected_topics != 'all' else 'all topics'
             follow_prompt = f"""Generate MORE UNIQUE questions (no repeats from list below).
 Already used (samples): {already}
 Text: {pdf_text[:3000]}
@@ -1007,10 +890,7 @@ Rules:
         unique_new = unique_new[:question_count]
 
         if len(unique_new) < 5:
-            return jsonify({
-                'success': False,
-                'error': f'Could only generate {len(unique_new)} unique questions. Try generating again or upload a longer PDF.'
-            }), 400
+            return jsonify({'success': False, 'error': f'Could only generate {len(unique_new)} unique questions. Try generating again or upload a longer PDF.'}), 400
 
         for q in unique_new:
             try:
@@ -1030,7 +910,6 @@ Rules:
 
         session['quiz_questions'] = json.dumps({"questions": unique_new})
         session.modified = True
-
         logger.info(f"Generated {len(unique_new)} unique questions")
         return jsonify({'success': True, 'count': len(unique_new)})
 
@@ -1053,10 +932,7 @@ def dashboard_stats():
         average_score    = user.get_average_score()
         connection_count = user.get_connection_count()
 
-        recent_results = QuizResult.query.filter_by(user_id=user_id).order_by(
-            QuizResult.completed_at.desc()
-        ).limit(5).all()
-
+        recent_results = QuizResult.query.filter_by(user_id=user_id).order_by(QuizResult.completed_at.desc()).limit(5).all()
         recent_activity = [{
             'quiz_title':   r.quiz.title,
             'score':        r.score,
@@ -1066,25 +942,19 @@ def dashboard_stats():
 
         daily_scores = {}
         for i in range(7):
-            day       = datetime.utcnow() - timedelta(days=6 - i)
-            day_start = day.replace(hour=0,  minute=0,  second=0,  microsecond=0)
+            day       = datetime.utcnow() - timedelta(days=6-i)
+            day_start = day.replace(hour=0, minute=0, second=0, microsecond=0)
             day_end   = day.replace(hour=23, minute=59, second=59, microsecond=999999)
             day_results = QuizResult.query.filter(
-                QuizResult.user_id      == user_id,
+                QuizResult.user_id == user_id,
                 QuizResult.completed_at >= day_start,
                 QuizResult.completed_at <= day_end
             ).all()
-            daily_scores[day.strftime('%a')] = (
-                round(sum(r.score for r in day_results) / len(day_results)) if day_results else 0
-            )
+            daily_scores[day.strftime('%a')] = round(sum(r.score for r in day_results) / len(day_results)) if day_results else 0
 
         return jsonify({
             'success': True,
-            'stats': {
-                'total_quizzes':    total_quizzes,
-                'average_score':    average_score,
-                'connection_count': connection_count
-            },
+            'stats': {'total_quizzes': total_quizzes, 'average_score': average_score, 'connection_count': connection_count},
             'recent_activity':  recent_activity,
             'performance_data': daily_scores
         })
@@ -1108,10 +978,6 @@ def logout():
     return jsonify({'success': True, 'message': 'Logged out successfully'})
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  STUDY BUDDIES & CONNECTIONS
-# ══════════════════════════════════════════════════════════════════════════════
-
 @app.route('/api/find-study-buddies')
 def find_study_buddies():
     if 'user_id' not in session:
@@ -1134,10 +1000,7 @@ def find_study_buddies():
     if level_filter and level_filter != 'all':
         query = query.filter(User.study_level == level_filter)
     if search_query:
-        query = query.filter(
-            (User.name.ilike(f'%{search_query}%')) |
-            (User.username.ilike(f'%{search_query}%'))
-        )
+        query = query.filter((User.name.ilike(f'%{search_query}%')) | (User.username.ilike(f'%{search_query}%')))
 
     buddies      = query.limit(100).all()
     buddies_data = []
@@ -1153,24 +1016,16 @@ def find_study_buddies():
         if buddy.study_level == user.study_level: priority += 25
 
         buddies_data.append({
-            'id':            buddy.id,
-            'name':          buddy.name,
-            'username':      buddy.username,
-            'profile_pic':   buddy.get_profile_pic_url(),
-            'school':        buddy.school,
-            'study_level':   buddy.study_level,
-            'country':       buddy.country,
-            'tags':          [t.tag for t in buddy.tags],
-            'total_quizzes': buddy.get_total_quizzes(),
-            'average_score': buddy.get_average_score(),
-            'is_connected':  is_connected,
-            'priority':      priority
+            'id': buddy.id, 'name': buddy.name, 'username': buddy.username,
+            'profile_pic': buddy.get_profile_pic_url(), 'school': buddy.school,
+            'study_level': buddy.study_level, 'country': buddy.country,
+            'tags': [t.tag for t in buddy.tags], 'total_quizzes': buddy.get_total_quizzes(),
+            'average_score': buddy.get_average_score(), 'is_connected': is_connected, 'priority': priority
         })
 
     buddies_data.sort(key=lambda x: (-x['priority'], x['name']))
     for b in buddies_data:
         del b['priority']
-
     return jsonify({'success': True, 'buddies': buddies_data})
 
 
@@ -1284,9 +1139,7 @@ def get_messages(buddy_id):
         ((Message.sender_id == buddy_id) & (Message.receiver_id == user_id))
     ).order_by(Message.created_at.asc()).all()
     Message.query.filter(
-        (Message.sender_id == buddy_id) &
-        (Message.receiver_id == user_id) &
-        (Message.is_read == False)
+        (Message.sender_id == buddy_id) & (Message.receiver_id == user_id) & (Message.is_read == False)
     ).update({Message.is_read: True})
     db.session.commit()
     return jsonify({'success': True, 'messages': [{
@@ -1307,9 +1160,7 @@ def get_connections():
 
     def _append(buddy, conn_ts):
         unread = Message.query.filter(
-            (Message.sender_id == buddy.id) &
-            (Message.receiver_id == user_id) &
-            (Message.is_read == False)
+            (Message.sender_id == buddy.id) & (Message.receiver_id == user_id) & (Message.is_read == False)
         ).count()
         connections_data.append({
             'id': buddy.id, 'name': buddy.name, 'username': buddy.username,
@@ -1326,7 +1177,6 @@ def get_connections():
         if conn.user_id not in seen_ids:
             seen_ids.add(conn.user_id)
             _append(conn.user, conn.created_at.isoformat())
-
     return jsonify({'success': True, 'connections': connections_data})
 
 
@@ -1335,12 +1185,9 @@ def get_discussions():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     discussions = [
-        {'id': 1, 'title': 'Understanding Calculus Derivatives',
-         'description': "Let's discuss how derivatives work", 'members': 12, 'messages': 45},
-        {'id': 2, 'title': 'Physics Mechanics Help',
-         'description': "Need help with Newton's laws", 'members': 8, 'messages': 23},
-        {'id': 3, 'title': 'Chemistry Reactions',
-         'description': 'Balancing equations and understanding reactions', 'members': 15, 'messages': 67}
+        {'id': 1, 'title': 'Understanding Calculus Derivatives', 'description': "Let's discuss how derivatives work", 'members': 12, 'messages': 45},
+        {'id': 2, 'title': 'Physics Mechanics Help', 'description': "Need help with Newton's laws", 'members': 8, 'messages': 23},
+        {'id': 3, 'title': 'Chemistry Reactions', 'description': 'Balancing equations and understanding reactions', 'members': 15, 'messages': 67}
     ]
     return jsonify({'success': True, 'discussions': discussions})
 
@@ -1389,18 +1236,11 @@ def ask_ai():
         conversation_history.append({'question': question, 'answer': explanation})
         session['ai_conversation'] = conversation_history
         session.modified = True
-
-        return jsonify({'success': True, 'explanation': explanation,
-                        'conversation_count': len(conversation_history),
-                        'pdf_processed': pdf_text is not None})
+        return jsonify({'success': True, 'explanation': explanation, 'conversation_count': len(conversation_history), 'pdf_processed': pdf_text is not None})
     except Exception as e:
         logger.error(f'Error in ask-ai: {str(e)}', exc_info=True)
         return jsonify({'error': f'Error: {str(e)}'}), 500
 
-
-# ══════════════════════════════════════════════════════════════════════════════
-#  GROUPS
-# ══════════════════════════════════════════════════════════════════════════════
 
 @app.route('/api/create-group', methods=['POST'])
 def create_group():
@@ -1698,14 +1538,10 @@ def create_poll():
         for opt_text in options:
             if opt_text.strip():
                 db.session.add(PollOption(poll_id=poll.id, option_text=opt_text.strip()))
-        poll_msg = GroupMessage(
-            group_id=group_id, sender_id=user_id,
-            content=f"📊 Poll: {question}", message_type='poll', poll_id=poll.id
-        )
+        poll_msg = GroupMessage(group_id=group_id, sender_id=user_id, content=f"📊 Poll: {question}", message_type='poll', poll_id=poll.id)
         db.session.add(poll_msg)
         db.session.commit()
-        return jsonify({'success': True, 'poll_id': poll.id, 'message_id': poll_msg.id,
-                        'message': 'Poll created successfully!'})
+        return jsonify({'success': True, 'poll_id': poll.id, 'message_id': poll_msg.id, 'message': 'Poll created successfully!'})
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
@@ -1835,8 +1671,7 @@ def schedule_brainstorm():
                     content=f"📅 Brainstorm Session Scheduled!\n\n{title}\n\n{description}\n\nTime: {scheduled_time}\n\nJoin us!"
                 ))
         db.session.commit()
-        return jsonify({'success': True, 'session_id': sess_obj.id,
-                        'message': f'Session scheduled! Notified {len(group_members)} members'})
+        return jsonify({'success': True, 'session_id': sess_obj.id, 'message': f'Session scheduled! Notified {len(group_members)} members'})
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
@@ -1846,8 +1681,7 @@ def schedule_brainstorm():
 def get_group_sessions(group_id):
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
-    sessions = BrainstormSession.query.filter_by(group_id=group_id).order_by(
-        BrainstormSession.scheduled_time.desc()).all()
+    sessions = BrainstormSession.query.filter_by(group_id=group_id).order_by(BrainstormSession.scheduled_time.desc()).all()
     return jsonify({'success': True, 'sessions': [{
         'id': s.id, 'title': s.title, 'description': s.description,
         'scheduled_time': s.scheduled_time.isoformat(), 'status': s.status,
@@ -1922,8 +1756,7 @@ def upload_brainstorm_image():
             ext      = f.filename.rsplit('.', 1)[1].lower()
             filename = f"brainstorm_{session['user_id']}_{ts}.{ext}"
             f.save(os.path.join('uploads/brainstorm', filename))
-            return jsonify({'success': True, 'filename': filename,
-                            'url': f'/uploads/brainstorm/{filename}'})
+            return jsonify({'success': True, 'filename': filename, 'url': f'/uploads/brainstorm/{filename}'})
         except Exception as e:
             return jsonify({'error': str(e)}), 500
     return jsonify({'error': 'Invalid file type'}), 400
@@ -1964,13 +1797,9 @@ def add_brainstorm_note_rich():
         ai_response = None
         if mention_ai:
             try:
-                resp        = model.generate_content(
-                    f"Brainstorm help requested:\nContent: {content}\nTags: {', '.join(tags)}\nBe brief (2-3 sentences).")
+                resp        = model.generate_content(f"Brainstorm help requested:\nContent: {content}\nTags: {', '.join(tags)}\nBe brief (2-3 sentences).")
                 ai_response = resp.text
-                db.session.add(BrainstormNote(
-                    session_id=session_id, user_id=1,
-                    content=f"AI Assistant: {ai_response}", has_media=False
-                ))
+                db.session.add(BrainstormNote(session_id=session_id, user_id=1, content=f"AI Assistant: {ai_response}", has_media=False))
                 db.session.commit()
             except Exception as e:
                 logger.error(f'AI response error: {e}')
@@ -1994,8 +1823,7 @@ def solve_problem_ai():
     if not problem:
         return jsonify({'error': 'Problem description required'}), 400
     try:
-        response = model.generate_content(
-            f"Help solve this problem:\n{problem}\nContext: {context or 'None'}\nProvide a clear step-by-step solution.")
+        response = model.generate_content(f"Help solve this problem:\n{problem}\nContext: {context or 'None'}\nProvide a clear step-by-step solution.")
         return jsonify({'success': True, 'solution': response.text})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -2011,8 +1839,7 @@ def brainstorm_ai_suggestions():
     if not topic:
         return jsonify({'error': 'Topic required'}), 400
     try:
-        response = model.generate_content(
-            f"Study group brainstorming:\nTopic: {topic}\nCurrent ideas: {current_ideas or 'Just starting'}\nGenerate 3-4 creative ideas or questions.")
+        response = model.generate_content(f"Study group brainstorming:\nTopic: {topic}\nCurrent ideas: {current_ideas or 'Just starting'}\nGenerate 3-4 creative ideas or questions.")
         return jsonify({'success': True, 'suggestions': response.text})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -2027,13 +1854,11 @@ def accept_join_request():
     join_request = GroupJoinRequest.query.get(request_id)
     if not join_request:
         return jsonify({'error': 'Request not found'}), 404
-    admin_member = ChatGroupMember.query.filter_by(
-        group_id=join_request.group_id, user_id=user_id).first()
+    admin_member = ChatGroupMember.query.filter_by(group_id=join_request.group_id, user_id=user_id).first()
     if not admin_member or admin_member.role != 'admin':
         return jsonify({'error': 'Only admins can accept requests'}), 403
     try:
-        db.session.add(ChatGroupMember(
-            group_id=join_request.group_id, user_id=join_request.user_id, role='member'))
+        db.session.add(ChatGroupMember(group_id=join_request.group_id, user_id=join_request.user_id, role='member'))
         join_request.status       = 'approved'
         join_request.responded_at = datetime.utcnow()
         db.session.commit()
@@ -2052,8 +1877,7 @@ def reject_join_request():
     join_request = GroupJoinRequest.query.get(request_id)
     if not join_request:
         return jsonify({'error': 'Request not found'}), 404
-    admin_member = ChatGroupMember.query.filter_by(
-        group_id=join_request.group_id, user_id=user_id).first()
+    admin_member = ChatGroupMember.query.filter_by(group_id=join_request.group_id, user_id=user_id).first()
     if not admin_member or admin_member.role != 'admin':
         return jsonify({'error': 'Only admins can reject requests'}), 403
     try:
@@ -2071,8 +1895,7 @@ def get_pending_join_requests():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     user_id         = session['user_id']
-    admin_group_ids = [m.group_id for m in ChatGroupMember.query.filter_by(
-        user_id=user_id, role='admin').all()]
+    admin_group_ids = [m.group_id for m in ChatGroupMember.query.filter_by(user_id=user_id, role='admin').all()]
     pending = GroupJoinRequest.query.filter(
         GroupJoinRequest.group_id.in_(admin_group_ids),
         GroupJoinRequest.status == 'pending'
@@ -2088,8 +1911,7 @@ def get_pending_join_requests():
 def get_my_join_requests():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
-    reqs = GroupJoinRequest.query.filter_by(user_id=session['user_id']).order_by(
-        GroupJoinRequest.created_at.desc()).all()
+    reqs = GroupJoinRequest.query.filter_by(user_id=session['user_id']).order_by(GroupJoinRequest.created_at.desc()).all()
     return jsonify({'success': True, 'requests': [{
         'id': r.id, 'group_id': r.group_id, 'group_name': r.group.name,
         'status': r.status, 'created_at': r.created_at.isoformat(),
@@ -2103,16 +1925,14 @@ def get_unread_notifications():
         return jsonify({'error': 'Unauthorized'}), 401
     user_id               = session['user_id']
     unread_messages_count = Message.query.filter_by(receiver_id=user_id, is_read=False).count()
-    unread_messages       = Message.query.filter_by(receiver_id=user_id, is_read=False).order_by(
-        Message.created_at.desc()).limit(5).all()
+    unread_messages       = Message.query.filter_by(receiver_id=user_id, is_read=False).order_by(Message.created_at.desc()).limit(5).all()
     messages_data = [{
         'id': m.id, 'type': 'message', 'sender_id': m.sender_id,
         'sender_name': m.sender.name, 'sender_pic': m.sender.get_profile_pic_url(),
         'content': (m.content[:50] + '...') if len(m.content) > 50 else m.content,
         'created_at': m.created_at.isoformat()
     } for m in unread_messages]
-    admin_group_ids = [m.group_id for m in ChatGroupMember.query.filter_by(
-        user_id=user_id, role='admin').all()]
+    admin_group_ids = [m.group_id for m in ChatGroupMember.query.filter_by(user_id=user_id, role='admin').all()]
     pending_reqs = GroupJoinRequest.query.filter(
         GroupJoinRequest.group_id.in_(admin_group_ids),
         GroupJoinRequest.status == 'pending'
@@ -2166,8 +1986,7 @@ def save_quiz_result():
         if 'quiz_questions' in session:
             del session['quiz_questions']
             session.modified = True
-        return jsonify({'success': True, 'message': 'Quiz result saved successfully!',
-                        'result_id': result.id}), 200
+        return jsonify({'success': True, 'message': 'Quiz result saved successfully!', 'result_id': result.id}), 200
     except Exception as e:
         logger.error(f'Error saving quiz result: {str(e)}', exc_info=True)
         db.session.rollback()
@@ -2207,10 +2026,6 @@ def uploaded_file(filename):
     return send_from_directory('uploads', filename)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  AUDIO / VIDEO CONVERSION ROUTES
-# ══════════════════════════════════════════════════════════════════════════════
-
 @app.route('/api/convert-to-audio', methods=['POST'])
 def convert_to_audio():
     if 'user_id' not in session:
@@ -2227,7 +2042,6 @@ def convert_to_audio():
 
         language = request.form.get('language', 'en')
         speed    = request.form.get('speed', '1')
-
         file_ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
         if file_ext == 'pdf':
             text_content = extract_pdf_text(file)
@@ -2242,7 +2056,6 @@ def convert_to_audio():
         import uuid
         audio_filename = f"audio_{uuid.uuid4().hex}.mp3"
         audio_path     = f"uploads/converted_audio/{audio_filename}"
-
         create_audio_from_text(text_content, audio_path, language, speed)
 
         if not os.path.exists(audio_path):
@@ -2256,10 +2069,8 @@ def convert_to_audio():
         duration_minutes = max(1, int((word_count // 150) / speed_multiplier))
 
         converted_file = ConvertedFile(
-            user_id=user_id,
-            original_filename=file.filename,
-            converted_filename=audio_filename,
-            file_type='audio',
+            user_id=user_id, original_filename=file.filename,
+            converted_filename=audio_filename, file_type='audio',
             file_path=audio_path,
             file_size=os.path.getsize(audio_path) if os.path.exists(audio_path) else 0,
             duration=f"{duration_minutes}:00",
@@ -2267,9 +2078,7 @@ def convert_to_audio():
         )
         db.session.add(converted_file)
         db.session.commit()
-
-        return jsonify({'success': True, 'message': 'Audio generated successfully!',
-                        'file_id': converted_file.id, 'filename': audio_filename})
+        return jsonify({'success': True, 'message': 'Audio generated successfully!', 'file_id': converted_file.id, 'filename': audio_filename})
     except Exception as e:
         logger.error(f'Audio conversion error: {str(e)}', exc_info=True)
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -2291,7 +2100,6 @@ def convert_to_video():
 
         style    = request.form.get('style', 'slides')
         duration = request.form.get('duration', 'medium')
-
         file_ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
         if file_ext == 'pdf':
             text_content = extract_pdf_text(file)
@@ -2306,15 +2114,12 @@ def convert_to_video():
         import uuid
         video_filename = f"video_{uuid.uuid4().hex}.mp4"
         video_path     = f"uploads/converted_video/{video_filename}"
-
         create_video_from_text(text_content, video_path, style, duration)
 
         duration_map = {'short': '5:00', 'medium': '15:00', 'long': '25:00'}
         converted_file = ConvertedFile(
-            user_id=user_id,
-            original_filename=file.filename,
-            converted_filename=video_filename,
-            file_type='video',
+            user_id=user_id, original_filename=file.filename,
+            converted_filename=video_filename, file_type='video',
             file_path=video_path,
             file_size=os.path.getsize(video_path) if os.path.exists(video_path) else 0,
             duration=duration_map.get(duration, '15:00'),
@@ -2322,9 +2127,7 @@ def convert_to_video():
         )
         db.session.add(converted_file)
         db.session.commit()
-
-        return jsonify({'success': True, 'message': 'Video generated successfully!',
-                        'file_id': converted_file.id, 'filename': video_filename})
+        return jsonify({'success': True, 'message': 'Video generated successfully!', 'file_id': converted_file.id, 'filename': video_filename})
     except Exception as e:
         logger.error(f'Video conversion error: {str(e)}', exc_info=True)
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -2335,8 +2138,7 @@ def get_converted_files():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     try:
-        files = ConvertedFile.query.filter_by(user_id=session['user_id']).order_by(
-            ConvertedFile.created_at.desc()).all()
+        files = ConvertedFile.query.filter_by(user_id=session['user_id']).order_by(ConvertedFile.created_at.desc()).all()
         return jsonify({'success': True, 'files': [{
             'id': f.id, 'filename': f.converted_filename, 'type': f.file_type,
             'created_at': f.created_at.strftime('%b %d, %Y'), 'duration': f.duration,
@@ -2373,11 +2175,7 @@ def download_file(file_id):
             return jsonify({'error': 'File not found'}), 404
         if not os.path.exists(f.file_path):
             return jsonify({'error': 'File does not exist on server'}), 404
-        return send_from_directory(
-            os.path.dirname(os.path.abspath(f.file_path)),
-            os.path.basename(f.file_path),
-            as_attachment=True
-        )
+        return send_from_directory(os.path.dirname(os.path.abspath(f.file_path)), os.path.basename(f.file_path), as_attachment=True)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
