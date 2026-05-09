@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brainspark — Legal</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f4ef;
+    --surface: #ffffff;
+    --accent: #2d5be3;
+    --accent2: #e8380d;
+    --text: #1a1a2e;
+    --muted: #6b6b7b;
+    --border: #e2ddd6;
+    --tag-bg: #eef1fc;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--text);
+    color: #fff;
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .logo span { color: #6c8aff; }
+
+  header nav a {
+    color: rgba(255,255,255,0.7);
+    text-decoration: none;
+    font-size: 0.875rem;
+    margin-left: 1.5rem;
+    transition: color 0.2s;
+  }
+
+  header nav a:hover { color: #fff; }
+
+  /* ── Hero ── */
+  .hero {
+    background: var(--text);
+    color: #fff;
+    padding: 5rem 2rem 4rem;
+    text-align: center;
+  }
+
+  .hero-badge {
+    display: inline-block;
+    background: rgba(108,138,255,0.2);
+    color: #6c8aff;
+    border: 1px solid rgba(108,138,255,0.3);
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.35rem 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 700;
+    line-height: 1.15;
+    margin-bottom: 1rem;
+  }
+
+  .hero p {
+    color: rgba(255,255,255,0.6);
+    font-size: 1rem;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+
+  /* ── Tab Nav ── */
+  .tab-bar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    position: sticky;
+    top: 64px;
+    z-index: 90;
+  }
+
+  .tab-btn {
+    padding: 1rem 2rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--muted);
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .tab-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  .tab-btn:hover { color: var(--text); }
+
+  /* ── Layout ── */
+  .container {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 3rem 2rem 6rem;
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── Section ── */
+  .meta-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2.5rem;
+    flex-wrap: wrap;
+  }
+
+  .meta-tag {
+    background: var(--tag-bg);
+    color: var(--accent);
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    padding: 0.3rem 0.8rem;
+  }
+
+  .section {
+    margin-bottom: 3rem;
+    padding-bottom: 3rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section:last-child { border-bottom: none; }
+
+  .section-num {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+
+  .section h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    line-height: 1.3;
+  }
+
+  .section p {
+    color: #3a3a4a;
+    margin-bottom: 0.9rem;
+    font-size: 0.95rem;
+  }
+
+  .section ul {
+    list-style: none;
+    padding: 0;
+    margin: 0.5rem 0 0.9rem;
+  }
+
+  .section ul li {
+    padding: 0.45rem 0 0.45rem 1.5rem;
+    position: relative;
+    color: #3a3a4a;
+    font-size: 0.95rem;
+  }
+
+  .section ul li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-size: 0.85rem;
+  }
+
+  /* ── Free Plan Banner ── */
+  .plan-banner {
+    background: linear-gradient(135deg, #eef1fc 0%, #f0fdf4 100%);
+    border: 1.5px solid #c7d7fb;
+    border-radius: 16px;
+    padding: 2rem;
+    margin: 2.5rem 0;
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+  }
+
+  .plan-icon {
+    font-size: 2.2rem;
+    flex-shrink: 0;
+    line-height: 1;
+  }
+
+  .plan-banner h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.15rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .plan-banner p {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin: 0;
+  }
+
+  .plan-banner strong { color: var(--accent); }
+
+  /* ── Highlight Box ── */
+  .highlight {
+    background: #fff8f6;
+    border-left: 4px solid var(--accent2);
+    border-radius: 0 10px 10px 0;
+    padding: 1rem 1.2rem;
+    margin: 1.2rem 0;
+    font-size: 0.9rem;
+    color: #3a3a4a;
+  }
+
+  .highlight strong { color: var(--accent2); }
+
+  /* ── Contact Card ── */
+  .contact-card {
+    background: var(--text);
+    color: #fff;
+    border-radius: 16px;
+    padding: 2rem;
+    margin-top: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .contact-card h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.2rem;
+    margin-bottom: 0.3rem;
+  }
+
+  .contact-card p { color: rgba(255,255,255,0.6); font-size: 0.875rem; margin: 0; }
+
+  .contact-card a {
+    background: var(--accent);
+    color: #fff;
+    text-decoration: none;
+    padding: 0.65rem 1.5rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: opacity 0.2s;
+  }
+
+  .contact-card a:hover { opacity: 0.85; }
+
+  /* ── Footer ── */
+  footer {
+    background: var(--text);
+    color: rgba(255,255,255,0.5);
+    text-align: center;
+    padding: 1.5rem;
+    font-size: 0.8rem;
+  }
+
+  footer a { color: rgba(255,255,255,0.7); text-decoration: none; }
+
+  @media (max-width: 600px) {
+    .tab-btn { padding: 0.85rem 1rem; font-size: 0.82rem; }
+    .plan-banner { flex-direction: column; }
+    .contact-card { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="logo">Brain<span>spark</span></div>
+  <nav>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/login">Login</a>
+  </nav>
+</header>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-badge">Legal Documents</div>
+  <h1>Terms, Privacy &amp; Policies</h1>
+  <p>Simple, honest policies written in plain language — because you deserve to know how we operate.</p>
+</div>
+
+<!-- Tab Bar -->
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('terms', this)">Terms of Service</button>
+  <button class="tab-btn" onclick="switchTab('privacy', this)">Privacy Policy</button>
+  <button class="tab-btn" onclick="switchTab('pricing', this)">Pricing Policy</button>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!--  TERMS OF SERVICE                                      -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="container">
+<div id="terms" class="tab-panel active">
+
+  <div class="meta-row">
+    <span class="meta-tag">Effective: May 2025</span>
+    <span class="meta-tag">Version 1.0</span>
+    <span class="meta-tag">English</span>
+  </div>
+
+  <!-- Free Plan Notice -->
+  <div class="plan-banner">
+    <div class="plan-icon">🎓</div>
+    <div>
+      <h3>Brainspark is currently <strong>100% Free</strong></h3>
+      <p>All features — quizzes, AI tutoring, study groups, and study buddy matching — are available at no cost. We will notify you clearly <strong>before any paid plans are introduced</strong>, and you will never be charged without your explicit consent.</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-num">01 — Agreement</div>
+    <h2>Acceptance of Terms</h2>
+    <p>By accessing or using Brainspark ("the Platform"), you agree to be bound by these Terms of Service. If you do not agree, please do not use the Platform. These terms apply to all users, including students, educators, and visitors.</p>
+    <p>We may update these terms from time to time. We will notify registered users of significant changes via email or an in-app notice. Continued use after notification constitutes acceptance.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-num">02 — Eligibility</div>
+    <h2>Who Can Use Brainspark</h2>
+    <p>You may use Brainspark if you:</p>
+    <ul>
+      <li>Are 13 years of age or older</li>
+      <li>Provide accurate and complete registration information</li>
+      <li>Are not barred from using the service under applicable law</li>
+      <li>Have verified your email address during signup</li>
+    </ul>
+    <p>Users under 18 should use the Platform with the awareness of a parent or guardian.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-num">03 — Your Account</div>
+    <h2>Account Responsibilities</h2>
+    <p>You are responsible for maintaining the confidentiality of your account credentials. You agree to:</p>
+    <ul>
+      <li>Use a strong, unique password (we require at least 8 characters, one uppercase letter, one number, and one special character)</li>
+      <li>Notify us immediately of any unauthorised access</li>
+      <li>Not share your account with others or create accounts on others' behalf</li>
+      <li>Not create multiple accounts to circumvent any limitations</li>
+    </ul>
+    <p>We reserve the right to suspend or terminate accounts that violate these terms.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-num">04 — Acceptable Use</div>
+    <h2>What You May and May Not Do</h2>
+    <p>Brainspark is a learning platform. You may use it to study, quiz yourself, collaborate with peers, and access AI-powered explanations. You may <strong>not</strong>:</p>
+    <ul>
+      <li>Upload content you do not own or have the right to share</li>
+      <li>Use the AI tutor to generate content intended to deceive, plagiarise, or cheat in academic assessments</li>
+      <li>Harass, bully, or send harmful messages to other users via the messaging or group features</li>
+      <li>Upload malicious files, spam, or attempt to exploit the platform technically</li>
+      <li>Use automated scripts or bots to interact with the Platform</li>
+      <li>Misrepresent your identity, school, or academic credentials</li>
+    </ul>
+    <div class="highlight">
+      <strong>Academic integrity note:</strong> AI-generated quiz questions and explanations are tools to help you learn — not to replace your own understanding. Use them responsibly in line with your institution's academic policies.
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-num">05 — Content</div>
+    <h2>Your Content &amp; AI-Generated Content</h2>
+    <p>When you upload a PDF or other material, you retain ownership of that content. By uploading, you grant Brainspark a limited licence to process it solely to provide the service to you (e.g., extracting text to generate quiz questions).</p>
+    <p>AI-generated questions and explanations are produced by Google Gemini and are provided for educational purposes. We do not guarantee their accuracy and recommend verifying important information with authoritative sources.</p>
+    <p>We do not sell or share your uploaded content with third parties.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-num">06 — Termination</div>
+    <h2>Ending Your Account</h2>
+    <p>You may delete your account at any time by contacting us. We may suspend or terminate your account if you violate these terms. Upon termination, your data will be handled according to our Privacy Policy.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-num">07 — Disclaimers</div>
+    <h2>Limitations &amp; Liability</h2>
+    <p>Brainspark is provided "as is" and "as available." We do not warrant that the Platform will be error-free, uninterrupted, or perfectly accurate. AI explanations are educational aids and should not replace professional academic advice.</p>
+    <p>To the fullest extent permitted by law, Brainspark and its team shall not be liable for any indirect, incidental, or consequential damages arising from your use of the Platform.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-num">08 — Governing Law</div>
+    <h2>Legal Jurisdiction</h2>
+    <p>These terms are governed by applicable law. Any disputes will be resolved in good faith, and if necessary, through appropriate legal channels in the jurisdiction of the Platform's operators.</p>
+  </div>
+
+  <div class="contact-card">
+    <div>
+      <h3>Questions about our Terms?</h3>
+      <p>We're happy to clarify anything. Reach out to our team.</p>
+    </div>
+    <a href="/contact">Contact Us</a>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!--  PRIVACY POLICY                                        -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div id="privacy" class="tab-panel">
+
+  <div class="meta-row">
+    <span class="meta-tag">Effective: May 2025</span>
+    <span class="meta-tag">GDPR Aware</span>
+    <span class="meta-tag">No Ads</span>
+  </div>
+
+  <div class="plan-banner">
+    <div class="plan-icon">🔒</div>
+    <div>
+      <h3>Your privacy is taken seriously</h3>
+      <p>We collect only what is necessary to operate Brainspark. <strong>We do not sell your data</strong>, show you ads, or share your information with marketers.</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-num">01 — What We Collect</div>
+    <h2>Information We Collect</h2>
+    <p>We collect information you provide when you register and use the Platform:</p>
+    <ul>
+      <li><strong>Account info:</strong> Name, username, email address, school, country, study level, and profile picture</li>
+      <li><strong>Uploaded files:</strong> PDFs you upload to generate quizzes (processed and then deleted from our servers)</li>
+      <li><strong>Usage data:</strong> Quiz scores, quiz history, connection activity, and session data</li>
+      <li><strong>Messages:</strong> Direct messages and group chat messages sent through the platform</li>
+      <li><strong>Device info:</strong> Basic browser and session data for security purposes</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-num">02 — How We Use It</div>
+    <h2>How We Use Your Information</h2>
+    <p>We use your information to:</p>
+    <ul>
+      <li>Create and manage your account</li>
+      <li>Generate personalised quiz questions from your uploaded materials</li>
+      <li>Display your study progress and performance stats on your dashboard</li>
+      <li>Connect you with study buddies based on shared school, country, or level</li>
+      <li>Send transactional emails (verification codes, important notices) via Brevo</li>
+      <li>Detect and prevent abuse, spam, or security threats</li>
+    </ul>
+    <div class="highlight">
+      <strong>AI Processing:</strong> Your PDF text is sent to Google Gemini API solely to generate quiz questions. Google's API data handling is governed by their privacy policy. We do not store PDF content beyond the active session.
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-num">03 — Third Parties</div>
+    <h2>Third-Party Services We Use</h2>
+    <ul>
+      <li><strong>Google Gemini API</strong> — AI question generation (text from your PDFs is sent here)</li>
+      <li><strong>Brevo (Sendinblue)</strong> — Transactional email delivery</li>
+      <li><strong>Render.com</strong> — Cloud hosting and database infrastructure</li>
+      <li><strong>PostgreSQL</strong> — Encrypted database for storing your account and quiz data</li>
+    </ul>
+    <p>We do not share your data with advertisers, data brokers, or unrelated third parties.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-num">04 — Data Retention</div>
+    <h2>How Long We Keep Your Data</h2>
+    <ul>
+      <li><strong>Uploaded PDFs:</strong> Deleted immediately after quiz generation; text is held in your session only</li>
+      <li><strong>Account data:</strong> Retained for as long as your account is active</li>
+      <li><strong>Quiz results:</strong> Retained to power your performance dashboard</li>
+      <li><strong>Messages:</strong> Retained until you or the recipient deletes the conversation</li>
+    </ul>
+    <p>You may request deletion of your account and all associated data at any time by contacting us.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-num">05 — Security</div>
+    <h2>How We Protect Your Data</h2>
+    <ul>
+      <li>Passwords are hashed using industry-standard algorithms (never stored in plain text)</li>
+      <li>Database connections use SSL encryption</li>
+      <li>Sessions are signed and stored server-side</li>
+      <li>Email verification is required before account activation</li>
+    </ul>
+    <p>While we implement strong security practices, no system is perfectly invulnerable. We encourage you to use a unique, strong password.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-num">06 — Your Rights</div>
+    <h2>Your Rights Over Your Data</h2>
+    <p>You have the right to:</p>
+    <ul>
+      <li>Access the personal data we hold about you</li>
+      <li>Request correction of inaccurate data</li>
+      <li>Request deletion of your account and associated data</li>
+      <li>Object to or restrict certain processing activities</li>
+      <li>Withdraw consent at any time (where processing is consent-based)</li>
+    </ul>
+    <p>To exercise any of these rights, contact us at the email below. We will respond within 30 days.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-num">07 — Cookies</div>
+    <h2>Cookies &amp; Sessions</h2>
+    <p>We use server-side sessions (not third-party tracking cookies) to keep you logged in and remember your preferences (such as light/dark theme). We do not use advertising or analytics cookies.</p>
+  </div>
+
+  <div class="contact-card">
+    <div>
+      <h3>Privacy concerns or requests?</h3>
+      <p>Contact us and we'll respond within 30 days.</p>
+    </div>
+    <a href="/contact">Contact Us</a>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!--  PRICING POLICY                                        -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div id="pricing" class="tab-panel">
+
+  <div class="meta-row">
+    <span class="meta-tag">Current Plan: Free</span>
+    <span class="meta-tag">No Credit Card Required</span>
+    <span class="meta-tag">No Auto-Charges</span>
+  </div>
+
+  <div class="plan-banner">
+    <div class="plan-icon">✨</div>
+    <div>
+      <h3>Everything is <strong>free right now</strong></h3>
+      <p>Brainspark is in its early access phase. All features are available to all users at no cost. You will never be charged without being clearly informed and explicitly agreeing to a paid plan.</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-num">01 — Current Model</div>
+    <h2>What's Free &amp; What's Included</h2>
+    <p>During the current phase, every Brainspark feature is available to all registered users at no charge:</p>
+    <ul>
+      <li>Upload unlimited PDFs and generate quiz questions</li>
+      <li>AI-powered explanations and study tutor chat</li>
+      <li>Study buddy matching and direct messaging</li>
+      <li>Study groups, group chat, polls, and brainstorm sessions</li>
+      <li>Performance dashboard and quiz history</li>
+      <li>Image and document sharing in group chats</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-num">02 — Future Plans</div>
+    <h2>How Paid Plans Will Work (When Introduced)</h2>
+    <p>At some point in the future, we may introduce optional paid plans to sustain platform development. Here is our commitment to you:</p>
+    <ul>
+      <li>We will announce any pricing changes at least <strong>30 days in advance</strong></li>
+      <li>Existing users will receive notice by email before any changes take effect</li>
+      <li>A free tier will always remain available with core features</li>
+      <li>You will never be automatically enrolled in a paid plan or charged without your explicit action</li>
+      <li>Any paid features will be clearly labelled within the app</li>
+    </ul>
+    <div class="highlight">
+      <strong>Our promise:</strong> If you signed up for free, you will stay on the free plan until <em>you</em> choose to upgrade. No surprises, no hidden charges.
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-num">03 — No Ads</div>
+    <h2>Ad-Free Experience</h2>
+    <p>Brainspark does not show advertisements. We do not sell advertising space or your data to advertisers. Our intention is to monetise through voluntary paid plans that offer additional value — not by monetising your attention.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-num">04 — Refund Policy</div>
+    <h2>Refunds (For Future Paid Plans)</h2>
+    <p>Since Brainspark is currently free, no refunds are applicable. When paid plans are introduced:</p>
+    <ul>
+      <li>Monthly subscriptions may be cancelled at any time; service continues until the end of the billing period</li>
+      <li>Refund requests within 7 days of first payment will be considered on a case-by-case basis</li>
+      <li>We will publish a detailed refund policy alongside any paid plan announcement</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-num">05 — Cancellation</div>
+    <h2>Cancelling Your Account</h2>
+    <p>You may stop using Brainspark at any time. Since there are no paid plans yet, there is nothing to cancel beyond deleting your account. When paid plans exist, you will be able to cancel from your account settings with no cancellation fees.</p>
+  </div>
+
+  <div class="contact-card">
+    <div>
+      <h3>Pricing questions?</h3>
+      <p>We're happy to clarify our current model or future plans.</p>
+    </div>
+    <a href="/contact">Contact Us</a>
+  </div>
+
+</div>
+</div><!-- /container -->
+
+<footer>
+  <p>© 2025 Brainspark. Built for learners. &nbsp;·&nbsp; <a href="/legal">Legal</a> &nbsp;·&nbsp; <a href="/contact">Contact</a></p>
+</footer>
+
+<script>
+  function switchTab(id, btn) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    btn.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+</script>
+</body>
+</html>
