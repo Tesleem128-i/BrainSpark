@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
+from flask_session import Session
 from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
 from models import db, User, Quiz, QuizResult, Connection, UserTag, Message, ChatGroup, ChatGroupMember, GroupMessage, BrainstormSession, BrainstormNote, GroupJoinRequest, Poll, PollOption, PollVote, GeneratedQuestion, ConvertedFile
@@ -9,12 +10,12 @@ import subprocess
 import requests as req
 from dotenv import load_dotenv
 import google.generativeai as genai
-from flask_mail import Mail, Message as MailMessage
 import random
 import PyPDF2
 import io
 import json
 import textwrap
+import tempfile
 from datetime import datetime, timedelta
 import logging
 
@@ -70,7 +71,15 @@ app.config['UPLOAD_FOLDER']         = 'uploads'
 app.config['PROFILE_UPLOAD_FOLDER'] = 'uploads/profiles'
 app.config['MAX_CONTENT_LENGTH']    = 10 * 1024 * 1024  # 10 MB
 
+# ── Server-side session (fixes multi-worker session loss on Render) ────────────
+app.config['SESSION_TYPE']           = 'filesystem'
+app.config['SESSION_FILE_DIR']       = tempfile.gettempdir()
+app.config['SESSION_PERMANENT']      = False
+app.config['SESSION_USE_SIGNER']     = True
+app.config['SESSION_FILE_THRESHOLD'] = 500
+
 db.init_app(app)
+Session(app)
 
 with app.app_context():
     db.create_all()
@@ -86,7 +95,7 @@ os.makedirs('uploads/converted_audio', exist_ok=True)
 os.makedirs('uploads/converted_video', exist_ok=True)
 
 
-# ── Brevo API Email (replaces Flask-Mail SMTP) ────────────────────────────────
+# ── Brevo API Email ───────────────────────────────────────────────────────────
 def send_email_brevo(to_email, to_name, subject, body):
     """Send email via Brevo API (HTTPS, not SMTP — works on Render free tier)."""
     response = req.post(
