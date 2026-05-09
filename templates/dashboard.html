@@ -704,14 +704,15 @@ function renderActivity(activities) {
 function renderChart(data) {
     const ctx = document.getElementById('performanceChart');
     if (!ctx) return;
-    const labels = Object.keys(data), scores = Object.values(data);
+    const orderedLabels = Array.isArray(data) ? data.map(d => d.day) : Object.keys(data);
+    const orderedScores = Array.isArray(data) ? data.map(d => d.score) : Object.values(data);
     const dark = document.documentElement.getAttribute('data-theme') === 'dark';
     const gc = dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
     const tc = dark ? 'rgba(255,255,255,0.4)'  : 'rgba(0,0,0,0.4)';
-    if (performanceChart) { performanceChart.data.labels = labels; performanceChart.data.datasets[0].data = scores; performanceChart.update(); return; }
+    if (performanceChart) { performanceChart.data.labels = orderedLabels; performanceChart.data.datasets[0].data = orderedScores; performanceChart.update(); return; }
     performanceChart = new Chart(ctx, {
         type: 'line',
-        data: { labels, datasets: [{ label:'Score', data:scores, borderColor:'#ff4f30', backgroundColor:'rgba(255,79,48,0.08)', tension:0.4, fill:true, pointBackgroundColor:'#ff4f30', pointBorderColor:'#fff', pointBorderWidth:2, pointRadius:4 }] },
+        data: { labels: orderedLabels, datasets: [{ label:'Score', data:orderedScores, borderColor:'#ff4f30', backgroundColor:'rgba(255,79,48,0.08)', tension:0.4, fill:true, pointBackgroundColor:'#ff4f30', pointBorderColor:'#fff', pointBorderWidth:2, pointRadius:4 }] },
         options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true,max:100,grid:{color:gc},ticks:{color:tc,callback:v=>v+'%'}}, x:{grid:{color:gc},ticks:{color:tc}} } }
     });
 }

@@ -558,6 +558,7 @@ def generate_questions():
 
     data            = request.json or {}
     selected_topics = data.get('selected_topics', 'all')
+    exam_mode       = data.get('exam_mode', False)
 
     try:
         requested_count = int(session.get('question_count', 10) or 10)
@@ -583,7 +584,27 @@ def generate_questions():
         existing_question_texts = {str(r.question_text).strip().lower() for r in existing_rows if r.question_text}
 
         if selected_topics == 'all' or not selected_topics:
-            prompt = f"""Generate UNIQUE questions (no repeats) for this text:
+            if exam_mode:
+                prompt = f"""You are an exam paper setter. Generate exam-standard questions from this educational text.
+
+{pdf_text[:3000]}
+
+**OUTPUT ONLY VALID JSON** (no explanations):
+{{"questions": [{{"question": "...", "options": ["A. option1", "B. option2", "C. option3", "D. option4"], "answer": "A", "explanation": "..."}}]}}
+
+Rules:
+- Generate EXACTLY {question_count} questions.
+- Questions must test understanding of CONCEPTS, PRINCIPLES, and APPLICATION only.
+- NEVER ask about: professor names, author names, book titles, page numbers, who wrote something, course codes, or any administrative/metadata details.
+- Questions must be answerable from the content itself, not from knowing who wrote it.
+- Cover all major topics in the text proportionally.
+- Vary question types: definition, application, comparison, calculation, analysis.
+- Exactly 4 options labelled A, B, C, D.
+- "answer" must be exactly one letter: A, B, C, or D.
+- Difficulty: {hardness}
+- All questions must have unique question text."""
+            else:
+                prompt = f"""Generate UNIQUE questions (no repeats) for this text:
 
 {pdf_text[:3000]}
 
@@ -733,7 +754,7 @@ def dashboard_stats():
             'time_ago':     get_time_ago(r.completed_at)
         } for r in recent_results]
 
-        daily_scores = {}
+        daily_scores = []
         for i in range(7):
             day       = datetime.utcnow() - timedelta(days=6-i)
             day_start = day.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -743,7 +764,10 @@ def dashboard_stats():
                 QuizResult.completed_at >= day_start,
                 QuizResult.completed_at <= day_end
             ).all()
-            daily_scores[day.strftime('%a')] = round(sum(r.score for r in day_results) / len(day_results)) if day_results else 0
+            daily_scores.append({
+                'day': day.strftime('%a'),
+                'score': round(sum(r.score for r in day_results) / len(day_results)) if day_results else 0
+            })
 
         return jsonify({
             'success': True,

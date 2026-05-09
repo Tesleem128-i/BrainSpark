@@ -437,9 +437,20 @@
             <h2 class="panel-title">Select Knowledge Areas</h2>
             <p class="panel-sub">Choose the topics you want to be tested on, or cover everything at once.</p>
 
-            <button class="btn btn-primary btn-full" onclick="selectAllTopics()" style="margin-bottom:1.5rem;">
-                <i class="fas fa-layer-group"></i> Cover All Topics
-            </button>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.5rem;">
+                <button class="btn btn-primary btn-full" onclick="selectAllTopics()" style="border-radius:12px;">
+                    <i class="fas fa-layer-group"></i> Cover All Topics
+                </button>
+                <button class="btn btn-full" onclick="selectExamMode()" id="exam-mode-btn"
+                    style="border-radius:12px;background:rgba(245,200,66,0.1);border:1.5px solid rgba(245,200,66,0.4);color:var(--gold);font-family:'DM Sans',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;">
+                    <i class="fas fa-graduation-cap"></i> Exam Mode
+                </button>
+            </div>
+
+            <div id="exam-mode-banner" style="display:none;margin-bottom:1rem;padding:0.85rem 1.1rem;border-radius:10px;background:rgba(245,200,66,0.08);border:1.5px solid rgba(245,200,66,0.3);">
+                <div style="font-size:0.82rem;font-weight:600;color:var(--gold);margin-bottom:0.25rem;"><i class="fas fa-graduation-cap"></i> Exam Mode Active</div>
+                <div style="font-size:0.78rem;color:var(--muted);">Questions are exam-standard only — no trivial, name-based, or professor-specific questions. Covers all topics comprehensively.</div>
+            </div>
 
             <div class="field-label">Or select specific topics</div>
             <div id="topics-container"></div>
@@ -641,6 +652,7 @@ let selectedQuestionCount= null;
 let selectedTimeLimit    = null;
 let selectedTopics       = [];
 let quizTopics           = [];
+let isExamMode           = false;
 
 // ──────────────────────────────────────────────────────────────
 //  SCREEN MANAGEMENT
@@ -718,7 +730,20 @@ function toggleTopic(el, index, topic) {
 }
 
 function selectAllTopics() {
+    isExamMode = false;
+    document.getElementById('exam-mode-banner').style.display = 'none';
+    document.getElementById('exam-mode-btn').style.background = 'rgba(245,200,66,0.1)';
     selectedTopics = 'all';
+    updateGenerateBtn();
+    generateQuestions();
+}
+
+function selectExamMode() {
+    isExamMode = true;
+    selectedTopics = 'all';
+    document.getElementById('exam-mode-banner').style.display = 'block';
+    document.getElementById('exam-mode-btn').style.background = 'rgba(245,200,66,0.2)';
+    document.getElementById('exam-mode-btn').style.borderColor = 'var(--gold)';
     updateGenerateBtn();
     generateQuestions();
 }
@@ -738,7 +763,7 @@ async function generateQuestions() {
         const res  = await fetch('/api/generate-questions', {
             method:'POST',
             headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({ selected_topics: selectedTopics })
+            body: JSON.stringify({ selected_topics: selectedTopics, exam_mode: isExamMode })
         });
         const data = await res.json();
         if (!data.success) throw new Error(data.error || 'Failed to generate questions');
