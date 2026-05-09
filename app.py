@@ -66,14 +66,12 @@ app.config['MAX_CONTENT_LENGTH']    = 10 * 1024 * 1024  # 10 MB
 
 # ── Email ─────────────────────────────────────────────────────────────────────
 # FIX: Use port 465 + SSL (more reliable on Render than 587 + TLS).
-app.config['MAIL_SERVER']         = 'smtp.gmail.com'
-app.config['MAIL_PORT']           = 465
-app.config['MAIL_USE_TLS']        = False
-app.config['MAIL_USE_SSL']        = True
-app.config['MAIL_USERNAME']       = os.getenv('MAIL_USERNAME')
-app.config['MAIL_PASSWORD']       = os.getenv('MAIL_PASSWORD')
-app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_USERNAME')
-app.config['MAIL_SUPPRESS_SEND']  = False
+app.config['MAIL_SERVER']   = os.getenv('MAIL_SERVER', 'smtp-relay.brevo.com')
+app.config['MAIL_PORT']     = int(os.getenv('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS']  = os.getenv('MAIL_USE_TLS', 'true').lower() == 'true'
+app.config['MAIL_USE_SSL']  = os.getenv('MAIL_USE_SSL', 'false').lower() == 'true'
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
 
 db.init_app(app)
 mail = Mail(app)
