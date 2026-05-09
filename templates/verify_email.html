@@ -10,348 +10,415 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
   <style>
-    /* ===================== TOKENS ===================== */
     :root {
       --ink: #0a0a14;
-      --ink2: #1c1c2e;
       --surface: #ffffff;
       --surface2: #f5f4f0;
+      --surface3: #ededea;
       --muted: #7a7a8c;
       --accent: #ff4f30;
       --accent2: #ff8c5a;
       --green: #00c98d;
-      --radius: 16px;
-      --radius-sm: 8px;
+      --blue: #3b6bff;
+      --radius: 20px;
+      --radius-sm: 10px;
       --transition: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
     [data-theme="dark"] {
       --ink: #f0efe8;
-      --ink2: #c8c6bc;
       --surface: #0d0d18;
       --surface2: #16162a;
+      --surface3: #1e1e30;
       --muted: #5a5a70;
       --accent: #ff6244;
       --accent2: #ffaa6e;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
     body {
       font-family: 'DM Sans', sans-serif;
       background: var(--surface);
       color: var(--ink);
       min-height: 100vh;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
+      padding: clamp(2rem, 5vw, 4rem);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3rem;
       transition: background 0.4s, color 0.4s;
+      overflow-y: auto;
     }
-    ::selection { background: var(--accent); color: #fff; }
     a { text-decoration: none; color: inherit; }
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; }
 
-    /* ===================== LEFT PANEL ===================== */
-    .left-panel {
-      position: relative; min-height: 100vh;
-      display: flex; flex-direction: column; justify-content: flex-end;
-      padding: 3rem; overflow: hidden;
+    /* Header */
+    .header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      text-align: center;
     }
-    .left-bg { position: absolute; inset: 0; z-index: 0; }
-    .left-bg img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.35); }
-    .left-bg::after {
-      content: ''; position: absolute; inset: 0;
-      background: linear-gradient(to bottom, rgba(10,10,20,0.05) 0%, rgba(10,10,20,0) 30%, rgba(10,10,20,0.7) 70%, rgba(10,10,20,0.98) 100%);
-    }
-    .left-logo {
-      position: absolute; top: 3rem; left: 3rem; z-index: 2;
-      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.5rem;
+    .logo {
+      font-family: 'Syne', sans-serif; 
+      font-weight: 800; 
+      font-size: clamp(1.8rem, 4vw, 2.5rem);
       letter-spacing: -0.02em;
-      background: linear-gradient(135deg, #ff4f30, #ff8c5a);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-    }
-    .left-content { position: relative; z-index: 1; }
-
-    /* Steps indicator */
-    .steps-indicator {
-      display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 2.5rem;
-    }
-    .step {
-      display: flex; align-items: center; gap: 0.75rem;
-      opacity: 0.35; transition: opacity 0.3s;
-    }
-    .step.done, .step.active { opacity: 1; }
-    .step-dot {
-      width: 28px; height: 28px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.25);
-      display: flex; align-items: center; justify-content: center;
-      font-family: 'Syne', sans-serif; font-size: 0.75rem; font-weight: 700; color: rgba(255,255,255,0.4);
-      flex-shrink: 0; transition: all 0.3s;
-    }
-    .step.done .step-dot { background: var(--green); border-color: var(--green); color: #fff; }
-    .step.active .step-dot { background: var(--accent); border-color: var(--accent); color: #fff; }
-    .step-label { font-size: 0.85rem; color: rgba(255,255,255,0.6); font-weight: 500; }
-    .step.active .step-label { color: #fff; font-weight: 600; }
-    .step.done .step-label { color: rgba(255,255,255,0.5); text-decoration: line-through; }
-    .step-connector {
-      width: 1px; height: 20px; background: rgba(255,255,255,0.12); margin-left: 13px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; 
+      -webkit-text-fill-color: transparent; 
+      background-clip: text;
     }
 
-    .left-heading {
-      font-family: 'Syne', sans-serif; font-size: clamp(1.75rem, 3.5vw, 2.75rem);
-      font-weight: 800; color: #fff; letter-spacing: -0.03em; line-height: 1.1;
-      margin-bottom: 0.75rem;
+    /* Main content */
+    .main-content {
+      width: 100%; 
+      max-width: 420px;
+      display: flex; 
+      flex-direction: column; 
+      gap: 2.5rem;
     }
-    .left-heading em { font-style: normal; color: var(--accent); }
-    .left-subheading { font-size: 0.95rem; color: rgba(255,255,255,0.5); line-height: 1.6; max-width: 380px; }
 
-    .tips-card {
-      margin-top: 2rem; padding: 1.5rem;
-      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
-      border-radius: var(--radius); backdrop-filter: blur(10px);
+    /* Steps */
+    .steps {
+      display: flex; flex-direction: column; gap: 0; 
+      background: var(--surface2);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      border: 1px solid rgba(0,0,0,0.07);
     }
-    .tips-card-title { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 0.75rem; }
-    .tip { display: flex; align-items: flex-start; gap: 0.6rem; margin-bottom: 0.6rem; }
-    .tip:last-child { margin-bottom: 0; }
-    .tip i { font-size: 0.8rem; color: var(--accent); margin-top: 0.1rem; flex-shrink: 0; }
-    .tip p { font-size: 0.83rem; color: rgba(255,255,255,0.6); line-height: 1.45; }
-
-    /* ===================== RIGHT PANEL ===================== */
-    .right-panel {
-      background: var(--surface);
-      display: flex; flex-direction: column; justify-content: center; align-items: center;
-      padding: 4rem;
-      position: relative;
-      transition: background 0.4s;
-    }
-    .right-inner { max-width: 420px; width: 100%; }
-
-    /* Theme / nav */
-    .top-controls {
-      position: absolute; top: 2rem; right: 2rem;
+    [data-theme="dark"] .steps { border-color: rgba(255,255,255,0.08); }
+    
+    .step-row {
       display: flex; align-items: center; gap: 1rem;
     }
-    #theme-btn {
-      width: 36px; height: 36px; border-radius: 50%;
-      background: var(--surface2); border: 1px solid rgba(0,0,0,0.08);
+    .step-col {
+      display: flex; flex-direction: column; align-items: center; gap: 0;
+    }
+    .step-dot {
+      width: 32px; height: 32px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
-      cursor: pointer; color: var(--muted); font-size: 0.9rem; transition: all 0.2s;
+      font-family: 'Syne', sans-serif; font-size: 0.8rem; font-weight: 700;
+      flex-shrink: 0; transition: all 0.4s;
+      border: 2px solid rgba(0,0,0,0.12);
+      color: var(--muted);
+      background: var(--surface);
     }
-    [data-theme="dark"] #theme-btn { border-color: rgba(255,255,255,0.08); }
-    #theme-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+    [data-theme="dark"] .step-dot { 
+      border-color: rgba(255,255,255,0.15); 
+      background: var(--surface2);
+    }
+    .step-dot.done { background: var(--green); border-color: var(--green); color: #fff; }
+    .step-dot.active { 
+      background: var(--accent); 
+      border-color: var(--accent); 
+      color: #fff; 
+      box-shadow: 0 0 0 6px rgba(255,79,48,0.15); 
+    }
+    .step-line {
+      width: 2px; height: 28px; margin: 4px 0;
+      background: rgba(0,0,0,0.08);
+    }
+    [data-theme="dark"] .step-line { background: rgba(255,255,255,0.1); }
+    .step-line.done { background: var(--green); opacity: 0.5; }
+    .step-text { flex: 1; }
+    .step-label {
+      font-size: 0.9rem; font-weight: 600;
+      color: var(--ink);
+      transition: color 0.3s;
+    }
+    .step-row.done .step-label { color: var(--muted); text-decoration: line-through; }
+    .step-row.active .step-label { color: var(--ink); font-weight: 700; }
+    .step-sublabel { font-size: 0.75rem; color: var(--muted); margin-top: 1px; }
 
-    /* Verify card content */
-    .verify-icon {
-      width: 72px; height: 72px; border-radius: 18px; margin: 0 auto 1.75rem;
-      background: linear-gradient(135deg, rgba(0,201,141,0.15), rgba(0,201,141,0.05));
-      border: 1px solid rgba(0,201,141,0.25);
+    /* Headline */
+    .headline-section {
+      text-align: center;
+    }
+    .left-headline {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(2.2rem, 5vw, 3.2rem);
+      font-weight: 800; 
+      letter-spacing: -0.04em;
+      color: var(--ink); 
+      line-height: 1.05;
+      margin-bottom: 1rem;
+    }
+    .left-headline em { font-style: normal; color: var(--accent); }
+    .left-sub { 
+      font-size: 0.95rem; 
+      color: var(--muted); 
+      line-height: 1.7; 
+      max-width: 380px;
+      margin: 0 auto;
+    }
+
+    /* Form content */
+    .form-section {
+      display: flex; flex-direction: column; gap: 1.5rem;
+    }
+
+    .top-bar {
+      display: flex; gap: 0.75rem; align-items: center;
+      justify-content: flex-end;
+      margin-bottom: -1rem;
+    }
+    .icon-btn {
+      width: 42px; height: 42px; border-radius: 50%;
+      background: var(--surface2); 
+      border: 1px solid rgba(0,0,0,0.07);
       display: flex; align-items: center; justify-content: center;
-      animation: pulse-icon 2.5s ease-in-out infinite;
+      cursor: pointer; 
+      color: var(--muted); 
+      font-size: 1rem;
+      transition: all 0.2s;
     }
-    @keyframes pulse-icon {
-      0%,100% { box-shadow: 0 0 0 0 rgba(0,201,141,0.25); }
-      50% { box-shadow: 0 0 0 14px rgba(0,201,141,0); }
-    }
-    .verify-icon i { font-size: 1.75rem; color: var(--green); }
+    [data-theme="dark"] .icon-btn { border-color: rgba(255,255,255,0.08); }
+    .icon-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
 
-    .form-eyebrow {
-      font-size: 0.78rem; font-weight: 600; letter-spacing: 0.12em;
+    .verify-icon-wrap {
+      width: 80px; height: 80px; border-radius: 24px; margin: 0 auto 2rem;
+      background: linear-gradient(135deg, rgba(0,201,141,0.12), rgba(0,201,141,0.04));
+      border: 1.5px solid rgba(0,201,141,0.2);
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+    }
+    .verify-icon-wrap::after {
+      content: '';
+      position: absolute; inset: -6px;
+      border-radius: 30px;
+      border: 1.5px solid rgba(0,201,141,0.1);
+      animation: ring-pulse 2.5s ease-in-out infinite;
+    }
+    @keyframes ring-pulse {
+      0%,100% { opacity: 0.8; transform: scale(1); }
+      50% { opacity: 0; transform: scale(1.15); }
+    }
+    .verify-icon-wrap i { font-size: 1.9rem; color: var(--green); }
+
+    .eyebrow {
+      font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em;
       text-transform: uppercase; color: var(--green);
-      display: flex; align-items: center; gap: 0.5rem;
-      margin-bottom: 0.75rem;
+      display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.6rem;
+      justify-content: center;
     }
-    .form-eyebrow::before { content: ''; width: 20px; height: 2px; background: var(--green); border-radius: 1px; }
+    .eyebrow::before { content: ''; width: 20px; height: 2px; background: var(--green); border-radius: 1px; }
+
     .form-title {
-      font-family: 'Syne', sans-serif; font-size: 2.25rem;
-      font-weight: 800; letter-spacing: -0.03em;
-      color: var(--ink); line-height: 1.1; margin-bottom: 0.5rem;
+      font-family: 'Syne', sans-serif; font-size: 2.4rem; font-weight: 800;
+      letter-spacing: -0.03em; color: var(--ink); line-height: 1.1; margin-bottom: 0.5rem;
     }
-    .form-subtitle {
-      font-size: 0.95rem; color: var(--muted); line-height: 1.6; margin-bottom: 0.5rem;
+    .form-sub { font-size: 0.95rem; color: var(--muted); line-height: 1.6; margin-bottom: 0.5rem; }
+
+    .email-chip {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.4rem 1rem; border-radius: 50px;
+      background: rgba(0,201,141,0.08); border: 1px solid rgba(0,201,141,0.2);
+      font-size: 0.9rem; color: var(--green); font-weight: 500;
+      margin-bottom: 2rem; word-break: break-all;
+      justify-content: center;
     }
-    .form-email-display {
-      display: inline-flex; align-items: center; gap: 0.4rem;
-      padding: 0.3rem 0.8rem; border-radius: 50px;
-      background: rgba(0,201,141,0.1); border: 1px solid rgba(0,201,141,0.25);
-      font-size: 0.875rem; color: var(--green); font-weight: 500; margin-bottom: 2rem;
+
+    /* Error */
+    .alert {
+      padding: 1rem 1.25rem; border-radius: var(--radius-sm);
+      font-size: 0.9rem; margin-bottom: 1.25rem;
+      display: none; align-items: center; gap: 0.7rem;
+      border: 1px solid rgba(255,79,48,0.2);
+      background: rgba(255,79,48,0.08); color: #c0280e;
     }
+    [data-theme="dark"] .alert { color: #ff8066; }
+    .alert.show { display: flex; }
 
     /* OTP */
-    .otp-row { display: flex; gap: 0.75rem; margin-bottom: 2rem; }
+    .otp-row { display: flex; gap: 0.75rem; margin-bottom: 2rem; justify-content: center; }
     .otp-input {
       flex: 1; aspect-ratio: 1; text-align: center;
-      font-family: 'Syne', sans-serif; font-size: 1.6rem; font-weight: 700;
-      border: 2px solid rgba(0,0,0,0.1); border-radius: var(--radius-sm);
+      font-family: 'Syne', sans-serif; font-size: 1.6rem; font-weight: 800;
+      border: 2px solid rgba(0,0,0,0.09); border-radius: var(--radius-sm);
       background: var(--surface2); color: var(--ink); outline: none;
-      transition: all 0.2s; cursor: text;
+      transition: all 0.22s; cursor: text; caret-color: var(--green);
+      max-width: 60px;
     }
-    [data-theme="dark"] .otp-input { border-color: rgba(255,255,255,0.1); }
-    .otp-input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(0,201,141,0.12); background: var(--surface); }
-    .otp-input.filled { border-color: rgba(0,201,141,0.4); background: rgba(0,201,141,0.04); }
-    .otp-input.error { border-color: var(--accent) !important; box-shadow: 0 0 0 3px rgba(255,79,48,0.1) !important; }
+    [data-theme="dark"] .otp-input { border-color: rgba(255,255,255,0.09); }
+    .otp-input:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 4px rgba(0,201,141,0.1);
+      background: var(--surface);
+    }
+    .otp-input.filled { border-color: rgba(0,201,141,0.45); background: rgba(0,201,141,0.04); }
+    .otp-input.err { border-color: var(--accent) !important; box-shadow: 0 0 0 4px rgba(255,79,48,0.1) !important; }
 
     .btn-verify {
-      width: 100%; padding: 1.1rem; background: var(--green);
-      color: #fff; border: none; border-radius: var(--radius-sm);
-      font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700;
+      width: 100%; padding: 1.2rem 2rem;
+      background: var(--green); color: #fff; border: none;
+      border-radius: var(--radius-sm);
+      font-family: 'Syne', sans-serif; font-size: 1.05rem; font-weight: 700;
       cursor: pointer; letter-spacing: 0.01em;
-      box-shadow: 0 8px 28px rgba(0,201,141,0.3);
+      box-shadow: 0 10px 32px rgba(0,201,141,0.3);
       transition: all var(--transition);
-      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+      display: flex; align-items: center; justify-content: center; gap: 0.6rem;
     }
-    .btn-verify:hover { filter: brightness(1.08); transform: translateY(-2px); box-shadow: 0 12px 34px rgba(0,201,141,0.4); }
-    .btn-verify:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-    .btn-verify.success { background: var(--green); }
+    .btn-verify:hover { filter: brightness(1.08); transform: translateY(-2px); box-shadow: 0 16px 40px rgba(0,201,141,0.4); }
+    .btn-verify:disabled { opacity: 0.55; cursor: not-allowed; transform: none; box-shadow: none; }
 
-    /* Resend */
-    .resend-area {
-      margin-top: 1.75rem; text-align: center;
-      font-size: 0.875rem; color: var(--muted);
+    .resend-row {
+      text-align: center; font-size: 0.9rem; color: var(--muted);
     }
-    .resend-area a, .resend-area button {
-      color: var(--accent); font-weight: 500; background: none; border: none;
-      cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 0.875rem;
+    .resend-btn {
+      color: var(--accent); font-weight: 600; background: none; border: none;
+      cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 0.9rem;
+      transition: color 0.2s; padding: 0;
+    }
+    .resend-btn:hover { color: var(--accent2); }
+    .resend-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .countdown-chip {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.3rem 0.85rem; border-radius: 50px;
+      background: var(--surface2); font-size: 0.85rem; color: var(--muted);
+      margin-top: 0.7rem;
+    }
+
+    .back-link {
+      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+      font-size: 0.88rem; color: var(--muted); 
       transition: color 0.2s;
     }
-    .resend-area a:hover, .resend-area button:hover { color: var(--accent2); }
+    .back-link:hover { color: var(--ink); }
 
-    .countdown {
-      display: inline-flex; align-items: center; gap: 0.3rem;
-      padding: 0.25rem 0.75rem; border-radius: 50px;
-      background: var(--surface2); font-size: 0.8rem; color: var(--muted);
-      margin-top: 0.75rem;
+    /* Success */
+    .success-state { 
+      display: none; flex-direction: column; align-items: center; text-align: center; 
+      padding: 3rem 2rem;
     }
-    .countdown i { font-size: 0.7rem; }
+    .success-state.show { display: flex; }
+    .success-anim {
+      width: 92px; height: 92px; border-radius: 50%; background: var(--green);
+      display: flex; align-items: center; justify-content: center; margin-bottom: 1.75rem;
+      animation: pop-in 0.5s cubic-bezier(0.16,1,0.3,1) forwards;
+    }
+    @keyframes pop-in {
+      from { transform: scale(0.4); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .success-anim i { font-size: 2.4rem; color: #fff; }
+    .success-title { 
+      font-family: 'Syne', sans-serif; font-size: 2.2rem; font-weight: 800; 
+      color: var(--ink); margin-bottom: 0.6rem; 
+    }
+    .success-sub { font-size: 0.95rem; color: var(--muted); }
 
-    /* Back link */
-    .back-to-signup {
-      display: flex; align-items: center; gap: 0.4rem;
-      font-size: 0.82rem; color: var(--muted); margin-top: 1.5rem;
-      justify-content: center; transition: color 0.2s;
+    /* Tips */
+    .tips-box {
+      border: 1px solid rgba(0,0,0,0.07);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      background: var(--surface2);
     }
-    .back-to-signup:hover { color: var(--ink); }
+    [data-theme="dark"] .tips-box { border-color: rgba(255,255,255,0.07); }
+    
+    .tips-label {
+      font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--muted);
+      margin-bottom: 1rem;
+    }
+    .tip-item {
+      display: flex; gap: 0.7rem; margin-bottom: 0.75rem; align-items: flex-start;
+    }
+    .tip-item:last-child { margin-bottom: 0; }
+    .tip-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent); flex-shrink: 0; margin-top: 0.5rem;
+    }
+    .tip-item p { font-size: 0.85rem; color: var(--muted); line-height: 1.55; }
 
-    /* Success state */
-    .success-overlay {
-      display: none; flex-direction: column; align-items: center; text-align: center;
-      padding: 2rem 0;
-    }
-    .success-overlay.show { display: flex; }
-    .success-check {
-      width: 80px; height: 80px; border-radius: 50%;
-      background: var(--green); display: flex; align-items: center; justify-content: center;
-      margin-bottom: 1.5rem;
-      box-shadow: 0 0 0 0 rgba(0,201,141,0.4);
-      animation: success-pulse 0.6s ease forwards;
-    }
-    @keyframes success-pulse {
-      0% { transform: scale(0.5); opacity: 0; }
-      70% { transform: scale(1.1); }
-      100% { transform: scale(1); opacity: 1; }
-    }
-    .success-check i { font-size: 2rem; color: #fff; }
-    .success-title {
-      font-family: 'Syne', sans-serif; font-size: 1.75rem; font-weight: 800;
-      color: var(--ink); margin-bottom: 0.5rem;
-    }
-    .success-desc { font-size: 0.95rem; color: var(--muted); }
-
-    /* Alerts */
-    .alert {
-      padding: 0.875rem 1rem; border-radius: var(--radius-sm);
-      font-size: 0.875rem; margin-bottom: 1.25rem;
-      display: none; align-items: center; gap: 0.5rem;
-    }
-    .alert.show { display: flex; }
-    .alert-error { background: rgba(255,79,48,0.1); color: #c0280e; border: 1px solid rgba(255,79,48,0.2); }
-    [data-theme="dark"] .alert-error { color: #ff8066; }
-
-    /* Shake */
     @keyframes shake {
       0%,100%{ transform: translateX(0); }
-      20%{ transform: translateX(-6px); }
-      40%{ transform: translateX(6px); }
+      20%{ transform: translateX(-7px); }
+      40%{ transform: translateX(7px); }
       60%{ transform: translateX(-4px); }
       80%{ transform: translateX(4px); }
     }
     .shake { animation: shake 0.45s ease; }
 
-    /* Responsive */
-    @media (max-width: 900px) {
-      body { grid-template-columns: 1fr; }
-      .left-panel { min-height: 35vh; }
-      .right-panel { padding: 3rem 2rem; }
-    }
-    @media (max-width: 500px) {
-      .right-panel { padding: 2rem 1.25rem; }
-      .otp-input { font-size: 1.3rem; }
-      .otp-row { gap: 0.45rem; }
+    @media (max-width: 480px) {
+      body { padding: 1.5rem 1rem; gap: 2rem; }
+      .main-content { gap: 2rem; }
+      .steps { padding: 1.25rem; }
+      .otp-input { font-size: 1.3rem; max-width: 52px; }
+      .otp-row { gap: 0.5rem; }
+      .form-title { font-size: 2rem; }
+      .left-headline { font-size: 1.9rem; }
     }
   </style>
 </head>
 <body>
 
-<!-- ======================== LEFT PANEL ======================== -->
-<div class="left-panel">
-  <div class="left-bg">
-    <img src="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=1200&q=80&fit=crop" alt="Student studying">
+  <!-- Header -->
+  <div class="header">
+    <a href="/" class="logo">Brainspark</a>
   </div>
-  <a href="/" class="left-logo">Brainspark</a>
 
-  <div class="left-content">
-    <div class="steps-indicator">
-      <div class="step done">
-        <div class="step-dot"><i class="fas fa-check" style="font-size:0.7rem;"></i></div>
-        <span class="step-label">Created your account</span>
+  <!-- Main Content -->
+  <div class="main-content">
+
+    <!-- Steps -->
+    <div class="steps">
+      <div class="step-row done">
+        <div class="step-col">
+          <div class="step-dot done"><i class="fas fa-check" style="font-size:0.7rem;"></i></div>
+          <div class="step-line done"></div>
+        </div>
+        <div class="step-text">
+          <div class="step-label">Created account</div>
+          <div class="step-sublabel">All done</div>
+        </div>
       </div>
-      <div class="step-connector"></div>
-      <div class="step active">
-        <div class="step-dot">2</div>
-        <span class="step-label">Verify your email</span>
+      <div class="step-row active">
+        <div class="step-col">
+          <div class="step-dot active">2</div>
+          <div class="step-line"></div>
+        </div>
+        <div class="step-text">
+          <div class="step-label">Verify your email</div>
+          <div class="step-sublabel" style="color:var(--accent);">Enter your 6-digit code</div>
+        </div>
       </div>
-      <div class="step-connector"></div>
-      <div class="step">
-        <div class="step-dot">3</div>
-        <span class="step-label">Access your dashboard</span>
+      <div class="step-row">
+        <div class="step-col">
+          <div class="step-dot">3</div>
+        </div>
+        <div class="step-text">
+          <div class="step-label">Access dashboard</div>
+          <div class="step-sublabel">Start learning</div>
+        </div>
       </div>
     </div>
 
-    <h1 class="left-heading">One step<br>from <em>genius.</em></h1>
-    <p class="left-subheading">Just confirm your email and you'll have full access to AI quiz generation, performance tracking, and 50K+ students worldwide.</p>
+    <!-- Verify Form Section -->
+    <div class="form-section" id="verify-state">
+      
+      <div class="top-bar">
+        <button class="icon-btn" onclick="toggleTheme()" title="Toggle theme" id="theme-btn">
+          <i class="fas fa-moon"></i>
+        </button>
+      </div>
 
-    <div class="tips-card">
-      <div class="tips-card-title">📬 Didn't get the email?</div>
-      <div class="tip"><i class="fas fa-arrow-right"></i><p>Check your spam or junk folder first.</p></div>
-      <div class="tip"><i class="fas fa-arrow-right"></i><p>Make sure you typed the right email address when signing up.</p></div>
-      <div class="tip"><i class="fas fa-arrow-right"></i><p>Codes expire after 10 minutes. Use the resend button if needed.</p></div>
-    </div>
-  </div>
-</div>
-
-<!-- ======================== RIGHT PANEL ======================== -->
-<div class="right-panel">
-  <div class="top-controls">
-    <button id="theme-btn" onclick="toggleTheme()" title="Toggle theme"><i class="fas fa-moon"></i></button>
-  </div>
-
-  <div class="right-inner">
-
-    <!-- Verify form (shown by default) -->
-    <div id="verify-state">
-      <div class="verify-icon">
+      <div class="verify-icon-wrap">
         <i class="fas fa-envelope-open-text"></i>
       </div>
 
-      <div class="form-eyebrow">Almost there</div>
-      <h2 class="form-title">Verify your email</h2>
-      <p class="form-subtitle">We sent a 6-digit code to:</p>
-      <div class="form-email-display">
-        <i class="fas fa-envelope"></i>
+      <div class="eyebrow">Almost there</div>
+      <h2 class="form-title">Verify your<br>email</h2>
+      <p class="form-sub">We sent a 6-digit code to:</p>
+      <div class="email-chip">
+        <i class="fas fa-envelope" style="font-size:0.85rem;"></i>
         <span id="email-display">{{ email }}</span>
       </div>
 
-      <div class="alert alert-error" id="error-alert">
+      <div class="alert" id="error-alert">
         <i class="fas fa-exclamation-circle"></i>
-        <span id="error-msg">Invalid or expired code.</span>
+        <span id="error-msg">Invalid or expired code. Please try again.</span>
       </div>
 
       <form id="verify-form" novalidate>
@@ -366,166 +433,214 @@
 
         <button type="submit" class="btn-verify" id="verify-btn">
           <i class="fas fa-check-circle"></i>
-          <span class="v-label">Verify & Continue to Login</span>
-          <span class="v-loading" style="display:none;"><i class="fas fa-spinner fa-spin"></i> Verifying…</span>
+          <span class="lbl">Verify & Continue</span>
+          <span class="spin" style="display:none;"><i class="fas fa-spinner fa-spin"></i> Verifying…</span>
         </button>
       </form>
 
-      <div class="resend-area">
+      <div class="resend-row">
         Didn't receive it?
-        <button id="resend-btn">Resend code</button>
-        <div class="countdown" id="countdown-display" style="display:none;">
-          <i class="fas fa-clock"></i>
-          <span id="countdown-text">Resend in 60s</span>
+        <button class="resend-btn" id="resend-btn">Resend code</button>
+        <br>
+        <div class="countdown-chip" id="countdown-chip" style="display:none;">
+          <i class="fas fa-clock" style="font-size:0.75rem;"></i>
+          <span id="countdown-txt">Resend in 60s</span>
         </div>
       </div>
 
-      <a href="/signup" class="back-to-signup">
-        <i class="fas fa-arrow-left"></i> Back to sign up
+      <a href="/signup" class="back-link">
+        <i class="fas fa-arrow-left" style="font-size:0.8rem;"></i> Back to sign up
       </a>
     </div>
 
-    <!-- Success state (hidden) -->
-    <div class="success-overlay" id="success-state">
-      <div class="success-check"><i class="fas fa-check"></i></div>
-      <div class="success-title">Email verified!</div>
-      <p class="success-desc">Redirecting you to login…</p>
+    <!-- Success state -->
+    <div class="success-state" id="success-state">
+      <div class="success-anim"><i class="fas fa-check"></i></div>
+      <div class="success-title">Verified! 🎉</div>
+      <p class="success-sub">Redirecting you to login…</p>
+    </div>
+
+    <!-- Headline & Tips -->
+    <div class="headline-section">
+      <h1 class="left-headline">One step<br>from <em>genius.</em></h1>
+      <p class="left-sub">Just confirm your email and you'll have full access to AI quiz generation, performance tracking, and 50K+ students worldwide.</p>
+
+      <div class="tips-box" style="margin-top: 2rem;">
+        <div class="tips-label">📬 Didn't get the email?</div>
+        <div class="tip-item">
+          <div class="tip-dot"></div>
+          <p>Check your spam or junk folder first.</p>
+        </div>
+        <div class="tip-item">
+          <div class="tip-dot"></div>
+          <p>Make sure you entered the right email during signup.</p>
+        </div>
+        <div class="tip-item">
+          <div class="tip-dot"></div>
+          <p>Codes expire in 15 minutes — use the resend button if needed.</p>
+        </div>
+      </div>
     </div>
 
   </div>
-</div>
 
 <script>
-  // Theme
+  // ── Theme ──────────────────────────────────────────────────
   let dark = localStorage.getItem('bs-theme') === 'dark';
   function applyTheme() {
     document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-    document.getElementById('theme-btn').innerHTML = dark ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+    document.getElementById('theme-btn').innerHTML = dark
+      ? '<i class="fas fa-sun"></i>'
+      : '<i class="fas fa-moon"></i>';
     localStorage.setItem('bs-theme', dark ? 'dark' : 'light');
   }
   applyTheme();
   function toggleTheme() { dark = !dark; applyTheme(); }
 
-  // Populate email from URL param or template
+  // ── Email from URL or template ─────────────────────────────
   const urlEmail = new URLSearchParams(window.location.search).get('email');
   const emailDisplay = document.getElementById('email-display');
   if (urlEmail) emailDisplay.textContent = decodeURIComponent(urlEmail);
 
-  // OTP inputs
-  const otpInputs = Array.from(document.querySelectorAll('.otp-input'));
-  otpInputs.forEach((input, i, arr) => {
-    input.addEventListener('input', e => {
-      const val = e.target.value.replace(/\D/g, '');
-      e.target.value = val;
-      if (val) {
+  function getEmail() { return emailDisplay.textContent.trim(); }
+
+  // ── OTP inputs ─────────────────────────────────────────────
+  const inputs = Array.from(document.querySelectorAll('.otp-input'));
+  inputs.forEach((inp, i, arr) => {
+    inp.addEventListener('input', e => {
+      const v = e.target.value.replace(/\D/g,'');
+      e.target.value = v;
+      if (v) {
         e.target.classList.add('filled');
-        arr[i + 1]?.focus();
-        if (i === 5) document.getElementById('verify-form').dispatchEvent(new Event('submit'));
-      } else { e.target.classList.remove('filled'); }
-    });
-    input.addEventListener('keydown', e => {
-      if (e.key === 'Backspace' && !e.target.value) {
+        arr[i+1]?.focus();
+        if (i === 5) submit();
+      } else {
         e.target.classList.remove('filled');
-        arr[i - 1]?.focus();
       }
     });
-    input.addEventListener('paste', e => {
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' && !e.target.value) {
+        e.target.classList.remove('filled');
+        arr[i-1]?.focus();
+      }
+    });
+    inp.addEventListener('paste', e => {
       e.preventDefault();
-      const digits = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-      digits.split('').forEach((d, j) => {
+      const digits = e.clipboardData.getData('text').replace(/\D/g,'').slice(0,6);
+      digits.split('').forEach((d,j) => {
         if (arr[j]) { arr[j].value = d; arr[j].classList.add('filled'); }
       });
-      if (digits.length === 6) setTimeout(() => document.getElementById('verify-form').dispatchEvent(new Event('submit')), 100);
+      if (digits.length === 6) setTimeout(submit, 80);
     });
   });
-  otpInputs[0]?.focus();
+  inputs[0]?.focus();
 
-  // Countdown timer for resend
-  let countdownInterval = null;
-  function startCountdown(seconds = 60) {
-    const display = document.getElementById('countdown-display');
-    const text = document.getElementById('countdown-text');
-    const btn = document.getElementById('resend-btn');
-    display.style.display = 'inline-flex';
+  // ── Verify ─────────────────────────────────────────────────
+  document.getElementById('verify-form').addEventListener('submit', e => {
+    e.preventDefault();
+    submit();
+  });
+
+  async function submit() {
+    const code = inputs.map(i => i.value).join('');
+    const email = getEmail();
+    const alert = document.getElementById('error-alert');
+    alert.classList.remove('show');
+
+    if (code.length !== 6) {
+      document.getElementById('error-msg').textContent = 'Please enter the complete 6-digit code.';
+      alert.classList.add('show');
+      return;
+    }
+
+    if (!email) {
+      document.getElementById('error-msg').textContent = 'Email address is missing. Please go back to sign up.';
+      alert.classList.add('show');
+      return;
+    }
+
+    const btn = document.getElementById('verify-btn');
+    btn.querySelector('.lbl').style.display = 'none';
+    btn.querySelector('.spin').style.display = 'flex';
+    btn.disabled = true;
+
+    try {
+      const res = await fetch('/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, email })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        document.getElementById('verify-state').style.display = 'none';
+        document.getElementById('success-state').classList.add('show');
+        setTimeout(() => { window.location.href = data.redirect || '/login'; }, 1400);
+      } else {
+        inputs.forEach(i => { i.classList.add('err'); });
+        document.getElementById('otp-row').classList.add('shake');
+        setTimeout(() => {
+          document.getElementById('otp-row').classList.remove('shake');
+          inputs.forEach(i => { i.classList.remove('err','filled'); i.value = ''; });
+          inputs[0].focus();
+        }, 450);
+        document.getElementById('error-msg').textContent = data.error || 'Invalid or expired code.';
+        alert.classList.add('show');
+      }
+    } catch {
+      document.getElementById('error-msg').textContent = 'Network error. Please try again.';
+      document.getElementById('error-alert').classList.add('show');
+    } finally {
+      btn.querySelector('.lbl').style.display = 'flex';
+      btn.querySelector('.spin').style.display = 'none';
+      btn.disabled = false;
+    }
+  }
+
+  // ── Resend ─────────────────────────────────────────────────
+  let countdownTimer = null;
+  function startCountdown(secs = 60) {
+    const chip = document.getElementById('countdown-chip');
+    const txt  = document.getElementById('countdown-txt');
+    const btn  = document.getElementById('resend-btn');
+    chip.style.display = 'inline-flex';
     btn.style.display = 'none';
-    let remaining = seconds;
-    clearInterval(countdownInterval);
-    countdownInterval = setInterval(() => {
-      remaining--;
-      text.textContent = `Resend in ${remaining}s`;
-      if (remaining <= 0) {
-        clearInterval(countdownInterval);
-        display.style.display = 'none';
+    let r = secs;
+    clearInterval(countdownTimer);
+    countdownTimer = setInterval(() => {
+      r--;
+      txt.textContent = `Resend in ${r}s`;
+      if (r <= 0) {
+        clearInterval(countdownTimer);
+        chip.style.display = 'none';
         btn.style.display = 'inline';
       }
     }, 1000);
   }
 
-  // Verify submit
-  document.getElementById('verify-form').addEventListener('submit', async e => {
-    e.preventDefault();
-    const code = otpInputs.map(i => i.value).join('');
-    const email = emailDisplay.textContent.trim();
-    const errorAlert = document.getElementById('error-alert');
-    errorAlert.classList.remove('show');
-
-    if (code.length !== 6) {
-      document.getElementById('error-msg').textContent = 'Please enter the complete 6-digit code.';
-      errorAlert.classList.add('show'); return;
-    }
-
-    const btn = document.getElementById('verify-btn');
-    btn.querySelector('.v-label').style.display = 'none';
-    btn.querySelector('.v-loading').style.display = 'flex';
-    btn.disabled = true;
-
-    try {
-      const response = await fetch('/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, email })
-      });
-      const result = await response.json();
-      if (result.success) {
-        document.getElementById('verify-state').style.display = 'none';
-        document.getElementById('success-state').classList.add('show');
-        setTimeout(() => { window.location.href = result.redirect || '/login'; }, 1400);
-      } else {
-        otpInputs.forEach(i => i.classList.add('error'));
-        document.getElementById('otp-row').classList.add('shake');
-        setTimeout(() => {
-          document.getElementById('otp-row').classList.remove('shake');
-          otpInputs.forEach(i => { i.classList.remove('error'); i.classList.remove('filled'); i.value = ''; });
-          otpInputs[0].focus();
-        }, 450);
-        document.getElementById('error-msg').textContent = result.error || 'Invalid or expired code. Please try again.';
-        errorAlert.classList.add('show');
-      }
-    } catch {
-      document.getElementById('error-msg').textContent = 'Network error. Please try again.';
-      errorAlert.classList.add('show');
-    } finally {
-      btn.querySelector('.v-label').style.display = 'flex';
-      btn.querySelector('.v-loading').style.display = 'none';
-      btn.disabled = false;
-    }
-  });
-
-  // Resend
   document.getElementById('resend-btn').addEventListener('click', async () => {
-    const email = emailDisplay.textContent.trim();
+    const email = getEmail();
     const btn = document.getElementById('resend-btn');
+    btn.disabled = true;
     btn.textContent = 'Sending…';
     try {
-      const r = await fetch('/resend-verification', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+      const res = await fetch('/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
       });
-      const result = await r.json();
-      if (result.success) { startCountdown(60); }
-      else alert(result.error || 'Failed to resend. Please try again.');
-    } catch { alert('Network error.'); }
-    finally { btn.textContent = 'Resend code'; }
+      const data = await res.json();
+      if (data.success) {
+        startCountdown(60);
+      } else {
+        alert(data.error || 'Could not resend. Try again.');
+      }
+    } catch {
+      alert('Network error.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Resend code';
+    }
   });
 </script>
 </body>

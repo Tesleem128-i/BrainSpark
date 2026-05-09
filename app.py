@@ -52,6 +52,7 @@ else:
 app.secret_key = os.getenv('SECRET_KEY', 'knowitnow_super_secret_key_change_in_production')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER']         = 'uploads'
+# FIX: unified profile upload path (was 'uploads/profiles' in config but makedirs used 'static/uploads/profiles')
 app.config['PROFILE_UPLOAD_FOLDER'] = 'uploads/profiles'
 app.config['MAX_CONTENT_LENGTH']    = 10 * 1024 * 1024  # 10 MB
 
@@ -74,7 +75,8 @@ genai.configure(api_key=os.getenv('GOOGLE_AI_API_KEY'))
 model = genai.GenerativeModel('gemini-2.5-flash')
 
 # ── Folders ───────────────────────────────────────────────────────────────────
-os.makedirs('static/uploads/profiles', exist_ok=True)
+# FIX: makedirs now matches PROFILE_UPLOAD_FOLDER config above
+os.makedirs('uploads/profiles', exist_ok=True)
 os.makedirs('uploads', exist_ok=True)
 os.makedirs('uploads/converted_audio', exist_ok=True)
 os.makedirs('uploads/converted_video', exist_ok=True)
@@ -152,42 +154,30 @@ def _find_font(size=28):
 
 
 def _draw_frame(mouth_open, bg_color, text_color, chunk_text, width=1280, height=720):
-    """
-    Render one video frame: animated character on the left, scrolling text on the right.
-    Returns a numpy uint8 array of shape (height, width, 3).
-    """
     import numpy as np
     from PIL import Image, ImageDraw
 
     img  = Image.new("RGB", (width, height), color=bg_color)
     draw = ImageDraw.Draw(img)
 
-    # ── Character ────────────────────────────────────────────────────────────
     hx, hy, hr = width // 4, height // 2, 90
 
-    # Body
     draw.ellipse(
         [hx - 50, hy + hr - 10, hx + 50, hy + hr + 120],
         fill=(200, 160, 120), outline=text_color, width=2
     )
-    # Head
     draw.ellipse(
         [hx - hr, hy - hr, hx + hr, hy + hr],
         fill=(255, 210, 160), outline=text_color, width=3
     )
-    # Hair
     draw.arc([hx - hr, hy - hr, hx + hr, hy], start=180, end=0, fill=(80, 50, 30), width=8)
-    # Eyes
     for ex in [hx - 32, hx + 32]:
         draw.ellipse([ex - 10, hy - 40, ex + 10, hy - 20], fill="white")
         draw.ellipse([ex -  6, hy - 37, ex +  6, hy - 24], fill=(60, 60, 80))
         draw.ellipse([ex -  3, hy - 35, ex +  3, hy - 29], fill="white")
-    # Eyebrows
     for ex in [hx - 32, hx + 32]:
         draw.line([(ex - 10, hy - 47), (ex + 10, hy - 45)], fill=(80, 50, 30), width=3)
-    # Nose
     draw.polygon([(hx, hy - 8), (hx - 6, hy + 8), (hx + 6, hy + 8)], fill=(240, 180, 140))
-    # Mouth
     my = hy + 48
     if mouth_open:
         draw.ellipse([hx - 22, my - 8, hx + 22, my + 18], fill=(140, 60, 60))
@@ -195,7 +185,6 @@ def _draw_frame(mouth_open, bg_color, text_color, chunk_text, width=1280, height
     else:
         draw.arc([hx - 22, my - 8, hx + 22, my + 10], start=0, end=180, fill=(140, 60, 60), width=3)
 
-    # ── Text panel (right side) ───────────────────────────────────────────────
     font_large = _find_font(32)
     font_small = _find_font(24)
 
@@ -212,7 +201,6 @@ def _draw_frame(mouth_open, bg_color, text_color, chunk_text, width=1280, height
         draw.text((text_x, text_y), line, fill=text_color, font=font_large)
         text_y += 44
 
-    # Footer
     draw.rectangle([0, height - 44, width, height], fill=(0, 0, 0))
     footer = "Brainspark AI · Learning Made Visual"
     try:
@@ -226,10 +214,6 @@ def _draw_frame(mouth_open, bg_color, text_color, chunk_text, width=1280, height
 
 
 def _tts_chunk(text, wav_path):
-    """
-    Run pyttsx3 TTS in a subprocess so the espeak engine is fully isolated
-    per chunk. Re-using the engine in the same process causes deadlocks on Linux.
-    """
     script = (
         "import pyttsx3\n"
         "engine = pyttsx3.init()\n"
@@ -255,10 +239,6 @@ def _tts_chunk(text, wav_path):
 
 
 def create_audio_from_text(text_content, audio_path, language, speed):
-    """
-    Convert text → audio file using pyttsx3.
-    Saves as WAV; converts to MP3 via pydub if available, otherwise renames.
-    """
     try:
         import pyttsx3
     except ImportError:
@@ -294,13 +274,6 @@ def create_audio_from_text(text_content, audio_path, language, speed):
 
 
 def create_video_from_text(text_content, video_path, style, duration_setting):
-    """
-    Convert text → narrated animated-character MP4.
-
-    Required packages: moviepy, Pillow, numpy, pyttsx3
-    Linux system deps: espeak, ffmpeg  (sudo apt install espeak ffmpeg)
-    """
-    # ── Guard imports ─────────────────────────────────────────────────────────
     try:
         import numpy as np
         from PIL import Image
@@ -312,7 +285,6 @@ def create_video_from_text(text_content, video_path, style, duration_setting):
     except ImportError:
         raise RuntimeError("moviepy is required. Run: pip install moviepy")
 
-    # ── Style palette ─────────────────────────────────────────────────────────
     style_map = {
         'slides':     ((10,  30,  100), (255, 255, 255)),
         'animated':   ((20,  20,   40), (255, 255, 255)),
@@ -320,13 +292,11 @@ def create_video_from_text(text_content, video_path, style, duration_setting):
     }
     bg_color, text_color = style_map.get(style, style_map['slides'])
 
-    # ── Chunk limits ──────────────────────────────────────────────────────────
     chunk_limits  = {'short': 3, 'medium': 6, 'long': 10}
     fallback_secs = {'short': 4, 'medium': 5, 'long':  7}
     max_chunks    = chunk_limits.get(duration_setting, 6)
     fallback_dur  = fallback_secs.get(duration_setting, 5)
 
-    # ── Split text into narration chunks ──────────────────────────────────────
     raw_sentences = [s.strip() for s in text_content[:4000].replace('\n', ' ').split('.') if s.strip()]
     chunks, current = [], ""
     for sentence in raw_sentences:
@@ -354,7 +324,6 @@ def create_video_from_text(text_content, video_path, style, duration_setting):
         audio_clip    = None
         wav_path      = os.path.join(audio_dir, f"chunk_{idx}_{os.getpid()}.wav")
 
-        # ── TTS narration (isolated subprocess to avoid espeak deadlocks) ─────
         try:
             if _tts_chunk(chunk, wav_path):
                 audio_clip    = AudioFileClip(wav_path)
@@ -365,7 +334,6 @@ def create_video_from_text(text_content, video_path, style, duration_setting):
         except Exception as tts_err:
             logger.warning(f"TTS error chunk {idx}: {tts_err}")
 
-        # ── Build alternating mouth-open / closed frames at 2 fps ─────────────
         fps       = 2
         n_frames  = max(2, int(clip_duration * fps))
         frame_dur = clip_duration / n_frames
@@ -376,23 +344,19 @@ def create_video_from_text(text_content, video_path, style, duration_setting):
             frame_arr  = _draw_frame(mouth_open, bg_color, text_color, chunk)
             frame_clips.append(ImageClip(frame_arr).set_duration(frame_dur))
 
-        # Use "chain" not "compose" — compose breaks when audio is attached
         chunk_video = concatenate_videoclips(frame_clips, method="chain")
 
         if audio_clip is not None:
-            # Trim audio to video length to prevent duration mismatch crashes
             if audio_clip.duration > chunk_video.duration:
                 audio_clip = audio_clip.subclip(0, chunk_video.duration)
             chunk_video = chunk_video.set_audio(audio_clip)
 
         clips.append(chunk_video)
 
-    # Fallback: single blank clip
     if not clips:
         blank = _draw_frame(False, bg_color, text_color, text_content[:300])
         clips = [ImageClip(blank).set_duration(fallback_dur)]
 
-    # ── Render final video ────────────────────────────────────────────────────
     final = concatenate_videoclips(clips, method="chain")
     final.write_videofile(
         video_path,
@@ -407,7 +371,6 @@ def create_video_from_text(text_content, video_path, style, duration_setting):
     )
     final.close()
 
-    # ── Cleanup temp WAV files ────────────────────────────────────────────────
     for path, ac in temp_audio_paths:
         try:
             ac.close()
@@ -436,51 +399,80 @@ def index():
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
-        name        = request.form['name']
-        username    = request.form['username']
-        email       = request.form['email'].strip().lower()
+        name        = request.form.get('name', '').strip()
+        username    = request.form.get('username', '').strip()
+        email       = request.form.get('email', '').strip().lower()
         school      = request.form.get('school', '')
         profession  = request.form.get('profession', '')
-        study_level = request.form['study_level']
-        country     = request.form['country']
-        password    = request.form['password']
+        study_level = request.form.get('study_level', '')
+        country     = request.form.get('country', '')
+        password    = request.form.get('password', '')
+
+        # ── Validate required fields ──────────────────────────────────────────
+        if not all([name, username, email, study_level, country, password]):
+            return jsonify({'success': False, 'error': 'All required fields must be filled in.'})
 
         if User.query.filter_by(username=username).first():
-            return jsonify({'error': 'Username already taken'})
+            return jsonify({'success': False, 'error': 'Username already taken.'})
         if User.query.filter_by(email=email).first():
-            return jsonify({'error': 'Email already registered'})
+            return jsonify({'success': False, 'error': 'Email already registered.'})
 
+        # ── Create user but don't commit yet ──────────────────────────────────
         user = User(
             name=name, username=username, email=email,
             school=school, profession=profession,
             study_level=study_level, country=country
         )
         user.set_password(password)
-        db.session.add(user)
-        db.session.flush()
 
-        if 'profile_pic' in request.files and request.files['profile_pic'].filename:
-            file = request.files['profile_pic']
-            if file and allowed_file(file.filename):
-                ext      = file.filename.rsplit('.', 1)[1].lower()
-                filename = f"{user.id}.{ext}"
-                filepath = os.path.join(app.config['PROFILE_UPLOAD_FOLDER'], filename)
-                file.save(filepath)
-                user.profile_pic = filename
-
+        # Generate verification code before any DB write
         code = ''.join(random.choices('0123456789', k=6))
         user.verification_code = code
-        db.session.commit()
 
-        msg = MailMessage('Brainspark - Verify Your Email', recipients=[email])
-        msg.body = f"Your Brainspark verification code is:\n\n{code}\n\nEnter this code on the signup page to verify your account. Code expires in 15 minutes.\n\nBest,\nBrainspark Team"
+        # ── Try sending the email BEFORE committing the user ──────────────────
+        # This ensures we don't save a user we can't email
+        msg = MailMessage(
+            'Brainspark - Verify Your Email',
+            recipients=[email]
+        )
+        msg.body = (
+            f"Your Brainspark verification code is:\n\n"
+            f"{code}\n\n"
+            f"Enter this code on the signup page to verify your account. "
+            f"Code expires in 15 minutes.\n\n"
+            f"Best,\nBrainspark Team"
+        )
         try:
             mail.send(msg)
         except Exception as e:
             logger.error(f"Email send failed: {str(e)}", exc_info=True)
-            db.session.rollback()
-            return jsonify({'error': f'Email send failed: {str(e)}'})
+            return jsonify({'success': False, 'error': f'Could not send verification email. Please check your email address and try again. ({str(e)})'})
 
+        # ── Email sent OK — now save the user ─────────────────────────────────
+        try:
+            db.session.add(user)
+            db.session.flush()  # get user.id for profile pic filename
+
+            # Handle optional profile picture
+            if 'profile_pic' in request.files and request.files['profile_pic'].filename:
+                file = request.files['profile_pic']
+                if file and allowed_file(file.filename):
+                    ext      = file.filename.rsplit('.', 1)[1].lower()
+                    filename = f"{user.id}.{ext}"
+                    filepath = os.path.join(app.config['PROFILE_UPLOAD_FOLDER'], filename)
+                    try:
+                        file.save(filepath)
+                        user.profile_pic = filename
+                    except Exception as pic_err:
+                        logger.warning(f"Profile pic save failed (non-fatal): {pic_err}")
+
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"User save failed after email sent: {str(e)}", exc_info=True)
+            return jsonify({'success': False, 'error': 'Account creation failed. Please try again.'})
+
+        logger.info(f"New user created and verification email sent: {email}")
         return jsonify({'success': True, 'email': email, 'user_id': user.id})
 
     theme = session.get('theme', 'light')
@@ -494,7 +486,7 @@ def verify():
     email = data.get('email', '').strip().lower()
 
     if not code or not email:
-        return jsonify({'error': 'Code and email are required.'}), 400
+        return jsonify({'success': False, 'error': 'Code and email are required.'}), 400
 
     user = User.query.filter(
         db.func.lower(User.email) == email,
@@ -507,13 +499,13 @@ def verify():
             db.func.lower(User.email) == email, User.is_verified == True
         ).first()
         if existing_verified:
-            return jsonify({'error': 'This email is already verified. Please log in.'})
+            return jsonify({'success': False, 'error': 'This email is already verified. Please log in.'})
         existing_user = User.query.filter(
             db.func.lower(User.email) == email, User.is_verified == False
         ).first()
         if existing_user:
-            return jsonify({'error': 'Invalid code. Please check your email and try again, or request a new code.'})
-        return jsonify({'error': 'Invalid or expired code. Please request new one.'})
+            return jsonify({'success': False, 'error': 'Invalid code. Please check your email and try again, or request a new code.'})
+        return jsonify({'success': False, 'error': 'Invalid or expired code. Please request a new one.'})
 
     user.is_verified       = True
     user.verification_code = None
@@ -531,22 +523,30 @@ def verify_email_page():
 @app.route('/resend-verification', methods=['POST'])
 def resend_verification():
     data  = request.json
-    email = data.get('email')
+    email = data.get('email', '').strip().lower()
     if not email:
-        return jsonify({'error': 'Email required'}), 400
-    user = User.query.filter_by(email=email, is_verified=False).first()
+        return jsonify({'success': False, 'error': 'Email required'}), 400
+    user = User.query.filter(
+        db.func.lower(User.email) == email,
+        User.is_verified == False
+    ).first()
     if not user:
-        return jsonify({'error': 'User not found or already verified'}), 404
+        return jsonify({'success': False, 'error': 'User not found or already verified'}), 404
     code = ''.join(random.choices('0123456789', k=6))
     user.verification_code = code
     db.session.commit()
     msg      = MailMessage('Brainspark - Verify Your Email', recipients=[email])
-    msg.body = f"Your new Brainspark verification code is:\n\n{code}\n\nCode expires in 15 minutes.\n\nBest,\nBrainspark Team"
+    msg.body = (
+        f"Your new Brainspark verification code is:\n\n"
+        f"{code}\n\n"
+        f"Code expires in 15 minutes.\n\n"
+        f"Best,\nBrainspark Team"
+    )
     try:
         mail.send(msg)
         return jsonify({'success': True, 'message': 'Code resent successfully'})
     except Exception as e:
-        return jsonify({'error': f'Email send failed: {str(e)}'}), 500
+        return jsonify({'success': False, 'error': f'Email send failed: {str(e)}'}), 500
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -558,12 +558,12 @@ def login():
 
         if user and user.check_password(password):
             if not user.is_verified:
-                return jsonify({'error': 'Please verify your email first'})
+                return jsonify({'success': False, 'error': 'Please verify your email first'})
             session['user_id']  = user.id
             session['username'] = user.username
             return jsonify({'success': True, 'message': 'Login successful!', 'redirect': '/dashboard'})
         else:
-            return jsonify({'error': 'Invalid username or password'})
+            return jsonify({'success': False, 'error': 'Invalid username or password'})
 
     theme = session.get('theme', 'light')
     return render_template('login.html', theme=theme)
@@ -2121,7 +2121,6 @@ def convert_to_audio():
 
         create_audio_from_text(text_content, audio_path, language, speed)
 
-        # pydub may not be available — accept .wav fallback
         if not os.path.exists(audio_path):
             wav_path = audio_path.replace('.mp3', '.wav')
             if os.path.exists(wav_path):
