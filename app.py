@@ -22,32 +22,41 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
+# ── Startup guard — fail loudly if required env vars are missing ──────────────
+_required_env = ['SECRET_KEY', 'GOOGLE_AI_API_KEY', 'MAIL_USERNAME', 'MAIL_PASSWORD']
+_missing_env  = [k for k in _required_env if not os.getenv(k)]
+if _missing_env:
+    raise RuntimeError(
+        f"Missing required environment variables: {', '.join(_missing_env)}. "
+        "Set them in your Render dashboard under Environment."
+    )
+
 app = Flask(__name__)
 
 # ── Database ──────────────────────────────────────────────────────────────────
-if os.getenv('RENDER') and os.getenv('DATABASE_URL'):
-    db_url = os.getenv('DATABASE_URL')
-    if db_url.startswith('postgres://'):
-        db_url = db_url.replace('postgres://', 'postgresql://', 1)
-    if '?' in db_url:
-        db_url = db_url.split('?')[0]
-    db_url += '?sslmode=require'
-    app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+# FIX: Render env var was named DATABASE_UR (missing L). We now check both
+# DATABASE_URL (correct) and DATABASE_UR (typo fallback) so it works either way.
+_db_url = os.getenv('DATABASE_URL') or os.getenv('DATABASE_UR')
+
+if (os.getenv('RENDER') or _db_url) and _db_url:
+    if _db_url.startswith('postgres://'):
+        _db_url = _db_url.replace('postgres://', 'postgresql://', 1)
+    if '?' in _db_url:
+        _db_url = _db_url.split('?')[0]
+    _db_url += '?sslmode=require'
+    app.config['SQLALCHEMY_DATABASE_URI'] = _db_url
     try:
-        if '@' in db_url:
-            host = db_url.split('@')[1].split('/')[0]
-            print(f"Using PostgreSQL: {host}")
-        else:
-            print("Using PostgreSQL (URL format)")
-    except (IndexError, AttributeError):
+        _host = _db_url.split('@')[1].split('/')[0] if '@' in _db_url else 'unknown'
+        print(f"Using PostgreSQL: {_host}")
+    except Exception:
         print("Using PostgreSQL")
 else:
-    base_dir      = os.path.dirname(os.path.abspath(__file__))
-    instance_path = os.path.join(base_dir, 'instance')
-    os.makedirs(instance_path, exist_ok=True)
-    db_path = os.path.join(instance_path, 'knowitnow.db').replace('\\', '/')
-    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
-    print(f"Using SQLite at {db_path}")
+    _base_dir      = os.path.dirname(os.path.abspath(__file__))
+    _instance_path = os.path.join(_base_dir, 'instance')
+    os.makedirs(_instance_path, exist_ok=True)
+    _db_path = os.path.join(_instance_path, 'knowitnow.db').replace('\\', '/')
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{_db_path}'
+    print(f"Using SQLite at {_db_path}")
 
 app.secret_key = os.getenv('SECRET_KEY', 'knowitnow_super_secret_key_change_in_production')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -56,13 +65,15 @@ app.config['PROFILE_UPLOAD_FOLDER'] = 'uploads/profiles'
 app.config['MAX_CONTENT_LENGTH']    = 10 * 1024 * 1024  # 10 MB
 
 # ── Email ─────────────────────────────────────────────────────────────────────
+# FIX: Use port 465 + SSL (more reliable on Render than 587 + TLS).
 app.config['MAIL_SERVER']         = 'smtp.gmail.com'
-app.config['MAIL_PORT']           = 587
-app.config['MAIL_USE_TLS']        = True
-app.config['MAIL_USE_SSL']        = False
+app.config['MAIL_PORT']           = 465
+app.config['MAIL_USE_TLS']        = False
+app.config['MAIL_USE_SSL']        = True
 app.config['MAIL_USERNAME']       = os.getenv('MAIL_USERNAME')
 app.config['MAIL_PASSWORD']       = os.getenv('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_SUPPRESS_SEND']  = False
 
 db.init_app(app)
 mail = Mail(app)
@@ -75,8 +86,8 @@ genai.configure(api_key=os.getenv('GOOGLE_AI_API_KEY'))
 model = genai.GenerativeModel('gemini-2.5-flash')
 
 # ── Folders ───────────────────────────────────────────────────────────────────
-os.makedirs('uploads/profiles', exist_ok=True)
-os.makedirs('uploads', exist_ok=True)
+os.makedirs('uploads/profiles',        exist_ok=True)
+os.makedirs('uploads',                 exist_ok=True)
 os.makedirs('uploads/converted_audio', exist_ok=True)
 os.makedirs('uploads/converted_video', exist_ok=True)
 
@@ -395,8 +406,6 @@ def index():
     return render_template('index.html', theme=theme)
 
 
-# FIX: Entire signup POST is wrapped in a top-level try/except so Flask never
-# returns an HTML 500 error page. All error paths return JSON.
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'GET':
@@ -430,11 +439,9 @@ def signup():
                 'error': f"Please fill in: {', '.join(missing)}."
             })
 
-        # ── Basic email format check ──────────────────────────────────────────
         if '@' not in email or '.' not in email.split('@')[-1]:
             return jsonify({'success': False, 'error': 'Please enter a valid email address.'})
 
-        # ── Username format: alphanumeric + underscores only ──────────────────
         import re
         if not re.match(r'^[a-zA-Z0-9_]{3,50}$', username):
             return jsonify({
@@ -442,14 +449,12 @@ def signup():
                 'error': 'Username must be 3–50 characters and contain only letters, numbers, or underscores.'
             })
 
-        # ── Check duplicates ──────────────────────────────────────────────────
         if User.query.filter(db.func.lower(User.username) == username.lower()).first():
             return jsonify({'success': False, 'error': 'That username is already taken. Please choose another.'})
 
         if User.query.filter(db.func.lower(User.email) == email).first():
             return jsonify({'success': False, 'error': 'An account with this email already exists. Try logging in.'})
 
-        # ── Password strength (server-side re-check) ──────────────────────────
         if len(password) < 8:
             return jsonify({'success': False, 'error': 'Password must be at least 8 characters.'})
         if not re.search(r'[A-Z]', password):
@@ -459,7 +464,6 @@ def signup():
         if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
             return jsonify({'success': False, 'error': 'Password must contain at least one special character.'})
 
-        # ── Build user object (not yet committed) ─────────────────────────────
         user = User(
             name=name,
             username=username,
@@ -471,46 +475,47 @@ def signup():
         )
         user.set_password(password)
 
-        # Generate 6-digit verification code
         code = ''.join(random.choices('0123456789', k=6))
         user.verification_code = code
 
-        # ── Send verification email BEFORE writing to DB ──────────────────────
-        # If email fails, we don't create a zombie account the user can't verify.
-        email_msg = MailMessage(
-            subject='Brainspark — Verify Your Email',
-            recipients=[email]
-        )
-        email_msg.body = (
-            f"Hi {name},\n\n"
-            f"Your Brainspark verification code is:\n\n"
-            f"    {code}\n\n"
-            f"Enter this code on the signup page to activate your account.\n"
-            f"The code expires in 15 minutes.\n\n"
-            f"If you didn't sign up, you can safely ignore this email.\n\n"
-            f"— The Brainspark Team"
-        )
-
+        # ── Build email message ───────────────────────────────────────────────
         try:
+            email_msg = MailMessage(
+                subject='Brainspark — Verify Your Email',
+                recipients=[email],
+                sender=app.config['MAIL_USERNAME']
+            )
+            email_msg.body = (
+                f"Hi {name},\n\n"
+                f"Your Brainspark verification code is:\n\n"
+                f"    {code}\n\n"
+                f"Enter this code on the signup page to activate your account.\n"
+                f"The code expires in 15 minutes.\n\n"
+                f"If you didn't sign up, you can safely ignore this email.\n\n"
+                f"— The Brainspark Team"
+            )
             mail.send(email_msg)
         except Exception as mail_err:
             logger.error(f"Email send failed for {email}: {mail_err}", exc_info=True)
-            # Give the user an actionable error message
-            err_str = str(mail_err)
-            if 'Authentication' in err_str or 'credentials' in err_str.lower():
-                user_msg = 'Email service authentication failed. Please contact support.'
-            elif 'Connection' in err_str or 'connect' in err_str.lower():
+            err_str = str(mail_err).lower()
+            if 'authentication' in err_str or 'credentials' in err_str or '535' in err_str or '534' in err_str:
+                user_msg = (
+                    'Email authentication failed. Make sure MAIL_PASSWORD is a Gmail App Password '
+                    '(not your regular password). Generate one at myaccount.google.com → Security → App Passwords.'
+                )
+            elif 'connection' in err_str or 'connect' in err_str or 'timeout' in err_str:
                 user_msg = 'Could not connect to the email service. Please try again in a moment.'
+            elif 'recipient' in err_str or 'address' in err_str:
+                user_msg = f'Could not send to {email}. Please check the address.'
             else:
-                user_msg = f'Could not send verification email to {email}. Please check the address and try again.'
+                user_msg = f'Could not send verification email ({str(mail_err)[:120]}). Please try again.'
             return jsonify({'success': False, 'error': user_msg})
 
-        # ── Email sent — now persist the user ─────────────────────────────────
+        # ── Persist user only after email succeeds ────────────────────────────
         try:
             db.session.add(user)
-            db.session.flush()  # get user.id for profile pic filename
+            db.session.flush()
 
-            # Optional profile picture
             profile_file = request.files.get('profile_pic')
             if profile_file and profile_file.filename and allowed_file(profile_file.filename):
                 try:
@@ -521,7 +526,6 @@ def signup():
                     profile_file.save(os.path.join(save_dir, filename))
                     user.profile_pic = filename
                 except Exception as pic_err:
-                    # Non-fatal — account still works without a picture
                     logger.warning(f"Profile pic save failed (non-fatal): {pic_err}")
 
             db.session.commit()
@@ -538,12 +542,11 @@ def signup():
         return jsonify({'success': True, 'email': email, 'user_id': user.id})
 
     except Exception as unexpected:
-        # FIX: Catch-all so Flask never serves an HTML 500 page for a JSON endpoint.
         logger.error(f"Unexpected error in /signup POST: {unexpected}", exc_info=True)
         db.session.rollback()
         return jsonify({
             'success': False,
-            'error': 'An unexpected error occurred. Please try again.'
+            'error': f'An unexpected error occurred: {str(unexpected)[:200]}'
         }), 500
 
 
@@ -564,7 +567,6 @@ def verify():
         ).first()
 
         if not user:
-            # Give a specific error based on what we find
             verified_user = User.query.filter(
                 db.func.lower(User.email) == email,
                 User.is_verified == True
@@ -626,7 +628,6 @@ def resend_verification():
         ).first()
 
         if not user:
-            # Don't reveal whether the email exists (security best practice)
             return jsonify({
                 'success': False,
                 'error': 'No unverified account found for this email.'
@@ -636,26 +637,26 @@ def resend_verification():
         user.verification_code = code
         db.session.commit()
 
-        msg      = MailMessage(
-            subject='Brainspark — New Verification Code',
-            recipients=[email]
-        )
-        msg.body = (
-            f"Hi {user.name},\n\n"
-            f"Your new Brainspark verification code is:\n\n"
-            f"    {code}\n\n"
-            f"This code expires in 15 minutes.\n\n"
-            f"— The Brainspark Team"
-        )
-
         try:
+            msg = MailMessage(
+                subject='Brainspark — New Verification Code',
+                recipients=[email],
+                sender=app.config['MAIL_USERNAME']
+            )
+            msg.body = (
+                f"Hi {user.name},\n\n"
+                f"Your new Brainspark verification code is:\n\n"
+                f"    {code}\n\n"
+                f"This code expires in 15 minutes.\n\n"
+                f"— The Brainspark Team"
+            )
             mail.send(msg)
             return jsonify({'success': True, 'message': 'A new code has been sent to your email.'})
         except Exception as mail_err:
             logger.error(f"Resend email failed for {email}: {mail_err}", exc_info=True)
             return jsonify({
                 'success': False,
-                'error': 'Could not send the email. Please try again in a moment.'
+                'error': f'Could not send the email: {str(mail_err)[:120]}. Please try again in a moment.'
             }), 500
 
     except Exception as e:
