@@ -129,10 +129,6 @@
         .btn-primary:hover { background: var(--accent2); transform: translateY(-1px); box-shadow: 0 8px 24px rgba(255,79,48,0.45); }
         .btn-ghost { background: var(--card); color: var(--ink); border: 1px solid var(--card-border); }
         .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
-        .btn-blue { background: var(--blue); color: #fff; box-shadow: 0 4px 20px rgba(59,107,255,0.3); }
-        .btn-blue:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(59,107,255,0.4); }
-        .btn-orange { background: #f97316; color: #fff; box-shadow: 0 4px 20px rgba(249,115,22,0.3); }
-        .btn-orange:hover { transform: translateY(-1px); }
         .btn-full { width: 100%; justify-content: center; border-radius: var(--radius-sm); }
         .btn-sm { padding: 0.45rem 1rem; font-size: 0.8rem; }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
@@ -150,28 +146,6 @@
         .community-item-icon { font-size: 1.1rem; }
         .community-item-text { font-size: 0.875rem; font-weight: 500; color: var(--ink); }
 
-        /* AV */
-        .av-card { border: 1px solid var(--card-border); border-radius: var(--radius); padding: 1.25rem; transition: all 0.2s; }
-        .av-card:hover { border-color: rgba(255,79,48,0.3); }
-        .av-card-header { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem; }
-        .av-card-icon { width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
-        .av-card.audio-card .av-card-icon { background: rgba(59,107,255,0.12); }
-        .av-card.video-card .av-card-icon { background: rgba(249,115,22,0.12); }
-        .av-card-title { font-family: 'Syne', sans-serif; font-size: 0.95rem; font-weight: 700; color: var(--ink); }
-        .av-card-sub { font-size: 0.75rem; color: var(--muted); }
-        .av-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; }
-        .av-tab { padding: 0.5rem 1rem; border-radius: 50px; font-size: 0.8rem; font-weight: 600; border: 1px solid var(--card-border); background: transparent; color: var(--muted); cursor: pointer; transition: all 0.2s; font-family: 'DM Sans', sans-serif; }
-        .av-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-
-        /* FILES */
-        .file-card { background: rgba(255,255,255,0.03); border: 1px solid var(--card-border); border-radius: var(--radius); padding: 1.25rem; transition: all var(--transition); }
-        .file-card:hover { border-color: rgba(255,79,48,0.3); transform: translateY(-2px); }
-        .file-type-badge { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.65rem; border-radius: 50px; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.04em; margin-bottom: 0.75rem; }
-        .file-type-badge.audio { background: rgba(59,107,255,0.12); color: var(--blue2); }
-        .file-type-badge.video { background: rgba(249,115,22,0.12); color: #f97316; }
-        .file-name { font-size: 0.875rem; font-weight: 600; color: var(--ink); margin-bottom: 0.25rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .file-meta { font-size: 0.75rem; color: var(--muted); margin-bottom: 1rem; }
-        .file-actions { display: flex; gap: 0.5rem; }
         .chart-wrap { position: relative; height: 220px; }
         .empty-state { text-align: center; padding: 3rem 1rem; color: var(--muted); }
         .empty-state-icon { font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.4; }
@@ -181,25 +155,21 @@
         .generating-bar { width: 100%; height: 3px; background: var(--card-border); border-radius: 2px; overflow: hidden; margin-top: 0.75rem; }
         .generating-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 2px; transition: width 0.3s; animation: progress-pulse 1.5s ease-in-out infinite; }
         @keyframes progress-pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
-        .file-preview-badge { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgba(249,115,22,0.08); border: 1px solid rgba(249,115,22,0.2); border-radius: var(--radius-sm); margin-bottom: 0.75rem; font-size: 0.82rem; color: var(--ink); }
-        .file-preview-badge button { background: none; border: none; color: var(--accent); cursor: pointer; margin-left: auto; }
 
         /* ══════════════════════════════════════════════════════
-           AI CHAT MODAL — Full redesign
+           AI CHAT MODAL — Enhanced
         ══════════════════════════════════════════════════════ */
         .modal-overlay {
             display: none; position: fixed; inset: 0; z-index: 9000;
             background: rgba(0,0,0,0.7); backdrop-filter: blur(12px);
-            align-items: flex-end; justify-content: flex-end;
+            align-items: center; justify-content: center;
             padding: 1rem;
         }
         .modal-overlay.open { display: flex; }
-
-        /* Preview modal is centered */
         .modal-overlay.centered { align-items: center; justify-content: center; }
 
         .ai-modal {
-            width: 420px; height: 620px;
+            width: 680px; height: 85vh;
             background: var(--surface3);
             border: 1px solid var(--card-border);
             border-radius: 24px;
@@ -213,7 +183,6 @@
             to   { opacity: 1; transform: translateY(0) scale(1); }
         }
 
-        /* Header */
         .ai-header {
             display: flex; align-items: center; gap: 0.75rem;
             padding: 1.25rem 1.25rem 1rem;
@@ -239,6 +208,22 @@
         .ai-header-btn { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--card-border); background: var(--card); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--muted); font-size: 0.8rem; transition: all 0.2s; }
         .ai-header-btn:hover { border-color: var(--accent); color: var(--accent); }
 
+        /* Mode pills */
+        .ai-mode-bar {
+            display: flex; gap: 6px; padding: 0.75rem 1rem 0;
+            flex-shrink: 0;
+        }
+        .ai-mode-pill {
+            display: flex; align-items: center; gap: 0.35rem;
+            padding: 0.3rem 0.75rem; border-radius: 50px;
+            font-size: 0.75rem; font-weight: 600;
+            border: 1px solid var(--card-border); background: var(--card);
+            color: var(--muted); cursor: pointer; transition: all 0.2s;
+            font-family: 'DM Sans', sans-serif;
+        }
+        .ai-mode-pill.active { background: rgba(255,79,48,0.12); border-color: rgba(255,79,48,0.35); color: var(--accent); }
+        .ai-mode-pill:hover { border-color: var(--accent); color: var(--accent); }
+
         /* Messages */
         .ai-messages {
             flex: 1; overflow-y: auto; padding: 1rem;
@@ -248,7 +233,6 @@
         .ai-messages::-webkit-scrollbar { width: 4px; }
         .ai-messages::-webkit-scrollbar-thumb { background: var(--card-border); border-radius: 2px; }
 
-        /* Empty state */
         .ai-empty {
             flex: 1; display: flex; flex-direction: column; align-items: center;
             justify-content: center; text-align: center; padding: 1.5rem;
@@ -258,10 +242,7 @@
         .ai-empty-title { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700; color: var(--ink); }
         .ai-empty-sub { font-size: 0.82rem; color: var(--muted); line-height: 1.5; }
 
-        /* Suggested prompts */
-        .ai-suggestions {
-            display: flex; flex-direction: column; gap: 0.4rem; margin-top: 1rem;
-        }
+        .ai-suggestions { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 1rem; }
         .ai-suggestion-btn {
             background: var(--card); border: 1px solid var(--card-border);
             border-radius: 10px; padding: 0.6rem 0.9rem;
@@ -282,8 +263,8 @@
         .msg-row.ai .msg-bubble-avatar { background: linear-gradient(135deg, var(--accent), var(--accent2)); }
         .msg-row.user .msg-bubble-avatar { background: rgba(255,255,255,0.1); color: var(--ink2); border: 1px solid var(--card-border); }
         .msg-bubble {
-            max-width: 78%; padding: 0.75rem 1rem;
-            border-radius: 16px; font-size: 0.875rem; line-height: 1.6;
+            max-width: 82%; padding: 0.9rem 1.1rem;
+            border-radius: 16px; font-size: 0.95rem; line-height: 1.7;
             position: relative;
         }
         .msg-row.ai .msg-bubble {
@@ -297,6 +278,55 @@
         .msg-time { font-size: 0.68rem; color: var(--muted); margin-top: 0.3rem; }
         .msg-row.user .msg-time { text-align: right; }
 
+        /* Image preview in bubble */
+        .msg-img-preview { width: 100%; max-width: 220px; border-radius: 10px; margin-bottom: 0.5rem; display: block; object-fit: cover; }
+
+        /* AI message actions */
+        .msg-actions {
+            display: flex; gap: 0.35rem; margin-top: 0.6rem; flex-wrap: wrap;
+        }
+        .msg-action-btn {
+            display: flex; align-items: center; gap: 0.3rem;
+            padding: 0.3rem 0.7rem; border-radius: 50px;
+            font-size: 0.72rem; font-weight: 600; cursor: pointer;
+            border: 1px solid var(--card-border); background: var(--card);
+            color: var(--muted); transition: all 0.2s; font-family: 'DM Sans', sans-serif;
+        }
+        .msg-action-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(255,79,48,0.06); }
+        .msg-action-btn.playing { border-color: var(--green); color: var(--green); background: rgba(0,201,141,0.08); }
+        .msg-action-btn.recording { border-color: var(--accent); color: var(--accent); background: rgba(255,79,48,0.1); animation: pulse-btn 1s infinite; }
+        @keyframes pulse-btn { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+        /* YouTube card */
+        .yt-card {
+            display: flex; align-items: center; gap: 0.75rem;
+            padding: 0.6rem 0.85rem; background: rgba(255,0,0,0.08);
+            border: 1px solid rgba(255,0,0,0.2); border-radius: 10px;
+            margin-top: 0.6rem; cursor: pointer; transition: all 0.2s; text-decoration: none;
+        }
+        .yt-card:hover { background: rgba(255,0,0,0.14); border-color: rgba(255,0,0,0.4); }
+        .yt-card-icon { color: #ff0000; font-size: 1.2rem; flex-shrink: 0; }
+        .yt-card-text { font-size: 0.78rem; color: var(--ink2); }
+        .yt-card-title { font-weight: 600; font-size: 0.82rem; color: var(--ink); }
+
+        /* Voice note bubble */
+        .voice-bubble {
+            display: flex; align-items: center; gap: 0.6rem;
+            padding: 0.6rem 0.9rem; background: rgba(59,107,255,0.08);
+            border: 1px solid rgba(59,107,255,0.2); border-radius: 12px;
+        }
+        .voice-waveform { display: flex; align-items: center; gap: 2px; height: 24px; }
+        .voice-bar { width: 3px; border-radius: 2px; background: var(--blue2); animation: wave-bar 1s ease-in-out infinite; }
+        .voice-bar:nth-child(1) { height: 8px;  animation-delay: 0.0s; }
+        .voice-bar:nth-child(2) { height: 16px; animation-delay: 0.1s; }
+        .voice-bar:nth-child(3) { height: 12px; animation-delay: 0.2s; }
+        .voice-bar:nth-child(4) { height: 20px; animation-delay: 0.3s; }
+        .voice-bar:nth-child(5) { height: 10px; animation-delay: 0.4s; }
+        .voice-bar:nth-child(6) { height: 18px; animation-delay: 0.5s; }
+        .voice-bar:nth-child(7) { height: 8px;  animation-delay: 0.6s; }
+        @keyframes wave-bar { 0%,100%{transform:scaleY(1)} 50%{transform:scaleY(0.4)} }
+        .voice-label { font-size: 0.78rem; color: var(--blue2); font-weight: 600; }
+
         /* Typing indicator */
         .typing-indicator { display: flex; align-items: center; gap: 4px; padding: 0.75rem 1rem; }
         .typing-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: bounce 1.2s infinite; }
@@ -304,22 +334,25 @@
         .typing-dot:nth-child(3) { animation-delay: 0.4s; }
         @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-5px)} }
 
-        /* PDF attachment badge */
-        .pdf-attach-badge {
-            display: flex; align-items: center; gap: 0.5rem;
-            padding: 0.4rem 0.75rem; background: rgba(249,115,22,0.1);
-            border: 1px solid rgba(249,115,22,0.25); border-radius: 8px;
-            margin: 0 1rem 0.5rem; font-size: 0.8rem; color: var(--ink2);
+        /* Attachments preview strip */
+        .attachment-strip {
+            display: flex; gap: 0.5rem; padding: 0.5rem 1rem;
+            border-top: 1px solid var(--card-border);
+            flex-wrap: wrap; flex-shrink: 0;
         }
-        .pdf-attach-badge .remove-pdf {
-            background: none; border: none; color: var(--muted); cursor: pointer;
-            margin-left: auto; font-size: 0.75rem; padding: 0; transition: color 0.2s;
+        .attachment-chip {
+            display: flex; align-items: center; gap: 0.4rem;
+            padding: 0.3rem 0.7rem; border-radius: 8px;
+            background: rgba(255,79,48,0.08); border: 1px solid rgba(255,79,48,0.2);
+            font-size: 0.75rem; color: var(--ink2);
         }
-        .pdf-attach-badge .remove-pdf:hover { color: var(--accent); }
+        .attachment-chip.image { background: rgba(59,107,255,0.08); border-color: rgba(59,107,255,0.2); }
+        .attachment-chip button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.7rem; margin-left: 2px; padding: 0; transition: color 0.2s; }
+        .attachment-chip button:hover { color: var(--accent); }
 
         /* Input area */
         .ai-input-area {
-            padding: 1rem;
+            padding: 0.75rem 1rem 1rem;
             border-top: 1px solid var(--card-border);
             flex-shrink: 0;
         }
@@ -346,6 +379,7 @@
             cursor: pointer; font-size: 0.8rem; transition: all 0.2s; flex-shrink: 0;
         }
         .ai-input-btn:hover { background: rgba(255,79,48,0.1); color: var(--accent); }
+        .ai-input-btn.active-record { background: rgba(255,79,48,0.15); color: var(--accent); animation: pulse-btn 1s infinite; }
         .ai-send-btn {
             width: 32px; height: 32px; border-radius: 8px; border: none;
             background: var(--accent); color: #fff;
@@ -354,15 +388,22 @@
         }
         .ai-send-btn:hover { background: var(--accent2); transform: scale(1.05); }
         .ai-send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
-
         .ai-footer-hint {
-            font-size: 0.7rem; color: var(--muted); text-align: center; margin-top: 0.6rem;
+            font-size: 0.7rem; color: var(--muted); text-align: center; margin-top: 0.5rem;
         }
         .ai-footer-hint kbd {
             display: inline-block; padding: 0.1rem 0.3rem;
             background: var(--card); border: 1px solid var(--card-border);
             border-radius: 4px; font-size: 0.65rem; font-family: monospace;
         }
+
+        /* Audio player inline */
+        .ai-audio-player {
+            margin-top: 0.6rem; width: 100%;
+            background: rgba(0,201,141,0.06); border: 1px solid rgba(0,201,141,0.2);
+            border-radius: 10px; padding: 0.5rem 0.75rem;
+        }
+        .ai-audio-player audio { width: 100%; height: 32px; }
 
         /* Preview modal */
         .preview-modal {
@@ -387,7 +428,7 @@
             .stats-row { grid-template-columns: 1fr; }
             nav { padding: 0 1.25rem; }
             .nav-links { display: none; }
-            .ai-modal { width: 100%; height: 500px; border-radius: 20px 20px 0 0; }
+            .ai-modal { width: 100%; height: 90vh; border-radius: 20px 20px 0 0; }
             .modal-overlay { padding: 0; align-items: flex-end; justify-content: stretch; }
         }
     </style>
@@ -404,7 +445,6 @@
     </div>
     <ul class="nav-links">
         <li><a href="#upload-section">Upload Notes</a></li>
-        <li><a href="#av-section">Audio & Video</a></li>
         <li><a href="#performance-section">Analytics</a></li>
     </ul>
     <div class="nav-right">
@@ -433,7 +473,6 @@
     <div class="sidebar-label">Main</div>
     <button class="sidebar-link active" onclick="scrollTo('top')"><i class="fas fa-house"></i> Dashboard</button>
     <button class="sidebar-link" onclick="scrollTo('upload-section')"><i class="fas fa-file-upload"></i> Upload Notes</button>
-    <button class="sidebar-link" onclick="scrollTo('av-section')"><i class="fas fa-film"></i> Audio & Video</button>
     <button class="sidebar-link" onclick="scrollTo('performance-section')"><i class="fas fa-chart-line"></i> Analytics</button>
     <div class="sidebar-label">Connect</div>
     <button class="sidebar-link" onclick="findStudyBuddies()"><i class="fas fa-users"></i> Study Buddies</button>
@@ -510,52 +549,6 @@
         </div>
     </div>
 
-    <div class="panel reveal" id="av-section" style="margin-bottom:1.5rem;">
-        <div class="panel-header" style="padding:1.5rem;"><div><div class="panel-eyebrow">AI Conversion</div><div class="panel-title">Learn Better with Audio & Video</div></div></div>
-        <div class="panel-body" style="padding-top:0;">
-            <div class="upload-zone" id="av-upload-zone" onclick="document.getElementById('av-file-input').click()" style="margin-bottom:1rem;">
-                <div class="upload-zone-icon"><i class="fas fa-file-import"></i></div>
-                <p>Upload Notes or PDF</p>
-                <span>PDF, DOC, TXT files · Max 20MB</span>
-                <input type="file" id="av-file-input" accept=".pdf,.doc,.docx,.txt" style="display:none">
-            </div>
-            <div id="av-file-preview" class="file-preview-badge" style="display:none;">
-                <span>📄</span>
-                <span id="av-file-name" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
-                <span id="av-file-size" style="color:var(--muted);font-size:0.75rem;white-space:nowrap;"></span>
-                <button onclick="clearAVFile()" title="Remove">✕</button>
-            </div>
-            <div class="content-grid" id="av-conversion-options" style="display:none;grid-template-columns:1fr 1fr;">
-                <div class="av-card audio-card">
-                    <div class="av-card-header"><div class="av-card-icon" style="color:var(--blue2);">🎵</div><div><div class="av-card-title">Convert to Audio</div><div class="av-card-sub">Hear your notes read aloud</div></div></div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem;">
-                        <div><div class="field-label">Language</div><select id="av-audio-language" class="field-select" style="font-size:0.8rem;padding:0.5rem 0.7rem;"><option value="en">English</option><option value="fr">Français</option><option value="es">Español</option><option value="de">Deutsch</option></select></div>
-                        <div><div class="field-label">Speed</div><select id="av-audio-speed" class="field-select" style="font-size:0.8rem;padding:0.5rem 0.7rem;"><option value="0.75">0.75x</option><option value="1" selected>1x Normal</option><option value="1.25">1.25x</option><option value="1.5">1.5x</option></select></div>
-                    </div>
-                    <button class="btn btn-blue btn-full btn-sm" onclick="convertToAudio()" id="audio-btn"><i class="fas fa-magic"></i> Generate Audio</button>
-                    <div class="generating-bar" id="audio-progress" style="display:none;margin-top:0.75rem;"><div class="generating-bar-fill"></div></div>
-                </div>
-                <div class="av-card video-card">
-                    <div class="av-card-header"><div class="av-card-icon" style="color:#f97316;">🎬</div><div><div class="av-card-title">Convert to Video</div><div class="av-card-sub">Talking characters + AI narration</div></div></div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem;">
-                        <div><div class="field-label">Style</div><select id="av-video-style" class="field-select" style="font-size:0.8rem;padding:0.5rem 0.7rem;"><option value="slides">📊 Slideshow</option><option value="animated">✨ Animated</option><option value="whiteboard">🎨 Whiteboard</option></select></div>
-                        <div><div class="field-label">Duration</div><select id="av-video-duration" class="field-select" style="font-size:0.8rem;padding:0.5rem 0.7rem;"><option value="short">⏱ Short (5-10m)</option><option value="medium" selected>⏱ Medium (10-20m)</option><option value="long">⏱ Long (20m+)</option></select></div>
-                    </div>
-                    <button class="btn btn-orange btn-full btn-sm" onclick="convertToVideo()" id="video-btn"><i class="fas fa-video"></i> Generate Video</button>
-                    <div class="generating-bar" id="video-progress" style="display:none;margin-top:0.75rem;"><div class="generating-bar-fill"></div></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="panel reveal" style="margin-bottom:2rem;">
-        <div class="panel-header"><div><div class="panel-eyebrow">Your Library</div><div class="panel-title">Converted Files</div></div></div>
-        <div class="panel-body">
-            <div id="converted-files-container" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;">
-                <div class="empty-state" style="grid-column:1/-1;"><div class="empty-state-icon">📭</div><h4>No converted files yet</h4><p>Upload your notes above to get started</p></div>
-            </div>
-        </div>
-    </div>
 </div>
 </div>
 
@@ -568,7 +561,7 @@
             <div class="ai-avatar">🤖</div>
             <div class="ai-header-info">
                 <div class="ai-header-name">Brainspark AI</div>
-                <div class="ai-header-status">Online · Ready to help</div>
+                <div class="ai-header-status" id="ai-status-text">Online · Ready to help</div>
             </div>
             <div class="ai-header-actions">
                 <button class="ai-header-btn" onclick="resetAIConversation()" title="New conversation">
@@ -580,51 +573,65 @@
             </div>
         </div>
 
+        <!-- Mode bar -->
+        <div class="ai-mode-bar">
+            <button class="ai-mode-pill active" id="mode-text" onclick="setMode('text')">💬 Text</button>
+            <button class="ai-mode-pill" id="mode-audio" onclick="setMode('audio')">🔊 Audio Reply</button>
+            <button class="ai-mode-pill" id="mode-youtube" onclick="setMode('youtube')">📺 + YouTube</button>
+        </div>
+
         <!-- Messages -->
         <div class="ai-messages" id="ai-messages">
             <div class="ai-empty" id="ai-empty">
                 <div class="ai-empty-icon">✨</div>
-                <div class="ai-empty-title">How can I help you today?</div>
-                <div class="ai-empty-sub">Ask me anything about your studies, upload a PDF for context, or pick a suggestion below.</div>
+                <div class="ai-empty-title">How can I help you study today?</div>
+                <div class="ai-empty-sub">Ask a question, upload a PDF or image, send a voice note — or pick a suggestion below.</div>
                 <div class="ai-suggestions" id="ai-suggestions">
-                    <button class="ai-suggestion-btn" onclick="usePrompt('Explain the key concepts from my last uploaded PDF')">💡 Explain key concepts from my notes</button>
+                    <button class="ai-suggestion-btn" onclick="usePrompt('Explain the key concepts from my uploaded PDF in simple terms')">💡 Explain key concepts from my notes</button>
                     <button class="ai-suggestion-btn" onclick="usePrompt('Give me a study plan for exam preparation')">📅 Help me make a study plan</button>
                     <button class="ai-suggestion-btn" onclick="usePrompt('Quiz me on what I should know for my exam')">🎯 Quiz me on important topics</button>
+                    <button class="ai-suggestion-btn" onclick="usePrompt('I don\'t understand this — can you explain it differently?')">🔄 Explain this a different way</button>
                 </div>
             </div>
         </div>
 
-        <!-- PDF attach badge (shown when PDF is selected) -->
-        <div class="pdf-attach-badge" id="pdf-attach-badge" style="display:none;">
-            <i class="fas fa-file-pdf" style="color:#f97316;"></i>
-            <span id="pdf-attach-name" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:0.8rem;"></span>
-            <button class="remove-pdf" onclick="clearAIPDF()"><i class="fas fa-times"></i></button>
-        </div>
+        <!-- Attachment strip (shown when files are queued) -->
+        <div class="attachment-strip" id="attachment-strip" style="display:none;"></div>
 
         <!-- Input area -->
         <div class="ai-input-area">
             <div class="ai-input-row">
+                <!-- Hidden inputs -->
+                <input type="file" id="ai-pdf-input"   accept=".pdf"                       style="display:none" onchange="handleAttachment('pdf',this)">
+                <input type="file" id="ai-image-input" accept="image/png,image/jpeg,image/webp,image/gif" style="display:none" onchange="handleAttachment('image',this)">
+
                 <textarea
                     class="ai-textarea"
                     id="ai-input"
-                    placeholder="Ask a question…"
+                    placeholder="Ask a question, or send a voice note…"
                     rows="1"
                     onkeydown="handleAIKey(event)"
                     oninput="autoResizeTextarea(this)"
                 ></textarea>
                 <div class="ai-input-actions">
-                    <input type="file" id="ai-pdf-input" accept=".pdf" style="display:none" onchange="handleAIPDFSelect()">
                     <button class="ai-input-btn" onclick="document.getElementById('ai-pdf-input').click()" title="Attach PDF">
-                        <i class="fas fa-paperclip"></i>
+                        <i class="fas fa-file-pdf"></i>
+                    </button>
+                    <button class="ai-input-btn" onclick="document.getElementById('ai-image-input').click()" title="Attach Image">
+                        <i class="fas fa-image"></i>
+                    </button>
+                    <button class="ai-input-btn" id="voice-btn" onclick="toggleVoiceInput()" title="Voice note">
+                        <i class="fas fa-microphone" id="voice-icon"></i>
                     </button>
                     <button class="ai-send-btn" id="ai-send-btn" onclick="submitAIQuestion()" title="Send">
                         <i class="fas fa-paper-plane"></i>
                     </button>
                 </div>
             </div>
-            <div class="ai-footer-hint">Press <kbd>Ctrl</kbd>+<kbd>Enter</kbd> to send · <kbd>Shift</kbd>+<kbd>Enter</kbd> for new line</div>
+            <div class="ai-footer-hint">
+                <kbd>Ctrl</kbd>+<kbd>Enter</kbd> send · <kbd>Shift</kbd>+<kbd>Enter</kbd> new line · Attach PDF, image, or voice
+            </div>
         </div>
-
     </div>
 </div>
 
@@ -746,27 +753,32 @@ function animateBar(id) {
     let w=0; const t=setInterval(() => { w=Math.min(w+(Math.random()*8),90); el.style.width=w+'%'; if(w>=90) clearInterval(t); }, 300);
 }
 
-// ── AV ──────────────────────────────────────────────────────────
-const avUploadZone=document.getElementById('av-upload-zone'), avFileInput=document.getElementById('av-file-input');
-let selectedAVFile=null;
-avUploadZone.addEventListener('dragover', e=>{e.preventDefault();avUploadZone.classList.add('dragover');});
-avUploadZone.addEventListener('dragleave',()=>avUploadZone.classList.remove('dragover'));
-avUploadZone.addEventListener('drop',e=>{e.preventDefault();avUploadZone.classList.remove('dragover');if(e.dataTransfer.files[0]){avFileInput.files=e.dataTransfer.files;handleAVFileSelect();}});
-avFileInput.addEventListener('change',handleAVFileSelect);
-function handleAVFileSelect(){const file=avFileInput.files[0];if(!file)return;if(file.size>20*1024*1024){alert('File too large. Max 20MB.');avFileInput.value='';return;}selectedAVFile=file;document.getElementById('av-file-name').textContent=file.name;document.getElementById('av-file-size').textContent=(file.size/1024/1024).toFixed(2)+' MB';document.getElementById('av-file-preview').style.display='flex';document.getElementById('av-conversion-options').style.display='grid';avUploadZone.style.opacity='0.4';}
-function clearAVFile(){selectedAVFile=null;avFileInput.value='';document.getElementById('av-file-preview').style.display='none';document.getElementById('av-conversion-options').style.display='none';avUploadZone.style.opacity='1';}
-async function convertToAudio(){if(!selectedAVFile){alert('Please select a file first');return;}const btn=document.getElementById('audio-btn');btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Generating…';document.getElementById('audio-progress').style.display='block';const fd=new FormData();fd.append('file',selectedAVFile);fd.append('language',document.getElementById('av-audio-language').value);fd.append('speed',document.getElementById('av-audio-speed').value);fd.append('type','audio');try{const res=await fetch('/api/convert-to-audio',{method:'POST',body:fd});const result=await res.json();if(result.success){alert('✅ Audio generated successfully!');loadConvertedFiles();clearAVFile();}else{alert('❌ '+result.error);}}catch(e){alert('❌ Network error.');}finally{btn.disabled=false;btn.innerHTML='<i class="fas fa-magic"></i> Generate Audio';document.getElementById('audio-progress').style.display='none';}}
-async function convertToVideo(){if(!selectedAVFile){alert('Please select a file first');return;}const btn=document.getElementById('video-btn');btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Generating…';document.getElementById('video-progress').style.display='block';const fd=new FormData();fd.append('file',selectedAVFile);fd.append('style',document.getElementById('av-video-style').value);fd.append('duration',document.getElementById('av-video-duration').value);fd.append('type','video');try{const res=await fetch('/api/convert-to-video',{method:'POST',body:fd});const result=await res.json();if(result.success){alert('✅ Video generated successfully!');loadConvertedFiles();clearAVFile();}else{alert('❌ '+result.error);}}catch(e){alert('❌ Network error.');}finally{btn.disabled=false;btn.innerHTML='<i class="fas fa-video"></i> Generate Video';document.getElementById('video-progress').style.display='none';}}
-async function loadConvertedFiles(){try{const res=await fetch('/api/converted-files');const result=await res.json();const c=document.getElementById('converted-files-container');if(!result.success||!result.files.length){c.innerHTML=`<div class="empty-state" style="grid-column:1/-1;"><div class="empty-state-icon">📭</div><h4>No converted files yet</h4><p>Upload your notes above to get started</p></div>`;return;}c.innerHTML=result.files.map(f=>`<div class="file-card"><div class="file-type-badge ${f.type}">${f.type==='audio'?'🎵 AUDIO':'🎬 VIDEO'}</div><div class="file-name" title="${f.filename}">${f.filename}</div><div class="file-meta">${f.created_at}${f.duration?' · '+f.duration:''}</div><div class="file-actions"><button class="btn btn-ghost btn-sm" onclick="previewFile(${f.id})" style="flex:1;border-radius:8px;font-size:0.78rem;"><i class="fas fa-eye"></i> Preview</button><button class="btn btn-primary btn-sm" onclick="downloadFile(${f.id})" style="flex:1;border-radius:8px;font-size:0.78rem;"><i class="fas fa-download"></i> Download</button><button class="btn btn-sm" onclick="deleteConvertedFile(${f.id})" style="background:rgba(255,79,48,0.1);color:var(--accent);border-radius:8px;border:1px solid rgba(255,79,48,0.2);padding:0 0.65rem;"><i class="fas fa-trash"></i></button></div></div>`).join('');}catch(e){console.error(e);}}
-async function deleteConvertedFile(id){if(!confirm('Delete this file?'))return;try{await fetch(`/api/delete-converted-file/${id}`,{method:'DELETE'});loadConvertedFiles();}catch(e){}}
-function downloadFile(id){window.location.href=`/api/download-file/${id}`;}
-async function previewFile(id){try{const res=await fetch(`/api/preview-file/${id}`);const result=await res.json();if(!result.success){alert('Preview failed');return;}const content=result.type==='audio'?`<div style="text-align:center;padding:1rem;"><p style="font-size:1rem;font-weight:600;color:var(--ink);margin-bottom:1rem;">🎵 ${result.filename}</p><audio controls style="width:100%;margin-bottom:0.75rem;"><source src="${result.preview_url}" type="audio/mpeg"></audio><p style="font-size:0.82rem;color:var(--muted);">Duration: ${result.duration}</p></div>`:`<div style="text-align:center;padding:1rem;"><p style="font-size:1rem;font-weight:600;color:var(--ink);margin-bottom:1rem;">🎬 ${result.filename}</p><video controls style="width:100%;border-radius:12px;margin-bottom:0.75rem;max-height:360px;"><source src="${result.preview_url}" type="video/mp4"></video><p style="font-size:0.82rem;color:var(--muted);">Duration: ${result.duration}</p></div>`;document.getElementById('preview-modal-title').textContent=result.type==='audio'?'🎵 Audio Preview':'🎬 Video Preview';document.getElementById('preview-modal-content').innerHTML=content;document.getElementById('preview-modal').classList.add('open');}catch(e){alert('Error: '+e.message);}}
+// ── Nav ──────────────────────────────────────────────────────────
+function findStudyBuddies() { window.location.href = '/study-buddies'; }
+async function logout() {
+    if (!confirm('Logout?')) return;
+    try { await fetch('/logout', { method:'POST' }); window.location.href='/'; } catch(e) {}
+}
 
 // ══════════════════════════════════════════════════════════════
-//  AI CHAT
+//  AI CHAT — Enhanced with PDF/Image/Voice/Audio/YouTube
 // ══════════════════════════════════════════════════════════════
-let aiMessages = [];
-let aiTyping   = false;
+
+let aiMessages        = [];
+let aiTyping          = false;
+let aiMode            = 'text';        // 'text' | 'audio' | 'youtube'
+let pendingAttachments = [];           // [{type:'pdf'|'image', file, name, dataUrl?}]
+let isRecording       = false;
+let mediaRecorder     = null;
+let audioChunks       = [];
+let recognition       = null;
+let currentAudio      = null;         // active Audio instance for TTS
+
+function setMode(mode) {
+    aiMode = mode;
+    document.querySelectorAll('.ai-mode-pill').forEach(p => p.classList.remove('active'));
+    document.getElementById('mode-' + mode).classList.add('active');
+}
 
 function openAIModal() {
     document.getElementById('ai-modal').classList.add('open');
@@ -776,61 +788,262 @@ function openAIModal() {
 function closeAIModal() {
     document.getElementById('ai-modal').classList.remove('open');
 }
-// Close when clicking outside the modal box
 document.getElementById('ai-modal').addEventListener('click', e => {
     if (e.target === document.getElementById('ai-modal')) closeAIModal();
 });
 
 function handleAIKey(e) {
     if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); submitAIQuestion(); }
-    // Shift+Enter creates newline naturally
 }
-
 function autoResizeTextarea(el) {
     el.style.height = 'auto';
     el.style.height = Math.min(el.scrollHeight, 120) + 'px';
 }
 
-function usePrompt(text) {
-    document.getElementById('ai-input').value = text;
-    autoResizeTextarea(document.getElementById('ai-input'));
-    submitAIQuestion();
+// ── Attachments ─────────────────────────────────────────────────
+async function handleAttachment(type, input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const maxMB = type === 'pdf' ? 10 : 5;
+    if (file.size > maxMB * 1024 * 1024) { alert(`File too large. Max ${maxMB}MB.`); input.value=''; return; }
+
+    let dataUrl = null;
+    if (type === 'image') {
+        dataUrl = await readFileAsDataURL(file);
+    }
+    pendingAttachments.push({ type, file, name: file.name, dataUrl });
+    renderAttachmentStrip();
+    input.value = '';
 }
 
-function handleAIPDFSelect() {
-    const f = document.getElementById('ai-pdf-input').files[0];
-    if (!f) return;
-    document.getElementById('pdf-attach-name').textContent = f.name;
-    document.getElementById('pdf-attach-badge').style.display = 'flex';
+function readFileAsDataURL(file) {
+    return new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(r.result);
+        r.onerror = rej;
+        r.readAsDataURL(file);
+    });
 }
-function clearAIPDF() {
-    document.getElementById('ai-pdf-input').value = '';
-    document.getElementById('pdf-attach-badge').style.display = 'none';
+
+function removeAttachment(idx) {
+    pendingAttachments.splice(idx, 1);
+    renderAttachmentStrip();
+}
+
+function renderAttachmentStrip() {
+    const strip = document.getElementById('attachment-strip');
+    if (!pendingAttachments.length) { strip.style.display='none'; return; }
+    strip.style.display = 'flex';
+    strip.innerHTML = pendingAttachments.map((a, i) => `
+        <div class="attachment-chip ${a.type}">
+            ${a.type === 'pdf' ? '📄' : '🖼️'} <span>${a.name}</span>
+            <button onclick="removeAttachment(${i})" title="Remove">✕</button>
+        </div>`).join('');
+}
+
+// ── Voice Input (speech-to-text) ─────────────────────────────────
+function toggleVoiceInput() {
+    if (isRecording) {
+        stopVoiceInput();
+    } else {
+        startVoiceInput();
+    }
+}
+
+function startVoiceInput() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        // Fallback: audio recording → send to AI as voice note
+        startAudioRecording();
+        return;
+    }
+    recognition = new SpeechRecognition();
+    recognition.continuous    = true;
+    recognition.interimResults = true;
+    recognition.lang          = 'en-US';
+
+    let finalTranscript = '';
+    recognition.onresult = (e) => {
+        let interim = '';
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+            if (e.results[i].isFinal) finalTranscript += e.results[i][0].transcript + ' ';
+            else interim += e.results[i][0].transcript;
+        }
+        document.getElementById('ai-input').value = finalTranscript + interim;
+        autoResizeTextarea(document.getElementById('ai-input'));
+    };
+    recognition.onerror = () => stopVoiceInput();
+    recognition.onend   = () => { if (isRecording) recognition.start(); };
+
+    recognition.start();
+    isRecording = true;
+    document.getElementById('voice-btn').classList.add('active-record');
+    document.getElementById('voice-icon').className = 'fas fa-stop';
+    document.getElementById('ai-status-text').textContent = '🔴 Listening…';
+}
+
+function stopVoiceInput() {
+    isRecording = false;
+    if (recognition) { recognition.stop(); recognition = null; }
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+    document.getElementById('voice-btn').classList.remove('active-record');
+    document.getElementById('voice-icon').className = 'fas fa-microphone';
+    document.getElementById('ai-status-text').textContent = 'Online · Ready to help';
+}
+
+async function startAudioRecording() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioChunks  = [];
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+        mediaRecorder.onstop = async () => {
+            const blob = new Blob(audioChunks, { type: 'audio/webm' });
+            stream.getTracks().forEach(t => t.stop());
+            // Show voice note in chat as user bubble, then transcribe & ask
+            const url = URL.createObjectURL(blob);
+            aiMessages.push({ role:'user', content:'🎤 Voice note', voiceUrl: url, time: getTime() });
+            renderMessages();
+            await transcribeAndAsk(blob);
+        };
+        mediaRecorder.start();
+        isRecording = true;
+        document.getElementById('voice-btn').classList.add('active-record');
+        document.getElementById('voice-icon').className = 'fas fa-stop';
+        document.getElementById('ai-status-text').textContent = '🔴 Recording…';
+    } catch(e) {
+        alert('Microphone access denied. Please allow microphone permissions.');
+    }
+}
+
+async function transcribeAndAsk(audioBlob) {
+    // We send the audio as a voice note and ask AI to process it
+    // Since server-side transcription would need Whisper, we ask AI to process with the label
+    aiTyping = true; renderMessages();
+    try {
+        const fd = new FormData();
+        fd.append('question', 'The user sent a voice note. Please acknowledge and ask them to type their question if you cannot process audio, or process this voice message.');
+        fd.append('voice_note', audioBlob, 'voice.webm');
+        const res  = await fetch('/api/ask-ai', { method:'POST', body:fd });
+        const data = await res.json();
+        const answer = data.success ? data.explanation : '❌ ' + data.error;
+        aiMessages.push({ role:'ai', content: answer, time: getTime(), showActions: true });
+    } catch(e) {
+        aiMessages.push({ role:'ai', content:'❌ Network error. Please try again.', time: getTime() });
+    }
+    aiTyping = false; renderMessages();
+}
+
+// ── Text-to-speech (browser native) ─────────────────────────────
+function speakText(btn, msgIdx) {
+    if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+        document.querySelectorAll('.msg-action-btn.playing').forEach(b => {
+            b.classList.remove('playing'); b.innerHTML = '🔊 Listen';
+        });
+        if (btn.dataset.active === 'true') { btn.dataset.active = ''; return; }
+    }
+    const msg = aiMessages[msgIdx];
+    if (!msg) return;
+    const rawText = msg.content.replace(/<[^>]+>/g,'').replace(/\*\*/g,'').replace(/&[a-z]+;/gi,'');
+    const u = new SpeechSynthesisUtterance(rawText.slice(0, 2000));
+    u.rate = 0.95;
+    const resumeTimer = setInterval(() => {
+        if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+        if (!window.speechSynthesis.speaking) clearInterval(resumeTimer);
+    }, 5000);
+    u.onend = () => {
+        clearInterval(resumeTimer);
+        btn.classList.remove('playing');
+        btn.innerHTML = '🔊 Listen';
+        btn.dataset.active = '';
+    };
+    btn.classList.add('playing');
+    btn.innerHTML = '⏸ Stop';
+    btn.dataset.active = 'true';
+    window.speechSynthesis.speak(u);
+}
+
+// ── Message rendering ────────────────────────────────────────────
+function getTime() {
+    return new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
+}
+
+function escapeHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+
+function formatAIText(text) {
+    return text
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.+?)\*/g, '<em>$1</em>')
+        .replace(/`(.+?)`/g, '<code style="background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:4px;font-size:0.85em;">$1</code>')
+        .replace(/\n/g,'<br>');
 }
 
 function renderMessages() {
     const container = document.getElementById('ai-messages');
     const empty     = document.getElementById('ai-empty');
 
-    if (aiMessages.length === 0) {
-        empty.style.display = 'flex';
-        // Remove all message rows
-        container.querySelectorAll('.msg-row').forEach(el => el.remove());
-        return;
-    }
+    if (!aiMessages.length) { empty.style.display='flex'; container.querySelectorAll('.msg-row').forEach(el=>el.remove()); return; }
     empty.style.display = 'none';
     container.querySelectorAll('.msg-row').forEach(el => el.remove());
 
-    aiMessages.forEach(msg => {
+    aiMessages.forEach((msg, idx) => {
         const row = document.createElement('div');
         row.className = `msg-row ${msg.role}`;
 
-        const avatarIcon = msg.role === 'ai' ? '🤖' : '👤';
+        let bubbleContent = '';
 
+        if (msg.voiceUrl) {
+            bubbleContent = `
+                <div class="voice-bubble">
+                    <div class="voice-waveform">
+                        <div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div>
+                        <div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div>
+                        <div class="voice-bar"></div>
+                    </div>
+                    <span class="voice-label">🎤 Voice note</span>
+                    <audio src="${msg.voiceUrl}" controls style="height:28px;margin-left:0.5rem;"></audio>
+                </div>`;
+        } else if (msg.imageDataUrl) {
+            bubbleContent = `<img src="${msg.imageDataUrl}" class="msg-img-preview" alt="Attached image"><br>${escapeHtml(msg.content)}`;
+        } else {
+            bubbleContent = msg.role === 'ai' ? formatAIText(msg.content) : escapeHtml(msg.content);
+        }
+
+        // AI message action buttons
+        let actionsHtml = '';
+        if (msg.role === 'ai' && msg.showActions !== false && !msg.voiceUrl) {
+            const rawText = msg.content.replace(/&[a-z]+;/gi,'').replace(/<[^>]+>/g,'');
+            actionsHtml = `
+                <div class="msg-actions">
+                    <button class="msg-action-btn" onclick="speakText(this, ${idx})">🔊 Listen</button>
+                    <button class="msg-action-btn" onclick="usePrompt('Please explain this more simply, I did not fully understand: ${rawText.slice(0,80).replace(/'/g,"\\'")}...')">🔄 Explain better</button>
+                    <button class="msg-action-btn" onclick="usePrompt('Give me an example to illustrate what you just explained')">💡 Give example</button>
+                </div>`;
+
+            // YouTube card if in youtube mode
+            if (msg.youtubeQuery) {
+                const ytUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(msg.youtubeQuery)}`;
+                actionsHtml += `
+                    <a href="${ytUrl}" target="_blank" class="yt-card">
+                        <i class="fab fa-youtube yt-card-icon"></i>
+                        <div>
+                            <div class="yt-card-title">Watch on YouTube</div>
+                            <div class="yt-card-text">Search: ${escapeHtmlAttr(msg.youtubeQuery)}</div>
+                        </div>
+                    </a>`;
+            }
+        }
+
+        const avatarIcon = msg.role === 'ai' ? '🤖' : '👤';
         row.innerHTML = `
             <div class="msg-bubble-avatar">${avatarIcon}</div>
-            <div>
-                <div class="msg-bubble">${msg.role === 'ai' ? formatAIText(msg.content) : escapeHtml(msg.content)}</div>
+            <div style="max-width:82%">
+                <div class="msg-bubble">${bubbleContent}${actionsHtml}</div>
                 <div class="msg-time">${msg.time}</div>
             </div>`;
         container.appendChild(row);
@@ -844,9 +1057,7 @@ function renderMessages() {
             <div class="msg-bubble-avatar">🤖</div>
             <div class="msg-bubble">
                 <div class="typing-indicator">
-                    <div class="typing-dot"></div>
-                    <div class="typing-dot"></div>
-                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
                 </div>
             </div>`;
         container.appendChild(typingRow);
@@ -855,93 +1066,117 @@ function renderMessages() {
     container.scrollTop = container.scrollHeight;
 }
 
-function escapeHtml(str) {
-    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+function escapeHtmlAttr(str) {
+    return str.replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
-function formatAIText(text) {
-    // Basic markdown-ish formatting
-    return text
-        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.+?)\*/g, '<em>$1</em>')
-        .replace(/`(.+?)`/g, '<code style="background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:4px;font-size:0.85em;">$1</code>')
-        .replace(/\n/g,'<br>');
+// ── Prompt helpers ───────────────────────────────────────────────
+function usePrompt(text) {
+    document.getElementById('ai-input').value = text;
+    autoResizeTextarea(document.getElementById('ai-input'));
+    submitAIQuestion();
 }
 
-function getTime() {
-    return new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
-}
-
+// ── Submit question ──────────────────────────────────────────────
 async function submitAIQuestion() {
     const input    = document.getElementById('ai-input');
     const question = input.value.trim();
-    const pdfInp   = document.getElementById('ai-pdf-input');
-    const hasPDF   = pdfInp.files && pdfInp.files[0];
 
-    if (!question && !hasPDF) return;
+    if (!question && !pendingAttachments.length) return;
     if (aiTyping) return;
 
-    // Add user message
-    aiMessages.push({
-        role: 'user',
-        content: hasPDF ? `📎 ${pdfInp.files[0].name}\n${question}` : question,
-        time: getTime()
-    });
+    // Build user message display
+    let userContent = question;
+    let userImgUrl  = null;
+    if (pendingAttachments.length) {
+        const labels = pendingAttachments.map(a => (a.type === 'pdf' ? '📄' : '🖼️') + ' ' + a.name).join(', ');
+        userContent  = `${labels}${question ? '\n' + question : ''}`;
+        const imgAtt = pendingAttachments.find(a => a.type === 'image');
+        if (imgAtt) userImgUrl = imgAtt.dataUrl;
+    }
+
+    const userMsg = { role:'user', content: userContent, time: getTime() };
+    if (userImgUrl) userMsg.imageDataUrl = userImgUrl;
+    aiMessages.push(userMsg);
 
     input.value = '';
     input.style.height = 'auto';
-    clearAIPDF();
+
+    // Build FormData
+    const fd = new FormData();
+    fd.append('question', question || (pendingAttachments.length ? 'Please analyze the attached file(s) and explain the key concepts.' : ''));
+    fd.append('response_mode', aiMode);
+
+    pendingAttachments.forEach((att, i) => {
+        if (att.type === 'pdf')   fd.append('pdf',   att.file);
+        if (att.type === 'image') fd.append('image', att.file);
+    });
+    pendingAttachments = [];
+    renderAttachmentStrip();
 
     aiTyping = true;
     renderMessages();
-
-    const btn = document.getElementById('ai-send-btn');
-    btn.disabled = true;
-
-    let opts;
-    if (hasPDF) {
-        const fd = new FormData();
-        fd.append('question', question);
-        fd.append('pdf', pdfInp.files[0]);
-        opts = { method:'POST', body: fd };
-    } else {
-        opts = { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ question }) };
-    }
+    document.getElementById('ai-send-btn').disabled = true;
 
     try {
-        const res  = await fetch('/api/ask-ai', opts);
+        const res  = await fetch('/api/ask-ai', { method:'POST', body:fd });
         const data = await res.json();
-        aiMessages.push({
-            role: 'ai',
-            content: data.success ? data.explanation : '❌ ' + data.error,
-            time: getTime()
-        });
+
+        if (data.success) {
+            const aiMsg = {
+                role: 'ai',
+                content: data.explanation,
+                time: getTime(),
+                showActions: true
+            };
+            if (aiMode === 'youtube' && data.youtube_query) {
+                aiMsg.youtubeQuery = data.youtube_query;
+            }
+            aiMessages.push(aiMsg);
+
+            // Auto-speak if audio mode
+            // Auto-speak if audio mode
+            if (aiMode === 'audio') {
+                setTimeout(() => {
+                    const rawText = data.explanation.replace(/<[^>]+>/g,'').replace(/\*\*/g,'');
+                    if (!window.speechSynthesis) { alert('Your browser does not support text-to-speech.'); return; }
+                    window.speechSynthesis.cancel();
+                    const u = new SpeechSynthesisUtterance(rawText.slice(0, 2000));
+                    u.rate = 0.95;
+                    u.pitch = 1;
+                    u.volume = 1;
+                    const resumeTimer = setInterval(() => {
+                        if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+                        if (!window.speechSynthesis.speaking) clearInterval(resumeTimer);
+                    }, 5000);
+                    u.onend = () => clearInterval(resumeTimer);
+                    window.speechSynthesis.speak(u);
+                }, 500);
+            }
+        } else {
+            aiMessages.push({ role:'ai', content:'❌ ' + data.error, time: getTime() });
+        }
     } catch(e) {
         aiMessages.push({ role:'ai', content:'❌ Network error. Please try again.', time: getTime() });
     }
 
     aiTyping = false;
-    btn.disabled = false;
+    document.getElementById('ai-send-btn').disabled = false;
     renderMessages();
-    input.focus();
+    document.getElementById('ai-input').focus();
 }
 
 function resetAIConversation() {
     aiMessages = [];
+    pendingAttachments = [];
+    renderAttachmentStrip();
     renderMessages();
+    window.speechSynthesis.cancel();
     fetch('/api/ask-ai', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ reset:true, question:' ' }) });
 }
 
-// ── Nav ──────────────────────────────────────────────────────────
-function findStudyBuddies() { window.location.href = '/study-buddies'; }
-async function logout() {
-    if (!confirm('Logout?')) return;
-    try { await fetch('/logout', { method:'POST' }); window.location.href='/'; } catch(e) {}
-}
-
 // ── Init ─────────────────────────────────────────────────────────
-window.addEventListener('load', () => { loadDashboardData(); loadConvertedFiles(); });
+window.addEventListener('load', () => { loadDashboardData(); });
 </script>
 </body>
 </html>

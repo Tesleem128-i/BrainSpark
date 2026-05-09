@@ -3,10 +3,9 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_session import Session
 from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
-from models import db, User, Quiz, QuizResult, Connection, UserTag, Message, ChatGroup, ChatGroupMember, GroupMessage, BrainstormSession, BrainstormNote, GroupJoinRequest, Poll, PollOption, PollVote, GeneratedQuestion, ConvertedFile
+from models import db, User, Quiz, QuizResult, Connection, UserTag, Message, ChatGroup, ChatGroupMember, GroupMessage, BrainstormSession, BrainstormNote, GroupJoinRequest, Poll, PollOption, PollVote, GeneratedQuestion
 import hashlib
 import os
-import subprocess
 import requests as req
 from dotenv import load_dotenv
 import google.generativeai as genai
@@ -14,7 +13,6 @@ import random
 import PyPDF2
 import io
 import json
-import textwrap
 import tempfile
 from datetime import datetime, timedelta
 import logging
@@ -24,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-# ── Startup guard — fail loudly if required env vars are missing ──────────────
+# ── Startup guard ─────────────────────────────────────────────────────────────
 _required_env = ['SECRET_KEY', 'GOOGLE_AI_API_KEY', 'MAIL_USERNAME', 'BREVO_API_KEY']
 _missing_env  = [k for k in _required_env if not os.getenv(k)]
 if _missing_env:
@@ -69,15 +67,15 @@ app.secret_key = os.getenv('SECRET_KEY', 'knowitnow_super_secret_key_change_in_p
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER']         = 'uploads'
 app.config['PROFILE_UPLOAD_FOLDER'] = 'uploads/profiles'
-app.config['MAX_CONTENT_LENGTH']    = 10 * 1024 * 1024  # 10 MB
+app.config['MAX_CONTENT_LENGTH']    = 20 * 1024 * 1024  # 20 MB (images + PDFs)
 
-# ── Server-side session (fixes multi-worker session loss on Render) ────────────
 app.config['SESSION_TYPE']           = 'filesystem'
-app.config['SESSION_FILE_DIR']       = tempfile.gettempdir()
+_session_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'flask_sessions')
+os.makedirs(_session_dir, exist_ok=True)
+app.config['SESSION_FILE_DIR']       = _session_dir
 app.config['SESSION_PERMANENT']      = False
 app.config['SESSION_USE_SIGNER']     = True
 app.config['SESSION_FILE_THRESHOLD'] = 500
-
 db.init_app(app)
 Session(app)
 
@@ -86,18 +84,16 @@ with app.app_context():
 
 # ── Google AI ─────────────────────────────────────────────────────────────────
 genai.configure(api_key=os.getenv('GOOGLE_AI_API_KEY'))
-model = genai.GenerativeModel('gemini-2.5-flash')
+model        = genai.GenerativeModel('gemini-2.5-flash')
+vision_model = genai.GenerativeModel('gemini-2.5-flash')   # same model, supports vision
 
 # ── Folders ───────────────────────────────────────────────────────────────────
-os.makedirs('uploads/profiles',        exist_ok=True)
-os.makedirs('uploads',                 exist_ok=True)
-os.makedirs('uploads/converted_audio', exist_ok=True)
-os.makedirs('uploads/converted_video', exist_ok=True)
+os.makedirs('uploads/profiles', exist_ok=True)
+os.makedirs('uploads',          exist_ok=True)
 
 
-# ── Brevo API Email ───────────────────────────────────────────────────────────
+# ── Brevo email ───────────────────────────────────────────────────────────────
 def send_email_brevo(to_email, to_name, subject, body):
-    """Send email via Brevo API (HTTPS, not SMTP — works on Render free tier)."""
     response = req.post(
         'https://api.brevo.com/v3/smtp/email',
         headers={
@@ -118,7 +114,7 @@ def send_email_brevo(to_email, to_name, subject, body):
 
 
 def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'pdf', 'png', 'jpg', 'jpeg', 'gif'}
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
 
 def extract_pdf_text(file_storage):
@@ -144,6 +140,13 @@ def extract_pdf_text(file_storage):
         return None
 
 
+def extract_pdf_bytes(file_storage):
+    """Return raw bytes + reset pointer."""
+    pdf_bytes = file_storage.read()
+    file_storage.seek(0)
+    return pdf_bytes
+
+
 def extract_pdf_text_simple(filepath):
     """Extract text from a PDF file path."""
     try:
@@ -158,224 +161,9 @@ def extract_pdf_text_simple(filepath):
                 except Exception:
                     continue
         return text.strip()
-    except ImportError:
-        return "PDF library not available"
     except Exception as e:
         logger.warning(f"PDF extraction failed: {str(e)}")
         return ""
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-#  AUDIO / VIDEO HELPERS
-# ══════════════════════════════════════════════════════════════════════════════
-
-def _find_font(size=28):
-    from PIL import ImageFont
-    candidates = [
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-        "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
-        "/Library/Fonts/Arial.ttf",
-        "C:/Windows/Fonts/arial.ttf",
-    ]
-    for path in candidates:
-        if os.path.exists(path):
-            try:
-                return ImageFont.truetype(path, size)
-            except Exception:
-                continue
-    return ImageFont.load_default()
-
-
-def _draw_frame(mouth_open, bg_color, text_color, chunk_text, width=1280, height=720):
-    import numpy as np
-    from PIL import Image, ImageDraw
-
-    img  = Image.new("RGB", (width, height), color=bg_color)
-    draw = ImageDraw.Draw(img)
-
-    hx, hy, hr = width // 4, height // 2, 90
-
-    draw.ellipse([hx-50, hy+hr-10, hx+50, hy+hr+120], fill=(200,160,120), outline=text_color, width=2)
-    draw.ellipse([hx-hr, hy-hr, hx+hr, hy+hr], fill=(255,210,160), outline=text_color, width=3)
-    draw.arc([hx-hr, hy-hr, hx+hr, hy], start=180, end=0, fill=(80,50,30), width=8)
-    for ex in [hx-32, hx+32]:
-        draw.ellipse([ex-10, hy-40, ex+10, hy-20], fill="white")
-        draw.ellipse([ex-6,  hy-37, ex+6,  hy-24], fill=(60,60,80))
-        draw.ellipse([ex-3,  hy-35, ex+3,  hy-29], fill="white")
-    for ex in [hx-32, hx+32]:
-        draw.line([(ex-10, hy-47), (ex+10, hy-45)], fill=(80,50,30), width=3)
-    draw.polygon([(hx, hy-8), (hx-6, hy+8), (hx+6, hy+8)], fill=(240,180,140))
-    my = hy + 48
-    if mouth_open:
-        draw.ellipse([hx-22, my-8, hx+22, my+18], fill=(140,60,60))
-        draw.rectangle([hx-18, my-5, hx+18, my+2], fill="white")
-    else:
-        draw.arc([hx-22, my-8, hx+22, my+10], start=0, end=180, fill=(140,60,60), width=3)
-
-    font_large = _find_font(32)
-    font_small = _find_font(24)
-    text_x = width // 2 + 20
-    lines  = textwrap.wrap(chunk_text, width=38)[:7]
-    text_y = height // 2 - (len(lines) * 42) // 2
-    for line in lines:
-        try:
-            bbox   = draw.textbbox((0,0), line, font=font_large)
-            text_w = bbox[2] - bbox[0]
-        except Exception:
-            text_w = len(line) * 18
-        draw.text((text_x, text_y), line, fill=text_color, font=font_large)
-        text_y += 44
-
-    draw.rectangle([0, height-44, width, height], fill=(0,0,0))
-    footer = "Brainspark AI · Learning Made Visual"
-    try:
-        fb = draw.textbbox((0,0), footer, font=font_small)
-        fw = fb[2] - fb[0]
-    except Exception:
-        fw = len(footer) * 13
-    draw.text(((width-fw)//2, height-32), footer, fill=(180,180,180), font=font_small)
-    return np.array(img)
-
-
-def _tts_chunk(text, wav_path):
-    script = (
-        "import pyttsx3\n"
-        "engine = pyttsx3.init()\n"
-        "engine.setProperty('rate', 150)\n"
-        f"engine.save_to_file({repr(text)}, {repr(wav_path)})\n"
-        "engine.runAndWait()\n"
-        "engine.stop()\n"
-    )
-    try:
-        result = subprocess.run(["python3", "-c", script], timeout=60, capture_output=True)
-        return result.returncode == 0 and os.path.exists(wav_path) and os.path.getsize(wav_path) > 0
-    except Exception as e:
-        logger.warning(f"_tts_chunk subprocess error: {e}")
-        return False
-
-
-def create_audio_from_text(text_content, audio_path, language, speed):
-    try:
-        import pyttsx3
-    except ImportError:
-        raise RuntimeError("pyttsx3 is not installed.")
-
-    try:
-        speed_multiplier = float(speed) if speed else 1.0
-        engine = pyttsx3.init()
-        engine.setProperty('rate', int(150 * speed_multiplier))
-        limited_text = ' '.join(text_content.split()[:1000])
-        wav_path = audio_path.replace('.mp3', '.wav')
-        engine.save_to_file(limited_text, wav_path)
-        engine.runAndWait()
-        engine.stop()
-        try:
-            from pydub import AudioSegment
-            AudioSegment.from_wav(wav_path).export(audio_path, format='mp3')
-            if os.path.exists(wav_path):
-                os.remove(wav_path)
-        except Exception:
-            if os.path.exists(wav_path):
-                os.rename(wav_path, audio_path)
-        logger.info(f"Audio created: {audio_path}")
-        return True
-    except Exception as e:
-        logger.error(f"create_audio_from_text error: {e}", exc_info=True)
-        raise
-
-
-def create_video_from_text(text_content, video_path, style, duration_setting):
-    try:
-        import numpy as np
-        from PIL import Image
-    except ImportError:
-        raise RuntimeError("Pillow and numpy are required.")
-
-    try:
-        from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips
-    except ImportError:
-        raise RuntimeError("moviepy is required.")
-
-    style_map = {
-        'slides':     ((10,30,100),   (255,255,255)),
-        'animated':   ((20,20,40),    (255,255,255)),
-        'whiteboard': ((245,245,240), (30,30,30)),
-    }
-    bg_color, text_color = style_map.get(style, style_map['slides'])
-    chunk_limits  = {'short': 3, 'medium': 6, 'long': 10}
-    fallback_secs = {'short': 4, 'medium': 5, 'long':  7}
-    max_chunks    = chunk_limits.get(duration_setting, 6)
-    fallback_dur  = fallback_secs.get(duration_setting, 5)
-
-    raw_sentences = [s.strip() for s in text_content[:4000].replace('\n',' ').split('.') if s.strip()]
-    chunks, current = [], ""
-    for sentence in raw_sentences:
-        if len(current) + len(sentence) < 280:
-            current += sentence + ". "
-        else:
-            if current.strip():
-                chunks.append(current.strip())
-            current = sentence + ". "
-    if current.strip():
-        chunks.append(current.strip())
-    chunks = chunks[:max_chunks] or [text_content[:400]]
-
-    audio_dir = 'uploads/converted_audio'
-    os.makedirs(audio_dir, exist_ok=True)
-    os.makedirs(os.path.dirname(os.path.abspath(video_path)), exist_ok=True)
-
-    clips, temp_audio_paths = [], []
-    for idx, chunk in enumerate(chunks):
-        logger.info(f"Video chunk {idx+1}/{len(chunks)}: {chunk[:60]}…")
-        clip_duration = fallback_dur
-        audio_clip    = None
-        wav_path      = os.path.join(audio_dir, f"chunk_{idx}_{os.getpid()}.wav")
-        try:
-            if _tts_chunk(chunk, wav_path):
-                audio_clip    = AudioFileClip(wav_path)
-                clip_duration = max(audio_clip.duration, 2.0)
-                temp_audio_paths.append((wav_path, audio_clip))
-            else:
-                logger.warning(f"TTS silent for chunk {idx}")
-        except Exception as tts_err:
-            logger.warning(f"TTS error chunk {idx}: {tts_err}")
-
-        fps       = 2
-        n_frames  = max(2, int(clip_duration * fps))
-        frame_dur = clip_duration / n_frames
-        frame_clips = []
-        for fi in range(n_frames):
-            mouth_open = (fi % 2 == 0) if audio_clip else False
-            frame_arr  = _draw_frame(mouth_open, bg_color, text_color, chunk)
-            frame_clips.append(ImageClip(frame_arr).set_duration(frame_dur))
-
-        chunk_video = concatenate_videoclips(frame_clips, method="chain")
-        if audio_clip is not None:
-            if audio_clip.duration > chunk_video.duration:
-                audio_clip = audio_clip.subclip(0, chunk_video.duration)
-            chunk_video = chunk_video.set_audio(audio_clip)
-        clips.append(chunk_video)
-
-    if not clips:
-        blank = _draw_frame(False, bg_color, text_color, text_content[:300])
-        clips = [ImageClip(blank).set_duration(fallback_dur)]
-
-    final = concatenate_videoclips(clips, method="chain")
-    final.write_videofile(
-        video_path, fps=24, codec='libx264', audio_codec='aac',
-        temp_audiofile=video_path+".temp_audio.m4a", remove_temp=True,
-        verbose=False, logger=None, preset='ultrafast',
-    )
-    final.close()
-    for path, ac in temp_audio_paths:
-        try: ac.close()
-        except: pass
-        try:
-            if os.path.exists(path): os.remove(path)
-        except: pass
-    logger.info(f"Video created: {video_path}")
-    return True
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -447,7 +235,6 @@ def signup():
         code = ''.join(random.choices('0123456789', k=6))
         user.verification_code = code
 
-        # ── Send verification email via Brevo API ─────────────────────────────
         try:
             body = (
                 f"Hi {name},\n\n"
@@ -463,7 +250,6 @@ def signup():
             logger.error(f"Email send failed for {email}: {mail_err}", exc_info=True)
             return jsonify({'success': False, 'error': f'Could not send verification email: {str(mail_err)[:200]}. Please try again.'})
 
-        # ── Persist user after email succeeds ─────────────────────────────────
         try:
             db.session.add(user)
             db.session.flush()
@@ -687,7 +473,6 @@ Rules:
         session['pdf_source_hash'] = hashlib.sha256(text.encode('utf-8', errors='ignore')).hexdigest()
         session.modified = True
 
-        logger.info(f"Stored PDF text and {len(topics)} topics in session")
         return jsonify({'success': True, 'count': len(topics), 'redirect': '/quiz'})
 
     except Exception as e:
@@ -919,7 +704,6 @@ Rules:
 
         session['quiz_questions'] = json.dumps({"questions": unique_new})
         session.modified = True
-        logger.info(f"Generated {len(unique_new)} unique questions")
         return jsonify({'success': True, 'count': len(unique_new)})
 
     except Exception as e:
@@ -1201,21 +985,50 @@ def get_discussions():
     return jsonify({'success': True, 'discussions': discussions})
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+#  ENHANCED AI CHAT — PDF + Image + Voice + YouTube
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _build_youtube_query(question, explanation):
+    """Generate a concise YouTube search query from the question + explanation topic."""
+    try:
+        prompt = (
+            f"Given this study question and answer, generate a short (4-7 word) YouTube search query "
+            f"that would find a helpful educational video about the topic.\n\n"
+            f"Question: {question[:200]}\n\n"
+            f"Answer summary: {explanation[:300]}\n\n"
+            f"Return ONLY the search query text, nothing else."
+        )
+        resp = model.generate_content(prompt)
+        return resp.text.strip().strip('"').strip("'")
+    except Exception:
+        return question[:60] if question else "study explanation"
+
+
 @app.route('/api/ask-ai', methods=['POST'])
 def ask_ai():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
-    if request.content_type and 'multipart/form-data' in request.content_type:
-        question           = request.form.get('question', '')
-        reset_conversation = request.form.get('reset', False)
+
+    # ── Parse incoming request (multipart or JSON) ─────────────────────────
+    is_multipart = request.content_type and 'multipart/form-data' in request.content_type
+
+    if is_multipart:
+        question      = request.form.get('question', '').strip()
+        reset_conv    = request.form.get('reset', '').lower() in ('true', '1')
+        response_mode = request.form.get('response_mode', 'text')   # 'text' | 'audio' | 'youtube'
     else:
-        data               = request.json or {}
-        question           = data.get('question', '')
-        reset_conversation = data.get('reset', False)
-    if not question:
+        data          = request.get_json(silent=True) or {}
+        question      = data.get('question', '').strip()
+        reset_conv    = data.get('reset', False)
+        response_mode = data.get('response_mode', 'text')
+
+    if not question and not is_multipart:
         return jsonify({'error': 'Please provide a question'}), 400
+
     try:
-        if reset_conversation or 'ai_conversation' not in session:
+        # ── Conversation history ───────────────────────────────────────────
+        if reset_conv or 'ai_conversation' not in session:
             conversation_history       = []
             session['ai_conversation'] = []
         else:
@@ -1224,32 +1037,112 @@ def ask_ai():
         context = ""
         if conversation_history:
             context = "Previous conversation:\n"
-            for i, ex in enumerate(conversation_history, 1):
+            for i, ex in enumerate(conversation_history[-6:], 1):   # last 6 turns
                 context += f"\nQ{i}: {ex['question']}\nA{i}: {ex['answer']}\n"
             context += "\n---\n\n"
 
-        pdf_text = None
-        if 'pdf' in request.files:
-            pdf_file = request.files['pdf']
-            if pdf_file and pdf_file.filename and allowed_file(pdf_file.filename):
-                pdf_text = extract_pdf_text(pdf_file)
+        # ── System prompt ──────────────────────────────────────────────────
+        system_prompt = (
+            "You are Brainspark AI, an expert study tutor. "
+            "Explain concepts clearly with examples. Use **bold** for key terms. "
+            "If the user says they don't understand, rephrase with a simpler analogy. "
+            "If you analyze an image or PDF, describe what you see and explain it educationally. "
+            "Be warm, encouraging, and concise."
+        )
 
-        if pdf_text:
-            prompt = f"""{context}PDF CONTENT:\n{pdf_text[:4000]}\n\nAnswer concisely:\n{question}"""
+        # ── Collect content parts for Gemini ──────────────────────────────
+        content_parts = []
+
+        # System + context + question text
+        full_text_prompt = f"{system_prompt}\n\n{context}"
+        if question:
+            full_text_prompt += f"Student's question: {question}"
         else:
-            prompt = f"""{context}Answer concisely:\n{question}"""
+            full_text_prompt += "Please analyze the attached file(s) and explain the key concepts in a clear, educational way."
 
-        response    = model.generate_content(prompt)
-        explanation = response.text
+        content_parts.append(full_text_prompt)
 
-        conversation_history.append({'question': question, 'answer': explanation})
-        session['ai_conversation'] = conversation_history
+        has_pdf   = False
+        has_image = False
+
+        # ── PDF attachment ─────────────────────────────────────────────────
+        if is_multipart and 'pdf' in request.files:
+            pdf_file = request.files['pdf']
+            if pdf_file and pdf_file.filename:
+                pdf_text = extract_pdf_text(pdf_file)
+                if pdf_text:
+                    has_pdf = True
+                    content_parts.append(f"\n\n[PDF CONTENT — analyze and explain this]\n{pdf_text[:5000]}")
+
+        # ── Image attachment ───────────────────────────────────────────────
+        if is_multipart and 'image' in request.files:
+            img_file = request.files['image']
+            if img_file and img_file.filename:
+                try:
+                    img_bytes = img_file.read()
+                    ext       = img_file.filename.rsplit('.', 1)[-1].lower()
+                    mime_map  = {'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png',
+                                 'gif': 'image/gif', 'webp': 'image/webp'}
+                    mime_type = mime_map.get(ext, 'image/jpeg')
+                    # Gemini vision: pass image as inline data
+                    content_parts.append({
+                        'mime_type': mime_type,
+                        'data': img_bytes
+                    })
+                    has_image = True
+                except Exception as img_err:
+                    logger.warning(f"Image processing error: {img_err}")
+
+        # ── Voice note (transcription fallback) ───────────────────────────
+        if is_multipart and 'voice_note' in request.files:
+            # We can't do audio transcription without Whisper, so we acknowledge
+            content_parts[0] += (
+                "\n\n[Note: The user sent a voice note. Since audio transcription is not available, "
+                "please respond: 'I received your voice note! Unfortunately I can\'t process audio directly. "
+                "Please type your question and I\'ll be happy to help.' Then stop.]"
+            )
+
+        # ── Generate response ──────────────────────────────────────────────
+        if has_image:
+            # Use vision-capable call
+            response = vision_model.generate_content(content_parts)
+        else:
+            # Text-only (content_parts is list of strings; join them)
+            joined_prompt = "\n".join(str(p) for p in content_parts if isinstance(p, str))
+            response      = model.generate_content(joined_prompt)
+
+        explanation = response.text.strip()
+
+        # ── YouTube query (only for 'youtube' mode) ────────────────────────
+        # ── YouTube query (only for 'youtube' mode) ────────────────────────
+        youtube_query = None
+        if response_mode == 'youtube':
+            q = question.strip() if question.strip() else explanation[:60]
+            youtube_query = q[:80]
+
+        # ── Save to conversation history ───────────────────────────────────
+        conversation_history.append({
+            'question': question or '[file attachment]',
+            'answer':   explanation[:500]   # store truncated
+        })
+        session['ai_conversation'] = conversation_history[-20:]   # keep last 20
         session.modified = True
-        return jsonify({'success': True, 'explanation': explanation, 'conversation_count': len(conversation_history), 'pdf_processed': pdf_text is not None})
+
+        return jsonify({
+            'success':          True,
+            'explanation':      explanation,
+            'youtube_query':    youtube_query,
+            'has_pdf':          has_pdf,
+            'has_image':        has_image,
+            'conversation_count': len(conversation_history)
+        })
+
     except Exception as e:
         logger.error(f'Error in ask-ai: {str(e)}', exc_info=True)
-        return jsonify({'error': f'Error: {str(e)}'}), 500
+        return jsonify({'error': f'AI error: {str(e)[:200]}'}), 500
 
+
+# ── Group chat + brainstorm routes (unchanged) ────────────────────────────────
 
 @app.route('/api/create-group', methods=['POST'])
 def create_group():
@@ -1637,7 +1530,7 @@ Provide a helpful, clear, and actionable response. Keep it concise but thorough.
                     from PIL import Image as PILImage
                     image_data = f.read()
                     image      = PILImage.open(io.BytesIO(image_data))
-                    response   = model.generate_content([prompt, image])
+                    response   = vision_model.generate_content([prompt, image])
                 except Exception as img_error:
                     logger.warning(f'Image processing failed: {img_error}')
                     response   = model.generate_content(prompt)
@@ -1747,111 +1640,6 @@ def get_brainstorm_notes(session_id):
         'textbook_url': f'/uploads/{n.textbook_path}' if n.textbook_path else None,
         'solved_problem': n.solved_problem, 'created_at': n.created_at.isoformat()
     } for n in notes]})
-
-
-@app.route('/api/upload-brainstorm-image', methods=['POST'])
-def upload_brainstorm_image():
-    if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    if 'image' not in request.files:
-        return jsonify({'error': 'No image file'}), 400
-    f = request.files['image']
-    if not f.filename:
-        return jsonify({'error': 'No file selected'}), 400
-    if f and allowed_file(f.filename):
-        try:
-            os.makedirs('uploads/brainstorm', exist_ok=True)
-            ts       = datetime.utcnow().timestamp()
-            ext      = f.filename.rsplit('.', 1)[1].lower()
-            filename = f"brainstorm_{session['user_id']}_{ts}.{ext}"
-            f.save(os.path.join('uploads/brainstorm', filename))
-            return jsonify({'success': True, 'filename': filename, 'url': f'/uploads/brainstorm/{filename}'})
-        except Exception as e:
-            return jsonify({'error': str(e)}), 500
-    return jsonify({'error': 'Invalid file type'}), 400
-
-
-@app.route('/api/add-brainstorm-note-rich', methods=['POST'])
-def add_brainstorm_note_rich():
-    if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    user_id      = session['user_id']
-    data         = request.json
-    session_id   = data.get('session_id')
-    content      = data.get('content', '').strip()
-    mentions     = data.get('mentions', [])
-    tags         = data.get('tags', [])
-    mention_ai   = data.get('mention_ai', False)
-    image_path   = data.get('image_path')
-    solved_prob  = data.get('solved_problem')
-    textbook_ref = data.get('textbook_ref')
-    if not session_id or not content:
-        return jsonify({'error': 'Session and content required'}), 400
-    sess_obj = BrainstormSession.query.get(session_id)
-    if not sess_obj:
-        return jsonify({'error': 'Session not found'}), 404
-    if not ChatGroupMember.query.filter_by(group_id=sess_obj.group_id, user_id=user_id).first():
-        return jsonify({'error': 'Not a member of this group'}), 403
-    try:
-        has_media = bool(image_path or textbook_ref or solved_prob)
-        note = BrainstormNote(
-            session_id=session_id, user_id=user_id, content=content,
-            mentions=json.dumps(mentions) if mentions else None,
-            tags=json.dumps(tags) if tags else None,
-            mention_ai=mention_ai, image_path=image_path,
-            textbook_path=textbook_ref, solved_problem=solved_prob, has_media=has_media
-        )
-        db.session.add(note)
-        db.session.commit()
-        ai_response = None
-        if mention_ai:
-            try:
-                resp        = model.generate_content(f"Brainstorm help requested:\nContent: {content}\nTags: {', '.join(tags)}\nBe brief (2-3 sentences).")
-                ai_response = resp.text
-                db.session.add(BrainstormNote(session_id=session_id, user_id=1, content=f"AI Assistant: {ai_response}", has_media=False))
-                db.session.commit()
-            except Exception as e:
-                logger.error(f'AI response error: {e}')
-        return jsonify({'success': True, 'note': {
-            'id': note.id, 'user_name': note.user.name, 'content': content,
-            'mentions': mentions, 'tags': tags, 'mention_ai': mention_ai,
-            'has_media': has_media, 'created_at': note.created_at.isoformat()
-        }, 'ai_response': ai_response})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/api/solve-problem-ai', methods=['POST'])
-def solve_problem_ai():
-    if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    data    = request.json
-    problem = data.get('problem', '')
-    context = data.get('context', '')
-    if not problem:
-        return jsonify({'error': 'Problem description required'}), 400
-    try:
-        response = model.generate_content(f"Help solve this problem:\n{problem}\nContext: {context or 'None'}\nProvide a clear step-by-step solution.")
-        return jsonify({'success': True, 'solution': response.text})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/api/brainstorm-ai-suggestions', methods=['POST'])
-def brainstorm_ai_suggestions():
-    if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    data          = request.json
-    topic         = data.get('topic', '')
-    current_ideas = data.get('current_ideas', '')
-    if not topic:
-        return jsonify({'error': 'Topic required'}), 400
-    try:
-        response = model.generate_content(f"Study group brainstorming:\nTopic: {topic}\nCurrent ideas: {current_ideas or 'Just starting'}\nGenerate 3-4 creative ideas or questions.")
-        return jsonify({'success': True, 'suggestions': response.text})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/accept-join-request', methods=['POST'])
@@ -2033,179 +1821,6 @@ def debug_db_status():
 @app.route('/uploads/<path:filename>')
 def uploaded_file(filename):
     return send_from_directory('uploads', filename)
-
-
-@app.route('/api/convert-to-audio', methods=['POST'])
-def convert_to_audio():
-    if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    user_id = session['user_id']
-    try:
-        file = None
-        for field in ('file', 'pdf', 'audio_file', 'notes'):
-            if field in request.files and request.files[field].filename:
-                file = request.files[field]
-                break
-        if file is None:
-            return jsonify({'success': False, 'error': 'No file provided. Please select a PDF or text file.'}), 400
-
-        language = request.form.get('language', 'en')
-        speed    = request.form.get('speed', '1')
-        file_ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
-        if file_ext == 'pdf':
-            text_content = extract_pdf_text(file)
-        elif file_ext in ('txt', 'doc', 'docx'):
-            text_content = file.read().decode('utf-8', errors='ignore')
-        else:
-            return jsonify({'success': False, 'error': 'Unsupported format. Use PDF or TXT.'}), 400
-
-        if not text_content or len(text_content) < 10:
-            return jsonify({'success': False, 'error': 'Could not extract text from file'}), 400
-
-        import uuid
-        audio_filename = f"audio_{uuid.uuid4().hex}.mp3"
-        audio_path     = f"uploads/converted_audio/{audio_filename}"
-        create_audio_from_text(text_content, audio_path, language, speed)
-
-        if not os.path.exists(audio_path):
-            wav_path = audio_path.replace('.mp3', '.wav')
-            if os.path.exists(wav_path):
-                audio_path     = wav_path
-                audio_filename = audio_filename.replace('.mp3', '.wav')
-
-        word_count       = len(text_content.split())
-        speed_multiplier = float(speed) if speed else 1.0
-        duration_minutes = max(1, int((word_count // 150) / speed_multiplier))
-
-        converted_file = ConvertedFile(
-            user_id=user_id, original_filename=file.filename,
-            converted_filename=audio_filename, file_type='audio',
-            file_path=audio_path,
-            file_size=os.path.getsize(audio_path) if os.path.exists(audio_path) else 0,
-            duration=f"{duration_minutes}:00",
-            conversion_settings=json.dumps({'language': language, 'speed': speed})
-        )
-        db.session.add(converted_file)
-        db.session.commit()
-        return jsonify({'success': True, 'message': 'Audio generated successfully!', 'file_id': converted_file.id, 'filename': audio_filename})
-    except Exception as e:
-        logger.error(f'Audio conversion error: {str(e)}', exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-
-@app.route('/api/convert-to-video', methods=['POST'])
-def convert_to_video():
-    if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    user_id = session['user_id']
-    try:
-        file = None
-        for field in ('file', 'pdf', 'video_file', 'notes'):
-            if field in request.files and request.files[field].filename:
-                file = request.files[field]
-                break
-        if file is None:
-            return jsonify({'success': False, 'error': 'No file provided. Please select a PDF or text file.'}), 400
-
-        style    = request.form.get('style', 'slides')
-        duration = request.form.get('duration', 'medium')
-        file_ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
-        if file_ext == 'pdf':
-            text_content = extract_pdf_text(file)
-        elif file_ext in ('txt', 'doc', 'docx'):
-            text_content = file.read().decode('utf-8', errors='ignore')
-        else:
-            return jsonify({'success': False, 'error': 'Unsupported format. Use PDF or TXT.'}), 400
-
-        if not text_content or len(text_content) < 10:
-            return jsonify({'success': False, 'error': 'Could not extract text from file'}), 400
-
-        import uuid
-        video_filename = f"video_{uuid.uuid4().hex}.mp4"
-        video_path     = f"uploads/converted_video/{video_filename}"
-        create_video_from_text(text_content, video_path, style, duration)
-
-        duration_map = {'short': '5:00', 'medium': '15:00', 'long': '25:00'}
-        converted_file = ConvertedFile(
-            user_id=user_id, original_filename=file.filename,
-            converted_filename=video_filename, file_type='video',
-            file_path=video_path,
-            file_size=os.path.getsize(video_path) if os.path.exists(video_path) else 0,
-            duration=duration_map.get(duration, '15:00'),
-            conversion_settings=json.dumps({'style': style, 'duration': duration})
-        )
-        db.session.add(converted_file)
-        db.session.commit()
-        return jsonify({'success': True, 'message': 'Video generated successfully!', 'file_id': converted_file.id, 'filename': video_filename})
-    except Exception as e:
-        logger.error(f'Video conversion error: {str(e)}', exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-
-@app.route('/api/converted-files')
-def get_converted_files():
-    if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    try:
-        files = ConvertedFile.query.filter_by(user_id=session['user_id']).order_by(ConvertedFile.created_at.desc()).all()
-        return jsonify({'success': True, 'files': [{
-            'id': f.id, 'filename': f.converted_filename, 'type': f.file_type,
-            'created_at': f.created_at.strftime('%b %d, %Y'), 'duration': f.duration,
-            'size': round(f.file_size / 1024 / 1024, 2) if f.file_size else 0
-        } for f in files]})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-
-@app.route('/api/delete-converted-file/<int:file_id>', methods=['DELETE'])
-def delete_converted_file(file_id):
-    if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    try:
-        f = ConvertedFile.query.filter_by(id=file_id, user_id=session['user_id']).first()
-        if not f:
-            return jsonify({'success': False, 'error': 'File not found'}), 404
-        if os.path.exists(f.file_path):
-            os.remove(f.file_path)
-        db.session.delete(f)
-        db.session.commit()
-        return jsonify({'success': True, 'message': 'File deleted successfully'})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-
-@app.route('/api/download-file/<int:file_id>')
-def download_file(file_id):
-    if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    try:
-        f = ConvertedFile.query.filter_by(id=file_id, user_id=session['user_id']).first()
-        if not f:
-            return jsonify({'error': 'File not found'}), 404
-        if not os.path.exists(f.file_path):
-            return jsonify({'error': 'File does not exist on server'}), 404
-        return send_from_directory(os.path.dirname(os.path.abspath(f.file_path)), os.path.basename(f.file_path), as_attachment=True)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/api/preview-file/<int:file_id>')
-def preview_file(file_id):
-    if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    try:
-        f = ConvertedFile.query.filter_by(id=file_id, user_id=session['user_id']).first()
-        if not f:
-            return jsonify({'success': False, 'error': 'File not found'}), 404
-        return jsonify({
-            'success':     True,
-            'type':        f.file_type,
-            'preview_url': f'/api/download-file/{file_id}',
-            'duration':    f.duration,
-            'filename':    f.converted_filename
-        })
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 if __name__ == '__main__':
