@@ -57,11 +57,12 @@ app.config['PROFILE_UPLOAD_FOLDER'] = 'uploads/profiles'
 app.config['MAX_CONTENT_LENGTH']    = 10 * 1024 * 1024  # 10 MB
 
 # ── Email ─────────────────────────────────────────────────────────────────────
-app.config['MAIL_SERVER']         = 'smtp.gmail.com'
-app.config['MAIL_PORT']           = 465
-app.config['MAIL_USE_SSL']        = True
-app.config['MAIL_USERNAME']       = os.getenv('MAIL_USERNAME')
-app.config['MAIL_PASSWORD']       = os.getenv('MAIL_PASSWORD')
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587      # ← CHANGED: 587 (TLS)
+app.config['MAIL_USE_TLS'] = True  # ← ADDED: TLS
+app.config['MAIL_USE_SSL'] = False # ← CHANGED: False
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_USERNAME')
 
 db.init_app(app)
