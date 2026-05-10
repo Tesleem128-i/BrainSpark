@@ -130,6 +130,8 @@ def send_email_brevo(to_email, to_name, subject, body):
 
 
 def allowed_file(filename):
+    if not filename or filename == '':
+        return False
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in {
         'pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'mp3', 'ogg', 'webm', 'wav'
     }
@@ -436,42 +438,51 @@ def upload_notes():
             break
     if file is None:
         return jsonify({'success': False, 'error': 'No file uploaded. Please select a PDF file.'}), 400
-    if not allowed_file(file.filename):
+    if not file.filename or not allowed_file(file.filename):
         return jsonify({'success': False, 'error': 'Only PDF files are allowed'}), 400
 
+    filepath = None
     try:
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], f"temp_{int(datetime.now().timestamp())}_{filename}")
-        file.save(filepath)
+        filename  = secure_filename(file.filename)
+        filepath  = os.path.join(app.config['UPLOAD_FOLDER'], f"temp_{int(datetime.now().timestamp())}_{filename}")
+        try:
+            file.save(filepath)
+        except Exception as save_err:
+            logger.error(f"File save error: {save_err}")
+            return jsonify({'success': False, 'error': f'Could not save file: {str(save_err)[:100]}'}), 500
+
         text = extract_pdf_text_simple(filepath)
-        if os.path.exists(filepath):
-            os.remove(filepath)
+
         if not text or len(text.strip()) < 50:
-            return jsonify({'success': False, 'error': 'No readable text found in PDF.'}), 400
+            return jsonify({'success': False, 'error': 'PDF has no readable text. Make sure it is not a scanned image PDF.'}), 400
+
+        # Limit text to avoid AI timeout on Render free tier
+        text = text[:6000]
 
         question_type  = request.form.get('type', 'objective')
         hardness       = request.form.get('hardness', 'medium')
         question_count = int(request.form.get('question_count', 10))
         question_count = max(5, min(100, question_count))
 
-        topics_prompt = f"""Analyze this educational text and identify the main topics.
-Text:
-{text[:3000]}
-**OUTPUT ONLY VALID JSON**:
-{{"topics": ["Topic 1", "Topic 2", ...]}}
-Rules: 3-10 distinct main topics. If text is short return ["General Content"]"""
-
-        response    = model.generate_content(topics_prompt)
-        topics_text = response.text.strip()
+        # Skip AI topic detection — go straight to session to avoid timeout
+        # Topics will be detected during question generation instead
+        topics = ["General Content"]
         try:
-            start       = topics_text.find('{')
-            end         = topics_text.rfind('}') + 1
-            json_str    = topics_text[start:end] if start != -1 and end > start else '{}'
-            topics_data = json.loads(json_str)
-        except json.JSONDecodeError:
-            topics_data = {"topics": ["General Content"]}
-
-        topics = topics_data.get('topics', ["General Content"]) or ["General Content"]
+            topics_prompt = (
+                f"List 3-7 main topics from this text as JSON only.\n"
+                f"Text: {text[:1500]}\n"
+                f'Return ONLY: {{"topics": ["Topic 1", "Topic 2"]}}'
+            )
+            response    = model.generate_content(topics_prompt)
+            topics_text = response.text.strip()
+            start = topics_text.find('{')
+            end   = topics_text.rfind('}') + 1
+            if start != -1 and end > start:
+                topics_data = json.loads(topics_text[start:end])
+                topics = topics_data.get('topics', ["General Content"]) or ["General Content"]
+        except Exception as topic_err:
+            logger.warning(f"Topic detection failed (non-fatal): {topic_err}")
+            topics = ["General Content"]
 
         session['pdf_text']        = text
         session['pdf_topics']      = json.dumps(topics)
@@ -486,6 +497,12 @@ Rules: 3-10 distinct main topics. If text is short return ["General Content"]"""
     except Exception as e:
         logger.error(f"Upload notes error: {str(e)}", exc_info=True)
         return jsonify({'success': False, 'error': f'Processing error: {str(e)[:200]}'}), 500
+    finally:
+        try:
+            if filepath and os.path.exists(filepath):
+                os.remove(filepath)
+        except Exception:
+            pass
 
 
 @app.route('/dashboard')
@@ -1435,7 +1452,29 @@ def send_group_message():
                     f"Someone asked you (tagged @BrainAI): {content}\n\n"
                     f"Respond directly and helpfully."
                 )
-                ai_response = model.generate_content(ai_prompt)
+                ai_content_parts = [ai_prompt]
+                if image_path:
+                    try:
+                        img_full_path = os.path.join('uploads/group_chat', image_path)
+                        with open(img_full_path, 'rb') as img_f:
+                            img_bytes = img_f.read()
+                        ext = image_path.rsplit('.', 1)[-1].lower()
+                        mime_map = {'jpg':'image/jpeg','jpeg':'image/jpeg','png':'image/png','webp':'image/webp','gif':'image/gif'}
+                        ai_content_parts.append({'mime_type': mime_map.get(ext,'image/jpeg'), 'data': img_bytes})
+                        ai_response = vision_model.generate_content(ai_content_parts)
+                    except Exception:
+                        ai_response = model.generate_content(ai_prompt)
+                elif pdf_path:
+                    try:
+                        pdf_full_path = os.path.join('uploads/group_chat', pdf_path)
+                        pdf_text_for_ai = extract_pdf_text_simple(pdf_full_path)
+                        if pdf_text_for_ai:
+                            ai_content_parts[0] += f"\n\n[Attached PDF Content]\n{pdf_text_for_ai[:4000]}"
+                        ai_response = model.generate_content(ai_content_parts[0])
+                    except Exception:
+                        ai_response = model.generate_content(ai_prompt)
+                else:
+                    ai_response = model.generate_content(ai_prompt)
                 ai_text     = ai_response.text.strip()
 
                 # Find a bot user or create a system message attributed to BrainAI
@@ -2451,13 +2490,13 @@ def generate_similar_questions():
         try:
             text = extract_pdf_text(f)
             if text and len(text.strip()) > 30:
-                all_texts.append(text.strip())
+                all_texts.append(text.strip()[:3000])  # limit per PDF to avoid timeout
                 file_names.append(f.filename)
         except Exception as e:
             logger.warning(f"Could not read PDF {f.filename}: {e}")
 
     if not all_texts:
-        return jsonify({'success': False, 'error': 'No readable text found.'}), 400
+        return jsonify({'success': False, 'error': 'No readable text found. Make sure PDFs are not scanned images.'}), 400
 
     combined_text = '\n\n---NEXT PDF---\n\n'.join(
         f"[PDF {i+1}: {file_names[i]}]\n{t[:4000]}" for i, t in enumerate(all_texts)

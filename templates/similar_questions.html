@@ -475,9 +475,13 @@ async function generateSimilar(){
     fd.append('include_answers', document.getElementById('include-answers').checked ? 'true':'false');
 
     try{
-        const res  = await fetch('/api/generate-similar-questions',{method:'POST',body:fd});
-        const data = await res.json();
+        const res = await fetch('/api/generate-similar-questions',{method:'POST',body:fd});
         clearInterval(statusTimer);
+        if (!res.ok) {
+            const txt = await res.text();
+            throw new Error(`Server ${res.status}: ${txt.slice(0,200)}`);
+        }
+        const data = await res.json();
         if(data.success){
             lastPaperData = data;
             renderFingerprint(data.fingerprint, data.source_files);
@@ -486,11 +490,12 @@ async function generateSimilar(){
             document.getElementById('output-q-count').textContent = data.question_count;
             setTimeout(()=>document.getElementById('paper-output').scrollIntoView({behavior:'smooth',block:'start'}),200);
         } else {
-            alert('❌ '+data.error);
+            alert('❌ '+(data.error||'Generation failed'));
         }
     } catch(e){
         clearInterval(statusTimer);
-        alert('Network error. Please try again.');
+        console.error('Generate error:', e);
+        alert('❌ ' + e.message);
     } finally {
         btn.disabled=false;
         btn.innerHTML='<i class="fas fa-wand-magic-sparkles"></i> Analyse & Generate Paper';

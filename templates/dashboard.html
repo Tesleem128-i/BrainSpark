@@ -772,11 +772,21 @@ async function uploadNotes() {
     const fd = new FormData(); fd.append('file', file); fd.append('type', selectedQuestionType); fd.append('hardness', document.getElementById('hardness').value); fd.append('question_count', document.getElementById('question-count-upload').value);
     try {
         const res = await fetch('/upload_notes', { method:'POST', body:fd });
+        if (!res.ok) {
+            const txt = await res.text();
+            throw new Error(`Server ${res.status}: ${txt.slice(0,200)}`);
+        }
         const result = await res.json();
         if (result.success) { window.location.href = '/quiz'; }
-        else { alert('❌ ' + result.error); }
-    } catch(e) { alert('Network error. Please try again.'); }
-    finally { btn.disabled=false; btn.innerHTML='<i class="fas fa-rocket"></i> Generate Questions from PDF'; document.getElementById('upload-progress').style.display='none'; }
+        else { alert('❌ ' + (result.error || 'Unknown error')); }
+    } catch(e) {
+        console.error('Upload error:', e);
+        alert('❌ ' + e.message);
+    } finally {
+        btn.disabled=false;
+        btn.innerHTML='<i class="fas fa-rocket"></i> Generate Questions from PDF';
+        document.getElementById('upload-progress').style.display='none';
+    }
 }
 function animateBar(id) {
     const el = document.getElementById(id);

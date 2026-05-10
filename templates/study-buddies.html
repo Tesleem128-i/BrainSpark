@@ -171,7 +171,7 @@
         .wa-msg-row{display:flex;margin-bottom:2px;align-items:flex-end;gap:6px;}
         .wa-msg-row.sent{justify-content:flex-end;}
         .wa-msg-row.received{justify-content:flex-start;}
-        .wa-bubble{max-width:68%;padding:8px 12px;border-radius:16px;font-size:.875rem;line-height:1.55;position:relative;word-break:break-word;}
+        .wa-bubble{max-width:85%;padding:8px 12px;border-radius:16px;font-size:.875rem;line-height:1.55;position:relative;word-break:break-word;}
         .wa-msg-row.sent .wa-bubble{background:var(--accent);color:#fff;border-bottom-right-radius:4px;}
         .wa-msg-row.received .wa-bubble{background:var(--surface);color:var(--ink);border:1px solid var(--border);border-bottom-left-radius:4px;}
         .wa-reply-block{background:rgba(0,0,0,.12);border-left:3px solid rgba(255,255,255,.5);border-radius:8px;padding:5px 8px;margin-bottom:6px;font-size:.78rem;line-height:1.4;}
@@ -224,7 +224,7 @@
         .gc-msg-row{display:flex;gap:8px;align-items:flex-end;margin-bottom:4px;}
         .gc-msg-row.sent{flex-direction:row-reverse;}
         .gc-msg-avatar{width:28px;height:28px;border-radius:8px;object-fit:cover;flex-shrink:0;}
-        .gc-bubble{max-width:72%;padding:8px 12px;border-radius:14px;font-size:.875rem;line-height:1.55;word-break:break-word;}
+        .gc-bubble{max-width:85%;padding:8px 12px;border-radius:14px;font-size:.875rem;line-height:1.55;word-break:break-word;}
         .gc-msg-row.sent .gc-bubble{background:var(--accent);color:#fff;border-bottom-right-radius:4px;}
         .gc-msg-row.received .gc-bubble{background:var(--surface);color:var(--ink);border:1px solid var(--border);border-bottom-left-radius:4px;}
         .gc-bubble.ai-bubble{background:linear-gradient(135deg,#1a0533,#2d1060);color:#fff;border:1px solid rgba(168,85,247,.4);}
@@ -686,7 +686,7 @@
                     <select id="bs-group" class="inp"><option value="">Select a group…</option></select>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                         <button onclick="scheduleBSSession()" class="btn btn-green" style="border-radius:50px;padding:11px;justify-content:center;"><i class="fas fa-calendar-check"></i> Schedule</button>
-                        <button onclick="startLiveSession()" class="btn btn-accent" style="border-radius:50px;padding:11px;justify-content:center;"><i class="fas fa-bolt"></i> Start Live Now</button>
+                        <button onclick="openTeacherVoiceModal()" class="btn btn-accent" style="border-radius:50px;padding:11px;justify-content:center;"><i class="fas fa-bolt"></i> Start Live Now</button>
                     </div>
                 </div>
             </div>
@@ -735,11 +735,31 @@
                         </div>
                     </div>
                 </div>
-                <!-- Shared doc -->
+                <!-- Shared whiteboard -->
                 <div>
-                    <div style="font-size:.75rem;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;">Shared Document</div>
-                    <textarea id="bs-shared-doc" class="inp" rows="12" placeholder="Shared whiteboard/doc — everyone can edit…" style="width:100%;resize:none;" oninput="autoSaveDoc()"></textarea>
-                    <div style="font-size:.72rem;color:var(--muted);margin-top:4px;text-align:right;" id="bs-doc-save-status">Auto-saved</div>
+                    <div style="font-size:.75rem;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;">Whiteboard</div>
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+                        <div id="wb-colors" style="display:flex;gap:4px;">
+                            <button onclick="setWBColor('#ff4f30')" style="width:22px;height:22px;border-radius:50%;background:#ff4f30;border:2px solid transparent;cursor:pointer;" title="Red"></button>
+                            <button onclick="setWBColor('#3b6bff')" style="width:22px;height:22px;border-radius:50%;background:#3b6bff;border:2px solid transparent;cursor:pointer;" title="Blue"></button>
+                            <button onclick="setWBColor('#00c98d')" style="width:22px;height:22px;border-radius:50%;background:#00c98d;border:2px solid transparent;cursor:pointer;" title="Green"></button>
+                            <button onclick="setWBColor('#f5c842')" style="width:22px;height:22px;border-radius:50%;background:#f5c842;border:2px solid transparent;cursor:pointer;" title="Yellow"></button>
+                            <button onclick="setWBColor('#a855f7')" style="width:22px;height:22px;border-radius:50%;background:#a855f7;border:2px solid transparent;cursor:pointer;" title="Purple"></button>
+                            <button onclick="setWBColor('#0a0a14')" style="width:22px;height:22px;border-radius:50%;background:#0a0a14;border:2px solid transparent;cursor:pointer;" title="Black"></button>
+                        </div>
+                        <input type="range" id="wb-size" min="2" max="30" value="4" style="width:70px;" title="Pen size">
+                        <select id="wb-tool" class="inp" style="width:90px;padding:4px 8px;font-size:.78rem;" onchange="setWBTool(this.value)">
+                            <option value="pen">✏️ Pen</option>
+                            <option value="marker">🖊️ Marker</option>
+                            <option value="eraser">⬜ Eraser</option>
+                            <option value="text">🔤 Text</option>
+                        </select>
+                        <button onclick="undoWB()" class="btn btn-ghost btn-sm" style="padding:4px 8px;"><i class="fas fa-undo"></i></button>
+                        <button onclick="clearWB()" class="btn btn-red btn-sm" style="padding:4px 8px;"><i class="fas fa-trash"></i> Clear</button>
+                        <button onclick="saveWBImage()" class="btn btn-ghost btn-sm" style="padding:4px 8px;"><i class="fas fa-download"></i></button>
+                    </div>
+                    <canvas id="bs-whiteboard" width="520" height="340" style="border:1px solid var(--border);border-radius:10px;cursor:crosshair;background:#fff;display:block;max-width:100%;"></canvas>
+                    <div style="font-size:.72rem;color:var(--muted);margin-top:4px;text-align:right;" id="bs-doc-save-status">Whiteboard ready</div>
                 </div>
             </div>
             <!-- SparkAI in session -->
@@ -1911,6 +1931,7 @@ async function startLiveSession() {
         await fetch('/api/update-session-status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:data.session_id,status:'ongoing'})});
         showToast('🚀 Live session started! Members notified.','success');
         showLiveArea(title,groupId);
+        setTimeout(initWhiteboard, 400);
         loadRecentSessions();
     } else showToast('❌ '+(data.error||'Failed'),'error');
 }
@@ -2084,6 +2105,200 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(()=>showToast(`Opening group ${joinId}…`,'info'), 500);
     }
 });
+// ═══════════════════════════════════════════════════════════════
+//  WHITEBOARD
+// ═══════════════════════════════════════════════════════════════
+let wbCtx=null, wbDrawing=false, wbColor='#ff4f30', wbSize=4, wbTool='pen', wbHistory=[], wbTextMode=false;
+
+function initWhiteboard(){
+    const canvas=document.getElementById('bs-whiteboard'); if(!canvas) return;
+    wbCtx=canvas.getContext('2d');
+    wbCtx.lineCap='round'; wbCtx.lineJoin='round';
+    canvas.addEventListener('mousedown',wbStart);
+    canvas.addEventListener('mousemove',wbMove);
+    canvas.addEventListener('mouseup',wbEnd);
+    canvas.addEventListener('mouseleave',wbEnd);
+    canvas.addEventListener('touchstart',e=>{e.preventDefault();wbStart(e.touches[0]);},{passive:false});
+    canvas.addEventListener('touchmove',e=>{e.preventDefault();wbMove(e.touches[0]);},{passive:false});
+    canvas.addEventListener('touchend',e=>{e.preventDefault();wbEnd();},{passive:false});
+    canvas.addEventListener('click',wbClickText);
+    wbSaveHistory();
+}
+
+function wbGetPos(e){
+    const canvas=document.getElementById('bs-whiteboard');
+    const r=canvas.getBoundingClientRect();
+    const scaleX=canvas.width/r.width, scaleY=canvas.height/r.height;
+    return {x:(e.clientX-r.left)*scaleX, y:(e.clientY-r.top)*scaleY};
+}
+
+function wbStart(e){
+    if(wbTool==='text') return;
+    wbDrawing=true;
+    const pos=wbGetPos(e);
+    wbCtx.beginPath(); wbCtx.moveTo(pos.x,pos.y);
+}
+
+function wbMove(e){
+    if(!wbDrawing) return;
+    const pos=wbGetPos(e);
+    wbCtx.globalCompositeOperation=wbTool==='eraser'?'destination-out':'source-over';
+    wbCtx.strokeStyle=wbColor;
+    wbCtx.lineWidth=wbTool==='marker'?wbSize*2.5:wbTool==='eraser'?wbSize*3:wbSize;
+    wbCtx.globalAlpha=wbTool==='marker'?0.4:1;
+    wbCtx.lineTo(pos.x,pos.y); wbCtx.stroke(); wbCtx.beginPath(); wbCtx.moveTo(pos.x,pos.y);
+}
+
+function wbEnd(){
+    if(!wbDrawing) return;
+    wbDrawing=false; wbCtx.globalAlpha=1; wbCtx.globalCompositeOperation='source-over';
+    wbSaveHistory();
+}
+
+function wbClickText(e){
+    if(wbTool!=='text') return;
+    const pos=wbGetPos(e);
+    const txt=prompt('Enter text:'); if(!txt) return;
+    wbCtx.font=`${wbSize*4+12}px 'DM Sans',sans-serif`;
+    wbCtx.fillStyle=wbColor; wbCtx.fillText(txt,pos.x,pos.y);
+    wbSaveHistory();
+}
+
+function wbSaveHistory(){
+    const canvas=document.getElementById('bs-whiteboard'); if(!canvas||!wbCtx) return;
+    wbHistory.push(wbCtx.getImageData(0,0,canvas.width,canvas.height));
+    if(wbHistory.length>30) wbHistory.shift();
+}
+
+function undoWB(){
+    if(wbHistory.length<2) return;
+    wbHistory.pop();
+    const canvas=document.getElementById('bs-whiteboard');
+    wbCtx.putImageData(wbHistory[wbHistory.length-1],0,0);
+}
+
+function clearWB(){
+    if(!confirm('Clear whiteboard?')) return;
+    const canvas=document.getElementById('bs-whiteboard');
+    wbCtx.clearRect(0,0,canvas.width,canvas.height);
+    wbCtx.fillStyle='#fff'; wbCtx.fillRect(0,0,canvas.width,canvas.height);
+    wbSaveHistory();
+}
+
+function setWBColor(c){
+    wbColor=c;
+    document.querySelectorAll('#wb-colors button').forEach(b=>b.style.borderColor='transparent');
+    event.target.style.borderColor='var(--ink)';
+    if(wbTool==='eraser') setWBTool('pen');
+}
+
+function setWBTool(t){
+    wbTool=t;
+    const canvas=document.getElementById('bs-whiteboard');
+    if(canvas) canvas.style.cursor=t==='eraser'?'cell':t==='text'?'text':'crosshair';
+}
+
+function saveWBImage(){
+    const canvas=document.getElementById('bs-whiteboard'); if(!canvas) return;
+    const a=document.createElement('a'); a.href=canvas.toDataURL('image/png'); a.download='whiteboard.png'; a.click();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  TEACHER VOICE INTRO
+// ═══════════════════════════════════════════════════════════════
+let tvMediaRecorder=null, tvAudioChunks=[], tvRecTimer=null, tvRecSeconds=0, tvRecording=false, tvAudioBlob=null;
+
+function openTeacherVoiceModal(){
+    const groupId=document.getElementById('bs-group').value;
+    if(!groupId){showToast('Please select a group first','warn');return;}
+    openModal('teacher-voice-modal');
+    tvAudioBlob=null;
+    document.getElementById('tv-playback').style.display='none';
+    document.getElementById('tv-start-btn').style.display='none';
+    document.getElementById('tv-rec-dot').style.background='var(--muted)';
+    document.getElementById('tv-rec-time').textContent='0:00';
+    document.getElementById('tv-waveform').innerHTML='';
+    document.getElementById('tv-record-btn').innerHTML='<i class="fas fa-microphone"></i> Record';
+}
+
+async function toggleTeacherVoiceRec(){
+    if(tvRecording){ stopTeacherVoice(); return; }
+    try {
+        const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+        tvAudioChunks=[]; tvRecSeconds=0; tvRecording=true;
+        tvMediaRecorder=new MediaRecorder(stream);
+        tvMediaRecorder.ondataavailable=e=>tvAudioChunks.push(e.data);
+        tvMediaRecorder.onstop=()=>{
+            tvAudioBlob=new Blob(tvAudioChunks,{type:'audio/webm'});
+            const url=URL.createObjectURL(tvAudioBlob);
+            const pb=document.getElementById('tv-playback'); pb.src=url; pb.style.display='';
+            document.getElementById('tv-start-btn').style.display='flex';
+        };
+        tvMediaRecorder.start();
+        document.getElementById('tv-rec-dot').style.cssText='width:12px;height:12px;border-radius:50%;background:#e03030;flex-shrink:0;animation:recPulse 1s ease-in-out infinite;';
+        document.getElementById('tv-record-btn').innerHTML='<i class="fas fa-stop"></i> Stop';
+        // Waveform bars
+        const wf=document.getElementById('tv-waveform'); wf.innerHTML='';
+        for(let i=0;i<16;i++){const b=document.createElement('div');b.style.cssText=`width:3px;border-radius:2px;background:var(--accent);animation:waveAnim ${0.3+Math.random()*0.4}s ease-in-out infinite alternate;animation-delay:${i*0.05}s;`;wf.appendChild(b);}
+        tvRecTimer=setInterval(()=>{tvRecSeconds++;const m=Math.floor(tvRecSeconds/60),s=tvRecSeconds%60;document.getElementById('tv-rec-time').textContent=`${m}:${s<10?'0':''}${s}`;},1000);
+    } catch { showToast('Microphone access denied','error'); }
+}
+
+function stopTeacherVoice(){
+    if(!tvMediaRecorder) return;
+    clearInterval(tvRecTimer); tvRecording=false;
+    tvMediaRecorder.stop();
+    tvMediaRecorder.stream.getTracks().forEach(t=>t.stop());
+    tvMediaRecorder=null;
+    document.getElementById('tv-rec-dot').style.cssText='width:12px;height:12px;border-radius:50%;background:var(--green);flex-shrink:0;';
+    document.getElementById('tv-waveform').innerHTML='';
+    document.getElementById('tv-record-btn').innerHTML='<i class="fas fa-microphone"></i> Re-record';
+}
+
+function skipTeacherVoice(){
+    closeModal('teacher-voice-modal');
+    startLiveSession();
+}
+
+async function startLiveSessionWithVoice(){
+    closeModal('teacher-voice-modal');
+    if(tvAudioBlob){
+        // Save voice intro if we have a current group
+        const groupId=document.getElementById('bs-group').value;
+        if(groupId){
+            const fd=new FormData();
+            fd.append('group_id',groupId); fd.append('message_type','voice');
+            fd.append('content','🎙️ Teacher intro for this session');
+            fd.append('voice',tvAudioBlob,'teacher_intro.webm');
+            try { await fetch('/api/send-group-message',{method:'POST',body:fd}); } catch {}
+        }
+    }
+    startLiveSession();
+    setTimeout(initWhiteboard, 400);
+}
 </script>
+<!-- Teacher Voice Intro Modal -->
+<div id="teacher-voice-modal" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+        <div class="modal-hd">
+            <div class="modal-title"><i class="fas fa-microphone" style="color:var(--accent);margin-right:8px;"></i>Teacher Voice Intro</div>
+            <button onclick="closeModal('teacher-voice-modal')" class="modal-close"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body" style="display:flex;flex-direction:column;gap:16px;">
+            <p style="font-size:.875rem;color:var(--muted);">Record a short voice introduction for your students before the session begins. They'll hear it when they join.</p>
+            <div id="tv-recorder-ui" style="display:flex;align-items:center;gap:12px;padding:14px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;">
+                <div id="tv-rec-dot" style="width:12px;height:12px;border-radius:50%;background:var(--muted);flex-shrink:0;"></div>
+                <span id="tv-rec-time" style="font-family:'Syne',sans-serif;font-weight:700;font-size:.875rem;min-width:36px;">0:00</span>
+                <div id="tv-waveform" style="flex:1;height:28px;display:flex;align-items:center;gap:2px;"></div>
+            </div>
+            <audio id="tv-playback" controls style="width:100%;display:none;border-radius:8px;"></audio>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button id="tv-record-btn" onclick="toggleTeacherVoiceRec()" class="btn btn-accent" style="flex:1;border-radius:50px;justify-content:center;"><i class="fas fa-microphone"></i> Record</button>
+                <button onclick="skipTeacherVoice()" class="btn btn-ghost" style="flex:1;border-radius:50px;justify-content:center;"><i class="fas fa-forward"></i> Skip & Start</button>
+            </div>
+            <button id="tv-start-btn" onclick="startLiveSessionWithVoice()" class="btn btn-green btn-full" style="border-radius:50px;display:none;justify-content:center;padding:11px;"><i class="fas fa-bolt"></i> Start Live Session</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
