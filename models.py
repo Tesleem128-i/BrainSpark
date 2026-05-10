@@ -329,5 +329,48 @@ class ConvertedFile(db.Model):
     
     user = db.relationship('User', backref='converted_files')
     
+class TopicMastery(db.Model):
+    """Tracks mastery level per topic per user"""
+    id         = db.Column(db.Integer, primary_key=True)
+    user_id    = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    topic      = db.Column(db.String(200), nullable=False)
+    total_questions = db.Column(db.Integer, default=0)
+    correct_answers = db.Column(db.Integer, default=0)
+    attempts   = db.Column(db.Integer, default=0)
+    last_score = db.Column(db.Float, default=0.0)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = db.relationship('User', backref='topic_masteries')
+
+    __table_args__ = (db.UniqueConstraint('user_id', 'topic', name='unique_user_topic'),)
+
+    @property
+    def mastery_score(self):
+        if self.total_questions == 0:
+            return 0
+        return round((self.correct_answers / self.total_questions) * 100)
+
+    @property
+    def level(self):
+        s = self.mastery_score
+        if self.attempts == 0: return 'not_started'
+        if s < 60:  return 'learning'
+        if s < 80:  return 'practicing'
+        if s < 95:  return 'mastered'
+        return 'expert'
+
+
+class WrongAnswer(db.Model):
+    """Stores wrong answers so we know which topics to drill"""
+    id            = db.Column(db.Integer, primary_key=True)
+    user_id       = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    topic         = db.Column(db.String(200), nullable=False)
+    question_text = db.Column(db.Text, nullable=False)
+    correct_answer = db.Column(db.String(10))
+    user_answer   = db.Column(db.String(10))
+    created_at    = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref='wrong_answers')
+    
     def __repr__(self):
         return f'<ConvertedFile {self.original_filename} - {self.file_type}>'
