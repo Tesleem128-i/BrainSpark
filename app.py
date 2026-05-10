@@ -1475,14 +1475,17 @@ def get_group_messages(group_id):
     member  = ChatGroupMember.query.filter_by(group_id=group_id, user_id=user_id).first()
     if not member:
         return jsonify({'error': 'You are not a member of this group'}), 403
-    since = request.args.get('since')  # ISO timestamp for polling
+
+    since = request.args.get('since')
     query = GroupMessage.query.filter_by(group_id=group_id)
     if since:
         try:
-            since_dt = datetime.fromisoformat(since)
-            query    = query.filter(GroupMessage.created_at > since_dt)
+            since_clean = since[:19]
+            since_dt    = datetime.fromisoformat(since_clean)
+            query       = query.filter(GroupMessage.created_at > since_dt)
         except Exception:
             pass
+
     messages = query.order_by(GroupMessage.created_at.asc()).all()
     return jsonify({
         'success': True,
@@ -2106,71 +2109,72 @@ def save_quiz_result():
         score      = data.get('score')
         time_taken = data.get('time_taken')
         answers    = data.get('answers', {})
+        questions  = data.get('questions', [])
+
         if score is None:
             return jsonify({'success': False, 'error': 'Score is required'}), 400
+
         user_id = session['user_id']
         user    = User.query.get(user_id)
         if not user:
             return jsonify({'success': False, 'error': 'User not found'}), 404
+
         quiz = Quiz.query.first()
         if not quiz:
-            quiz = Quiz(title='Generated Quiz', description='Quiz generated from uploaded PDF',
-                        subject='General', difficulty='medium', question_count=10, time_limit=300)
+            quiz = Quiz(
+                title='Generated Quiz',
+                description='Quiz generated from uploaded PDF',
+                subject='General', difficulty='medium',
+                question_count=10, time_limit=300
+            )
             db.session.add(quiz)
             db.session.flush()
-        result = QuizResult(user_id=user_id, quiz_id=quiz.id, score=score,
-                            answers=json.dumps(answers), time_taken=time_taken,
-                            completed_at=datetime.utcnow())
-        db.session.add(result)
-        db.session.commit()
-        if 'quiz_questions' in session:
-            del session['quiz_questions']
-            session.modified = True
 
-        # ── Auto-update mastery from answer data ──────────────────────────
-        if answers and isinstance(answers, dict):
-            quiz_questions_raw = data.get('questions', [])  # frontend must send these
-            mastery_payload    = []
-            for q in quiz_questions_raw:
-                q_text      = q.get('question', '')
+        result = QuizResult(
+            user_id=user_id, quiz_id=quiz.id, score=score,
+            answers=json.dumps(answers), time_taken=time_taken,
+            completed_at=datetime.utcnow()
+        )
+        db.session.add(result)
+
+        if answers and isinstance(answers, dict) and questions:
+            for q in questions:
                 topic       = q.get('topic', 'General')
+                q_text      = q.get('question', '')
                 user_ans    = str(answers.get(q_text, '')).strip().upper()
                 correct_ans = str(q.get('answer', '')).strip().upper()
-                mastery_payload.append({
-                    'topic':          topic,
-                    'correct':        user_ans == correct_ans,
-                    'question_text':  q_text,
-                    'correct_answer': correct_ans,
-                    'user_answer':    user_ans
-                })
-            if mastery_payload:
-                # In-process call so we don't need an HTTP round-trip
-                from flask import current_app
-                with current_app.test_request_context():
-                    try:
-                        for r in mastery_payload:
-                            topic   = r['topic']
-                            correct = r['correct']
-                            mastery = TopicMastery.query.filter_by(user_id=user_id, topic=topic).first()
-                            if not mastery:
-                                mastery = TopicMastery(user_id=user_id, topic=topic)
-                                db.session.add(mastery)
-                            mastery.total_questions += 1
-                            mastery.attempts = (mastery.attempts or 0) + 1
-                            if correct:
-                                mastery.correct_answers += 1
-                            else:
-                                db.session.add(WrongAnswer(
-                                    user_id=user_id, topic=topic,
-                                    question_text=r['question_text'],
-                                    correct_answer=r['correct_answer'],
-                                    user_answer=r['user_answer']
-                                ))
-                        db.session.commit()
-                    except Exception:
-                        db.session.rollback()
-            session.modified = True
-        return jsonify({'success': True, 'message': 'Quiz result saved successfully!', 'result_id': result.id}), 200
+                is_correct  = (user_ans == correct_ans)
+
+                mastery = TopicMastery.query.filter_by(
+                    user_id=user_id, topic=topic
+                ).first()
+                if not mastery:
+                    mastery = TopicMastery(user_id=user_id, topic=topic)
+                    db.session.add(mastery)
+
+                mastery.total_questions  += 1
+                mastery.attempts          = (mastery.attempts or 0) + 1
+                mastery.updated_at        = datetime.utcnow()
+                if is_correct:
+                    mastery.correct_answers += 1
+                else:
+                    db.session.add(WrongAnswer(
+                        user_id=user_id, topic=topic,
+                        question_text=q_text,
+                        correct_answer=correct_ans,
+                        user_answer=user_ans
+                    ))
+
+        db.session.commit()
+        session.pop('quiz_questions', None)
+        session.modified = True
+
+        return jsonify({
+            'success': True,
+            'message': 'Quiz result saved successfully!',
+            'result_id': result.id
+        }), 200
+
     except Exception as e:
         logger.error(f'Error saving quiz result: {str(e)}', exc_info=True)
         db.session.rollback()

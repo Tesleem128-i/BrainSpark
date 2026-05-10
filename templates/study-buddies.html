@@ -1527,8 +1527,10 @@ async function loadChatList() {
         const data = await res.json();
         waAllContacts = data.connections || [];
         renderContactList(waAllContacts);
+        return waAllContacts;
     } catch {
         container.innerHTML = '<div class="empty-state"><i class="fas fa-comments"></i><p>Could not load chats.</p></div>';
+        return [];
     }
 }
 
@@ -1996,7 +1998,35 @@ function formatDateSep(isoStr) {
 
 // ── Auto-poll for new messages ────────────────────────
 setInterval(async () => {
-    if (waCurrentUserId) await loadMessages(waCurrentUserId);
+    if (!waCurrentUserId) return;
+    try {
+        const res  = await fetch(`/api/get-messages/${waCurrentUserId}`);
+        const data = await res.json();
+        if (!data.messages || !data.messages.length) return;
+
+        const container   = document.getElementById('chat-messages');
+        const renderedIds = new Set(
+            [...container.querySelectorAll('.wa-msg-row[data-msg-id]')]
+                .map(el => el.dataset.msgId)
+        );
+
+        const emptyState = container.querySelector('.empty-state');
+        if (emptyState && data.messages.length) emptyState.remove();
+
+        let newMessages = false;
+        data.messages.forEach((msg, idx) => {
+            const id = String(msg.id);
+            if (!renderedIds.has(id) && !id.startsWith('tmp-')) {
+                container.appendChild(buildBubble(msg, idx));
+                newMessages = true;
+            }
+        });
+
+        if (newMessages) {
+            const atBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
+            if (atBottom) scrollToBottom();
+        }
+    } catch {}
 }, 8000);
 
 // ═══════════════════════════════════════════════════════

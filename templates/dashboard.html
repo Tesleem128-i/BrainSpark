@@ -561,22 +561,7 @@
 
 </div>
 </div>
-<div class="panel reveal" style="margin-bottom:1.5rem;margin-left:240px;margin-right:0;padding:0 2.5rem;">
-    <div class="panel-header">
-        <div>
-            <div class="panel-eyebrow">AI Paper Generator</div>
-            <div class="panel-title">Generate Similar Questions</div>
-        </div>
-    </div>
-    <div class="panel-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
-        <p style="font-size:0.875rem;color:var(--muted);max-width:500px;line-height:1.6;">
-            Upload 1–4 past exam PDFs. The AI fingerprints their structure — question style, topics, difficulty, option format — then generates a completely fresh paper in the same pattern. Download it as PDF instantly.
-        </p>
-        <button class="btn btn-primary" onclick="window.location.href='/similar-questions'">
-            <i class="fas fa-wand-magic-sparkles"></i> Try it now
-        </button>
-    </div>
-</div>
+
 
 
   
@@ -1221,7 +1206,7 @@ function resetAIConversation() {
 }
 
 // ── Init ─────────────────────────────────────────────────────────
-window.addEventListener('load', () => { loadDashboardData(); });
+
 // ── YouTube video fetcher ────────────────────────────────────────
 async function fetchYouTubeVideos(query, containerId) {
     const container = document.getElementById(containerId);
