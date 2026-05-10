@@ -449,13 +449,14 @@
     </ul>
     <div class="nav-right">
         
-            <i class="fas fa-robot"></i><button class="icon-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">
+            <button class="icon-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">
             <i class="fas fa-moon" id="theme-icon"></i>
         </button>
         <button class="icon-btn" onclick="window.location.href='/settings'" title="Settings">
             <i class="fas fa-gear"></i>
         </button>
         <button class="icon-btn" onclick="openAIModal()" title="Ask AI" style="position:relative;">
+            <i class="fas fa-robot"></i>
             <span id="ai-nav-dot" style="display:none;position:absolute;top:4px;right:4px;width:7px;height:7px;background:var(--green);border-radius:50%;border:1.5px solid var(--surface);"></span>
         </button>
         <button class="icon-btn" onclick="logout()" title="Logout" style="color:#ff4f30">
@@ -1030,18 +1031,17 @@ function renderMessages() {
                     <button class="msg-action-btn" onclick="usePrompt('Give me an example to illustrate what you just explained')">💡 Give example</button>
                 </div>`;
 
-            // YouTube card if in youtube mode
+           // YouTube cards if in youtube mode
             if (msg.youtubeQuery) {
-                const ytUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(msg.youtubeQuery)}`;
+                const ytSectionId = `yt-section-${idx}`;
                 actionsHtml += `
-                    <a href="${ytUrl}" target="_blank" class="yt-card">
-                        <i class="fab fa-youtube yt-card-icon"></i>
-                        <div>
-                            <div class="yt-card-title">Watch on YouTube</div>
-                            <div class="yt-card-text">Search: ${escapeHtmlAttr(msg.youtubeQuery)}</div>
-                        </div>
-                    </a>`;
-            }
+                    <div class="yt-section" id="${ytSectionId}">
+                        <div class="yt-section-label"><i class="fab fa-youtube"></i> Related Videos</div>
+                        <div class="yt-loading"><i class="fas fa-spinner fa-spin"></i> Finding videos…</div>
+                    </div>`;
+                // Fetch videos after render
+                setTimeout(() => fetchYouTubeVideos(msg.youtubeQuery, ytSectionId), 100);
+            } 
         }
 
         const avatarIcon = msg.role === 'ai' ? '🤖' : '👤';
@@ -1182,6 +1182,39 @@ function resetAIConversation() {
 
 // ── Init ─────────────────────────────────────────────────────────
 window.addEventListener('load', () => { loadDashboardData(); });
+// ── YouTube video fetcher ────────────────────────────────────────
+async function fetchYouTubeVideos(query, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    try {
+        const res  = await fetch(`/api/youtube-search?q=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        
+        if (!data.success || !data.videos.length) {
+            container.querySelector('.yt-loading').outerHTML = 
+                `<div class="yt-error">No videos found for this topic.</div>`;
+            return;
+        }
+        
+        const cardsHtml = data.videos.map(v => `
+            <a href="${v.url}" target="_blank" rel="noopener" class="yt-card">
+                <img class="yt-card-thumb" src="${v.thumbnail}" alt="${escapeHtmlAttr(v.title)}" loading="lazy">
+                <div class="yt-card-info">
+                    <div class="yt-card-title">${escapeHtml(v.title)}</div>
+                    <div class="yt-card-channel"><i class="fab fa-youtube"></i> ${escapeHtml(v.channel)}</div>
+                </div>
+            </a>`).join('');
+        
+        container.innerHTML = `
+            <div class="yt-section-label"><i class="fab fa-youtube"></i> Related Videos</div>
+            <div class="yt-cards-grid">${cardsHtml}</div>`;
+    
+    } catch(e) {
+        const loader = container.querySelector('.yt-loading');
+        if (loader) loader.outerHTML = `<div class="yt-error">Could not load videos.</div>`;
+    }
+}
 </script>
 </body>
 </html>

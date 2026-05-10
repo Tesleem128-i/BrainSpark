@@ -2076,6 +2076,58 @@ def delete_account():
         db.session.rollback()
         logger.error(f"Account deletion error: {e}", exc_info=True)
         return jsonify({'success': False, 'error': 'Deletion failed. Please try again.'})
+    
+    
+@app.route('/api/youtube-search')
+def youtube_search():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    query = request.args.get('q', '').strip()
+    if not query:
+        return jsonify({'success': False, 'error': 'No query provided'}), 400
+    
+    api_key = os.getenv('YOUTUBE_API_KEY')
+    if not api_key:
+        return jsonify({'success': False, 'error': 'YouTube API not configured'}), 500
+    
+    try:
+        response = req.get(
+            'https://www.googleapis.com/youtube/v3/search',
+            params={
+                'part': 'snippet',
+                'q': query,
+                'type': 'video',
+                'maxResults': 4,
+                'relevanceLanguage': 'en',
+                'safeSearch': 'strict',
+                'key': api_key
+            },
+            timeout=10
+        )
+        data = response.json()
+        
+        if 'error' in data:
+            return jsonify({'success': False, 'error': data['error'].get('message', 'YouTube API error')}), 500
+        
+        videos = []
+        for item in data.get('items', []):
+            video_id = item['id']['videoId']
+            snippet  = item['snippet']
+            videos.append({
+                'video_id':    video_id,
+                'title':       snippet['title'],
+                'channel':     snippet['channelTitle'],
+                'thumbnail':   snippet['thumbnails']['medium']['url'],
+                'description': snippet['description'][:120] + '…' if len(snippet['description']) > 120 else snippet['description'],
+                'url':         f'https://www.youtube.com/watch?v={video_id}'
+            })
+        
+        return jsonify({'success': True, 'videos': videos, 'query': query})
+    
+    except Exception as e:
+        logger.error(f"YouTube search error: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Failed to fetch videos'}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=app.debug)
