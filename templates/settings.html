@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings – Brainspark</title>
+    <link rel="icon" type="image/png" href="/static/image/KNOWITNOW.png">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/styles.css">
+
+    <style>
+        :root {
+            --ink: #f0efe8; --ink2: #c8c6bc;
+            --surface: #0a0a14; --surface2: #0d0d1a; --surface3: #13131f;
+            --card: rgba(255,255,255,0.04); --card-border: rgba(255,255,255,0.08);
+            --muted: #5a5a70;
+            --accent: #ff4f30; --accent2: #ff8c5a;
+            --gold: #f5c842; --blue: #3b6bff; --blue2: #7ba4ff; --green: #00c98d;
+            --radius: 16px; --radius-sm: 8px;
+            --transition: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        [data-theme="light"] {
+            --ink: #0a0a14; --ink2: #1c1c2e;
+            --surface: #f5f4f0; --surface2: #ffffff; --surface3: #ededea;
+            --card: rgba(0,0,0,0.03); --card-border: rgba(0,0,0,0.07); --muted: #7a7a8c;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body { font-family: 'DM Sans', sans-serif; background: var(--surface); color: var(--ink); min-height: 100vh; transition: background 0.4s, color 0.4s; overflow-x: hidden; }
+        ::selection { background: var(--accent); color: #fff; }
+        a { text-decoration: none; color: inherit; }
+        body::before { content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.018; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+        ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; }
+
+        /* NAV */
+        nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; padding: 0 3rem; height: 68px; display: flex; align-items: center; justify-content: space-between; background: rgba(10,10,20,0.75); backdrop-filter: blur(20px); border-bottom: 1px solid var(--card-border); transition: all 0.4s; }
+        [data-theme="light"] nav { background: rgba(245,244,240,0.85); }
+        .nav-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.4rem; letter-spacing: -0.02em; background: linear-gradient(135deg, #ff4f30, #ff8c5a); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .nav-right { display: flex; align-items: center; gap: 1rem; }
+        .nav-user { display: flex; align-items: center; gap: 0.75rem; padding-left: 1rem; border-left: 1px solid var(--card-border); }
+        .nav-user-text .name { font-size: 0.875rem; font-weight: 600; color: var(--ink); }
+        .nav-user-text .level { font-size: 0.72rem; color: var(--muted); }
+        .nav-avatar { width: 36px; height: 36px; border-radius: 10px; object-fit: cover; border: 2px solid var(--accent); }
+        .icon-btn { width: 36px; height: 36px; border-radius: 9px; border: 1px solid var(--card-border); background: var(--card); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--muted); font-size: 0.9rem; transition: all 0.2s; backdrop-filter: blur(10px); }
+        .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+        /* LAYOUT */
+        .page-wrap { padding-top: 68px; min-height: 100vh; display: flex; }
+        .sidebar { width: 240px; flex-shrink: 0; position: fixed; top: 68px; left: 0; bottom: 0; background: rgba(10,10,20,0.6); border-right: 1px solid var(--card-border); backdrop-filter: blur(20px); padding: 2rem 1.25rem; display: flex; flex-direction: column; gap: 0.5rem; overflow-y: auto; z-index: 50; }
+        [data-theme="light"] .sidebar { background: rgba(255,255,255,0.85); }
+        .sidebar-label { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); padding: 1rem 0.75rem 0.5rem; margin-top: 0.5rem; }
+        .sidebar-link { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0.85rem; border-radius: var(--radius-sm); font-size: 0.875rem; font-weight: 500; color: var(--muted); transition: all 0.2s; cursor: pointer; border: none; background: none; width: 100%; text-align: left; }
+        .sidebar-link:hover { background: var(--card); color: var(--ink); }
+        .sidebar-link.active { background: rgba(255,79,48,0.12); color: var(--accent); }
+        .sidebar-link i { width: 16px; text-align: center; font-size: 0.875rem; }
+        .main { flex: 1; margin-left: 240px; padding: 2.5rem; min-height: calc(100vh - 68px); max-width: 900px; }
+
+        /* HEADER */
+        .settings-header { margin-bottom: 2rem; }
+        .settings-eyebrow { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.4rem; }
+        .settings-eyebrow::before { content: ''; width: 14px; height: 1.5px; background: var(--accent); border-radius: 1px; }
+        .settings-title { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800; color: var(--ink); letter-spacing: -0.02em; }
+        .settings-sub { font-size: 0.9rem; color: var(--muted); margin-top: 0.3rem; }
+
+        /* TABS */
+        .settings-tabs { display: flex; gap: 4px; padding: 4px; background: rgba(255,255,255,0.04); border-radius: 12px; margin-bottom: 2rem; width: fit-content; }
+        [data-theme="light"] .settings-tabs { background: rgba(0,0,0,0.05); }
+        .settings-tab { display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 1.1rem; border-radius: 9px; font-size: 0.82rem; font-weight: 600; border: none; cursor: pointer; transition: all 0.2s; color: var(--muted); background: transparent; font-family: 'DM Sans', sans-serif; }
+        .settings-tab.active { background: var(--accent); color: #fff; box-shadow: 0 2px 10px rgba(255,79,48,0.3); }
+        .settings-tab:hover:not(.active) { color: var(--ink); background: var(--card); }
+
+        /* PANELS */
+        .settings-panel { display: none; }
+        .settings-panel.active { display: flex; flex-direction: column; gap: 1.25rem; }
+
+        .card { background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius); overflow: hidden; backdrop-filter: blur(10px); }
+        .card-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--card-border); display: flex; align-items: center; gap: 0.75rem; }
+        .card-header-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; flex-shrink: 0; }
+        .card-header-icon.orange { background: rgba(255,79,48,0.12); color: var(--accent); }
+        .card-header-icon.blue   { background: rgba(59,107,255,0.12); color: var(--blue2); }
+        .card-header-icon.green  { background: rgba(0,201,141,0.12); color: var(--green); }
+        .card-header-icon.gold   { background: rgba(245,200,66,0.12); color: var(--gold); }
+        .card-header-title { font-family: 'Syne', sans-serif; font-size: 0.95rem; font-weight: 700; color: var(--ink); }
+        .card-header-sub { font-size: 0.75rem; color: var(--muted); }
+        .card-body { padding: 1.5rem; }
+
+        /* AVATAR */
+        .avatar-section { display: flex; align-items: center; gap: 1.5rem; }
+        .avatar-preview { position: relative; cursor: pointer; }
+        .avatar-img { width: 90px; height: 90px; border-radius: 20px; object-fit: cover; border: 3px solid var(--accent); display: block; }
+        .avatar-overlay { position: absolute; inset: 0; border-radius: 20px; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; color: #fff; font-size: 1.2rem; }
+        .avatar-preview:hover .avatar-overlay { opacity: 1; }
+        .avatar-info { flex: 1; }
+        .avatar-info h4 { font-size: 0.95rem; font-weight: 600; color: var(--ink); margin-bottom: 0.25rem; }
+        .avatar-info p  { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+        .avatar-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; }
+
+        /* FORM */
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .form-grid.single { grid-template-columns: 1fr; }
+        .form-field { display: flex; flex-direction: column; gap: 0.4rem; }
+        .form-label { font-size: 0.78rem; font-weight: 600; color: var(--muted); letter-spacing: 0.03em; }
+        .form-label span { color: var(--accent); }
+        .form-input, .form-select { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--card-border); border-radius: var(--radius-sm); padding: 0.65rem 0.9rem; color: var(--ink); font-family: 'DM Sans', sans-serif; font-size: 0.875rem; transition: border-color 0.2s, box-shadow 0.2s; outline: none; }
+        [data-theme="light"] .form-input, [data-theme="light"] .form-select { background: rgba(0,0,0,0.04); }
+        .form-input:focus, .form-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,79,48,0.1); }
+        .form-input.error  { border-color: #ff4f30; }
+        .form-input.success{ border-color: var(--green); }
+        .form-hint { font-size: 0.72rem; color: var(--muted); }
+        .form-hint.error   { color: #ff6b6b; }
+        .form-hint.success { color: var(--green); }
+
+        /* Password reveal toggle */
+        .input-wrap { position: relative; }
+        .input-wrap .form-input { padding-right: 2.5rem; }
+        .reveal-toggle { position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.85rem; transition: color 0.2s; }
+        .reveal-toggle:hover { color: var(--ink); }
+
+        /* Password strength */
+        .strength-bar { display: flex; gap: 3px; margin-top: 0.4rem; }
+        .strength-seg { height: 3px; flex: 1; border-radius: 2px; background: var(--card-border); transition: background 0.3s; }
+        .strength-seg.weak   { background: #ff4f30; }
+        .strength-seg.fair   { background: var(--gold); }
+        .strength-seg.good   { background: var(--blue2); }
+        .strength-seg.strong { background: var(--green); }
+        .strength-label { font-size: 0.7rem; color: var(--muted); margin-top: 0.2rem; }
+
+        /* BUTTONS */
+        .btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.7rem 1.5rem; border-radius: 50px; border: none; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: all var(--transition); }
+        .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 4px 20px rgba(255,79,48,0.35); }
+        .btn-primary:hover { background: var(--accent2); transform: translateY(-1px); box-shadow: 0 8px 24px rgba(255,79,48,0.45); }
+        .btn-ghost { background: var(--card); color: var(--ink); border: 1px solid var(--card-border); }
+        .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+        .btn-danger { background: rgba(255,79,48,0.12); color: var(--accent); border: 1px solid rgba(255,79,48,0.25); }
+        .btn-danger:hover { background: rgba(255,79,48,0.2); }
+        .btn-sm { padding: 0.45rem 1.1rem; font-size: 0.8rem; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+        /* DIVIDER */
+        .divider { height: 1px; background: var(--card-border); margin: 1.25rem 0; }
+
+        /* TOAST */
+        #toast { position: fixed; bottom: 2rem; right: 2rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; pointer-events: none; }
+        .toast-item { display: flex; align-items: center; gap: 0.6rem; padding: 0.75rem 1.1rem; border-radius: 12px; font-size: 0.875rem; font-weight: 500; box-shadow: 0 8px 24px rgba(0,0,0,0.35); backdrop-filter: blur(12px); animation: toast-in 0.35s cubic-bezier(0.16,1,0.3,1) forwards; pointer-events: auto; min-width: 200px; }
+        .toast-item.success { background: rgba(0,201,141,0.15); border: 1px solid rgba(0,201,141,0.3); color: var(--green); }
+        .toast-item.error   { background: rgba(255,79,48,0.15);  border: 1px solid rgba(255,79,48,0.3);  color: #ff7a5a; }
+        .toast-item.info    { background: rgba(59,107,255,0.15); border: 1px solid rgba(59,107,255,0.3); color: var(--blue2); }
+        @keyframes toast-in { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+        /* Danger zone */
+        .danger-zone { border: 1px solid rgba(255,79,48,0.25); border-radius: var(--radius); overflow: hidden; }
+        .danger-zone .card-header { background: rgba(255,79,48,0.05); border-bottom-color: rgba(255,79,48,0.2); }
+        .danger-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+        .danger-text h4 { font-size: 0.9rem; font-weight: 600; color: var(--ink); margin-bottom: 0.2rem; }
+        .danger-text p  { font-size: 0.78rem; color: var(--muted); }
+
+        /* Confirm dialog */
+        .confirm-overlay { display: none; position: fixed; inset: 0; z-index: 9000; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); align-items: center; justify-content: center; }
+        .confirm-overlay.open { display: flex; }
+        .confirm-box { background: var(--surface3); border: 1px solid var(--card-border); border-radius: 20px; padding: 2rem; width: 90%; max-width: 400px; text-align: center; }
+        .confirm-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+        .confirm-box h3 { font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 700; color: var(--ink); margin-bottom: 0.5rem; }
+        .confirm-box p  { font-size: 0.875rem; color: var(--muted); margin-bottom: 1.5rem; line-height: 1.5; }
+        .confirm-actions { display: flex; gap: 0.75rem; justify-content: center; }
+
+        @media (max-width: 768px) {
+            .main { margin-left: 0; padding: 1.25rem; }
+            nav { padding: 0 1.25rem; }
+            .form-grid { grid-template-columns: 1fr; }
+            .settings-tabs { flex-wrap: wrap; }
+            .avatar-section { flex-direction: column; text-align: center; }
+            .avatar-actions { justify-content: center; }
+        }
+        @media (max-width: 1024px) { .sidebar { display: none; } .main { margin-left: 0; } }
+
+        .reveal { opacity: 0; transform: translateY(16px); transition: opacity 0.5s ease, transform 0.5s ease; }
+        .reveal.visible { opacity: 1; transform: none; }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="/dashboard" class="nav-logo">Brainspark</a>
+    <div class="nav-right">
+        <button class="icon-btn" onclick="toggleTheme()" title="Toggle theme"><i class="fas fa-moon" id="theme-icon"></i></button>
+        <button class="icon-btn" onclick="window.location.href='/dashboard'" title="Dashboard"><i class="fas fa-house"></i></button>
+        <button class="icon-btn" onclick="logout()" title="Logout" style="color:#ff4f30"><i class="fas fa-sign-out-alt"></i></button>
+        <div class="nav-user">
+            <div class="nav-user-text">
+                <div class="name" id="nav-name">{{ user.name }}</div>
+                <div class="level" id="nav-level">{{ user.study_level }}</div>
+            </div>
+            <img src="{{ user.get_profile_pic_url() }}" alt="Profile" class="nav-avatar" id="nav-avatar">
+        </div>
+    </div>
+</nav>
+
+<div class="sidebar">
+    <div class="sidebar-label">Main</div>
+    <button class="sidebar-link" onclick="window.location.href='/dashboard'"><i class="fas fa-house"></i> Dashboard</button>
+    <button class="sidebar-link" onclick="window.location.href='/study-buddies'"><i class="fas fa-users"></i> Study Buddies</button>
+    <div class="sidebar-label">Account</div>
+    <button class="sidebar-link active"><i class="fas fa-gear"></i> Settings</button>
+    <div style="flex:1"></div>
+    <button class="sidebar-link" onclick="logout()" style="color:#ff4f30"><i class="fas fa-sign-out-alt"></i> Logout</button>
+</div>
+
+<div class="page-wrap">
+<div class="main">
+
+    <div class="settings-header reveal">
+        <div class="settings-eyebrow">Account</div>
+        <h1 class="settings-title">Settings</h1>
+        <p class="settings-sub">Manage your profile, security, and preferences</p>
+    </div>
+
+    <div class="settings-tabs reveal">
+        <button class="settings-tab active" onclick="showTab('profile',this)"><i class="fas fa-user"></i> Profile</button>
+        <button class="settings-tab" onclick="showTab('security',this)"><i class="fas fa-lock"></i> Security</button>
+        <button class="settings-tab" onclick="showTab('academic',this)"><i class="fas fa-graduation-cap"></i> Academic</button>
+    </div>
+
+    <!-- ═══════════════ PROFILE TAB ═══════════════ -->
+    <div class="settings-panel active" id="panel-profile">
+
+        <!-- Avatar card -->
+        <div class="card reveal">
+            <div class="card-header">
+                <div class="card-header-icon orange"><i class="fas fa-camera"></i></div>
+                <div>
+                    <div class="card-header-title">Profile Picture</div>
+                    <div class="card-header-sub">JPG, PNG, WEBP or GIF · Max 5MB</div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="avatar-section">
+                    <div class="avatar-preview" onclick="document.getElementById('avatar-input').click()">
+                        <img src="{{ user.get_profile_pic_url() }}" alt="Avatar" class="avatar-img" id="avatar-preview-img">
+                        <div class="avatar-overlay"><i class="fas fa-camera"></i></div>
+                    </div>
+                    <div class="avatar-info">
+                        <h4>{{ user.name }}</h4>
+                        <p>Click your avatar to upload a new photo, or drag a file onto it. Your picture is visible to study buddies.</p>
+                        <div class="avatar-actions">
+                            <input type="file" id="avatar-input" accept="image/png,image/jpeg,image/webp,image/gif" style="display:none" onchange="previewAvatar(this)">
+                            <button class="btn btn-primary btn-sm" id="avatar-save-btn" style="display:none" onclick="saveAvatar()"><i class="fas fa-save"></i> Save Photo</button>
+                            <button class="btn btn-ghost btn-sm" id="avatar-cancel-btn" style="display:none" onclick="cancelAvatar()">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Name / Username -->
+        <div class="card reveal">
+            <div class="card-header">
+                <div class="card-header-icon blue"><i class="fas fa-id-card"></i></div>
+                <div>
+                    <div class="card-header-title">Personal Info</div>
+                    <div class="card-header-sub">Your name and public username</div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label class="form-label" for="field-name">Full Name <span>*</span></label>
+                        <input class="form-input" id="field-name" type="text" value="{{ user.name }}" maxlength="100" placeholder="Your full name">
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label" for="field-username">Username <span>*</span></label>
+                        <input class="form-input" id="field-username" type="text" value="{{ user.username }}" maxlength="50" placeholder="your_username" oninput="validateUsername(this)">
+                        <span class="form-hint" id="username-hint">3–50 chars, letters, numbers, underscores only</span>
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label" for="field-profession">Profession / Role</label>
+                        <input class="form-input" id="field-profession" type="text" value="{{ user.profession or '' }}" maxlength="100" placeholder="e.g. Student, Engineer">
+                    </div>
+                </div>
+                <div class="divider"></div>
+                <div style="display:flex;justify-content:flex-end;gap:0.75rem">
+                    <button class="btn btn-ghost btn-sm" onclick="resetProfileForm()"><i class="fas fa-rotate-left"></i> Reset</button>
+                    <button class="btn btn-primary btn-sm" onclick="saveProfile()" id="profile-save-btn"><i class="fas fa-save"></i> Save Changes</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ═══════════════ SECURITY TAB ═══════════════ -->
+    <div class="settings-panel" id="panel-security">
+
+        <!-- Email -->
+        <div class="card reveal">
+            <div class="card-header">
+                <div class="card-header-icon blue"><i class="fas fa-envelope"></i></div>
+                <div>
+                    <div class="card-header-title">Email Address</div>
+                    <div class="card-header-sub">Used for login and notifications</div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="form-grid single">
+                    <div class="form-field">
+                        <label class="form-label" for="field-email">Email <span>*</span></label>
+                        <input class="form-input" id="field-email" type="email" value="{{ user.email }}" placeholder="you@example.com">
+                        <span class="form-hint">Changing your email will require re-verification</span>
+                    </div>
+                </div>
+                <div style="display:flex;justify-content:flex-end;margin-top:1.25rem">
+                    <button class="btn btn-primary btn-sm" onclick="saveEmail()"><i class="fas fa-save"></i> Update Email</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Password -->
+        <div class="card reveal">
+            <div class="card-header">
+                <div class="card-header-icon orange"><i class="fas fa-key"></i></div>
+                <div>
+                    <div class="card-header-title">Change Password</div>
+                    <div class="card-header-sub">Keep your account secure with a strong password</div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="form-grid single">
+                    <div class="form-field">
+                        <label class="form-label" for="field-current-pw">Current Password <span>*</span></label>
+                        <div class="input-wrap">
+                            <input class="form-input" id="field-current-pw" type="password" placeholder="Enter current password">
+                            <button class="reveal-toggle" type="button" onclick="togglePw('field-current-pw',this)"><i class="fas fa-eye"></i></button>
+                        </div>
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label" for="field-new-pw">New Password <span>*</span></label>
+                        <div class="input-wrap">
+                            <input class="form-input" id="field-new-pw" type="password" placeholder="At least 8 chars, uppercase, number, symbol" oninput="checkStrength(this.value)">
+                            <button class="reveal-toggle" type="button" onclick="togglePw('field-new-pw',this)"><i class="fas fa-eye"></i></button>
+                        </div>
+                        <div class="strength-bar">
+                            <div class="strength-seg" id="seg1"></div>
+                            <div class="strength-seg" id="seg2"></div>
+                            <div class="strength-seg" id="seg3"></div>
+                            <div class="strength-seg" id="seg4"></div>
+                        </div>
+                        <span class="strength-label" id="strength-label"></span>
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label" for="field-confirm-pw">Confirm New Password <span>*</span></label>
+                        <div class="input-wrap">
+                            <input class="form-input" id="field-confirm-pw" type="password" placeholder="Re-enter new password" oninput="checkMatch()">
+                            <button class="reveal-toggle" type="button" onclick="togglePw('field-confirm-pw',this)"><i class="fas fa-eye"></i></button>
+                        </div>
+                        <span class="form-hint" id="match-hint"></span>
+                    </div>
+                </div>
+                <div style="display:flex;justify-content:flex-end;margin-top:1.25rem">
+                    <button class="btn btn-primary btn-sm" onclick="savePassword()"><i class="fas fa-shield"></i> Update Password</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Danger zone -->
+        <div class="danger-zone card reveal">
+            <div class="card-header">
+                <div class="card-header-icon orange"><i class="fas fa-triangle-exclamation"></i></div>
+                <div>
+                    <div class="card-header-title" style="color:#ff7a5a">Danger Zone</div>
+                    <div class="card-header-sub">These actions are irreversible</div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="danger-row">
+                    <div class="danger-text">
+                        <h4>Delete Account</h4>
+                        <p>Permanently remove your account, all quiz history, connections, and data. This cannot be undone.</p>
+                    </div>
+                    <button class="btn btn-danger btn-sm" onclick="openDeleteConfirm()"><i class="fas fa-trash"></i> Delete My Account</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ═══════════════ ACADEMIC TAB ═══════════════ -->
+    <div class="settings-panel" id="panel-academic">
+
+        <div class="card reveal">
+            <div class="card-header">
+                <div class="card-header-icon gold"><i class="fas fa-graduation-cap"></i></div>
+                <div>
+                    <div class="card-header-title">Academic Details</div>
+                    <div class="card-header-sub">Helps us match you with the right study buddies</div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label class="form-label" for="field-school">School / University <span>*</span></label>
+                        <input class="form-input" id="field-school" type="text" value="{{ user.school }}" maxlength="150" placeholder="e.g. University of Lagos">
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label" for="field-study-level">Level of Study <span>*</span></label>
+                        <select class="form-select" id="field-study-level">
+                            {% set levels = ['High School','Undergraduate','Postgraduate','PhD','Professional','Self-learner'] %}
+                            {% for l in levels %}
+                            <option value="{{ l }}" {% if user.study_level == l %}selected{% endif %}>{{ l }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label" for="field-country">Country <span>*</span></label>
+                        <input class="form-input" id="field-country" type="text" value="{{ user.country }}" maxlength="100" placeholder="e.g. Nigeria">
+                    </div>
+                </div>
+                <div class="divider"></div>
+                <div style="display:flex;justify-content:flex-end;gap:0.75rem">
+                    <button class="btn btn-ghost btn-sm" onclick="resetAcademicForm()"><i class="fas fa-rotate-left"></i> Reset</button>
+                    <button class="btn btn-primary btn-sm" onclick="saveAcademic()"><i class="fas fa-save"></i> Save Changes</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+</div>
+
+<!-- DELETE CONFIRM -->
+<div class="confirm-overlay" id="delete-confirm">
+    <div class="confirm-box">
+        <div class="confirm-icon">🗑️</div>
+        <h3>Delete Account?</h3>
+        <p>This will permanently delete your account, quiz history, connections, and all associated data. <strong>This cannot be undone.</strong></p>
+        <div class="form-field" style="margin-bottom:1.25rem;text-align:left">
+            <label class="form-label" for="delete-confirm-input">Type <strong>DELETE</strong> to confirm</label>
+            <input class="form-input" id="delete-confirm-input" type="text" placeholder="DELETE">
+        </div>
+        <div class="confirm-actions">
+            <button class="btn btn-ghost btn-sm" onclick="closeDeleteConfirm()">Cancel</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteAccount()"><i class="fas fa-trash"></i> Delete Forever</button>
+        </div>
+    </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ── Theme ───────────────────────────────────────────────────────
+let isDark = true;
+function toggleTheme() {
+    isDark = !isDark;
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    document.getElementById('theme-icon').className = isDark ? 'fas fa-moon' : 'fas fa-sun';
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    fetch('/toggle_mode', { method: 'POST' });
+}
+(function(){
+    const saved = localStorage.getItem('theme') || '{{ theme }}';
+    isDark = saved === 'dark';
+    document.documentElement.setAttribute('data-theme', saved);
+    document.getElementById('theme-icon').className = isDark ? 'fas fa-moon' : 'fas fa-sun';
+})();
+
+// ── Reveal ─────────────────────────────────────────────────────
+const revealObserver = new IntersectionObserver(entries => {
+    entries.forEach((e, i) => {
+        if (e.isIntersecting) {
+            setTimeout(() => e.target.classList.add('visible'), i * 60);
+            revealObserver.unobserve(e.target);
+        }
+    });
+}, { threshold: 0.05 });
+document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+// ── Tabs ────────────────────────────────────────────────────────
+function showTab(name, btn) {
+    document.querySelectorAll('.settings-tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + name).classList.add('active');
+    document.querySelectorAll('#panel-' + name + ' .reveal').forEach(el => {
+        setTimeout(() => el.classList.add('visible'), 50);
+    });
+}
+
+// ── Toast ───────────────────────────────────────────────────────
+function toast(msg, type = 'success') {
+    const container = document.getElementById('toast');
+    const el = document.createElement('div');
+    el.className = `toast-item ${type}`;
+    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+    el.innerHTML = `${icon} ${msg}`;
+    container.appendChild(el);
+    setTimeout(() => { el.style.opacity='0'; el.style.transform='translateY(8px)'; el.style.transition='all 0.3s'; setTimeout(() => el.remove(), 300); }, 3500);
+}
+
+// ── Logout ──────────────────────────────────────────────────────
+async function logout() {
+    if (!confirm('Log out?')) return;
+    await fetch('/logout', { method: 'POST' });
+    window.location.href = '/';
+}
+
+// ── Password helpers ─────────────────────────────────────────────
+function togglePw(id, btn) {
+    const input = document.getElementById(id);
+    const showing = input.type === 'text';
+    input.type = showing ? 'password' : 'text';
+    btn.querySelector('i').className = showing ? 'fas fa-eye' : 'fas fa-eye-slash';
+}
+
+function checkStrength(pw) {
+    const segs = [document.getElementById('seg1'),document.getElementById('seg2'),document.getElementById('seg3'),document.getElementById('seg4')];
+    segs.forEach(s => { s.className = 'strength-seg'; });
+    let score = 0;
+    if (pw.length >= 8) score++;
+    if (/[A-Z]/.test(pw)) score++;
+    if (/[0-9]/.test(pw)) score++;
+    if (/[!@#$%^&*(),.?":{}|<>]/.test(pw)) score++;
+    const labels = ['', 'Weak 😬', 'Fair 😐', 'Good 👍', 'Strong 💪'];
+    const cls    = ['','weak','fair','good','strong'];
+    document.getElementById('strength-label').textContent = pw.length ? labels[score] : '';
+    for (let i = 0; i < score; i++) segs[i].classList.add(cls[score]);
+}
+
+function checkMatch() {
+    const np = document.getElementById('field-new-pw').value;
+    const cp = document.getElementById('field-confirm-pw').value;
+    const hint = document.getElementById('match-hint');
+    if (!cp) { hint.textContent = ''; hint.className = 'form-hint'; return; }
+    if (np === cp) { hint.textContent = '✓ Passwords match'; hint.className = 'form-hint success'; }
+    else           { hint.textContent = '✗ Passwords do not match'; hint.className = 'form-hint error'; }
+}
+
+function validateUsername(input) {
+    const val = input.value;
+    const hint = document.getElementById('username-hint');
+    if (/^[a-zA-Z0-9_]{3,50}$/.test(val)) {
+        input.classList.remove('error'); input.classList.add('success');
+        hint.textContent = '✓ Valid username'; hint.className = 'form-hint success';
+    } else if (val.length > 0) {
+        input.classList.add('error'); input.classList.remove('success');
+        hint.textContent = 'Letters, numbers, underscores only (3–50 chars)'; hint.className = 'form-hint error';
+    } else {
+        input.classList.remove('error','success');
+        hint.textContent = '3–50 chars, letters, numbers, underscores only'; hint.className = 'form-hint';
+    }
+}
+
+// ── Avatar ───────────────────────────────────────────────────────
+let avatarFile = null;
+const originalAvatarSrc = document.getElementById('avatar-preview-img').src;
+
+function previewAvatar(input) {
+    if (!input.files[0]) return;
+    avatarFile = input.files[0];
+    const reader = new FileReader();
+    reader.onload = e => {
+        document.getElementById('avatar-preview-img').src = e.target.result;
+        document.getElementById('avatar-save-btn').style.display = 'flex';
+        document.getElementById('avatar-cancel-btn').style.display = 'flex';
+    };
+    reader.readAsDataURL(avatarFile);
+}
+
+function cancelAvatar() {
+    document.getElementById('avatar-preview-img').src = originalAvatarSrc;
+    document.getElementById('avatar-save-btn').style.display = 'none';
+    document.getElementById('avatar-cancel-btn').style.display = 'none';
+    document.getElementById('avatar-input').value = '';
+    avatarFile = null;
+}
+
+async function saveAvatar() {
+    if (!avatarFile) return;
+    const btn = document.getElementById('avatar-save-btn');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
+    const fd = new FormData(); fd.append('profile_pic', avatarFile);
+    try {
+        const res = await fetch('/api/update-profile-pic', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (data.success) {
+            toast('Profile picture updated!');
+            document.getElementById('nav-avatar').src = document.getElementById('avatar-preview-img').src;
+            document.getElementById('avatar-save-btn').style.display = 'none';
+            document.getElementById('avatar-cancel-btn').style.display = 'none';
+            avatarFile = null;
+        } else {
+            toast(data.error || 'Failed to update picture', 'error');
+        }
+    } catch(e) { toast('Network error', 'error'); }
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Save Photo';
+}
+
+// ── Profile ──────────────────────────────────────────────────────
+const origProfile = {
+    name:       document.getElementById('field-name').value,
+    username:   document.getElementById('field-username').value,
+    profession: document.getElementById('field-profession').value
+};
+
+function resetProfileForm() {
+    document.getElementById('field-name').value       = origProfile.name;
+    document.getElementById('field-username').value   = origProfile.username;
+    document.getElementById('field-profession').value = origProfile.profession;
+    toast('Changes reset', 'info');
+}
+
+async function saveProfile() {
+    const name     = document.getElementById('field-name').value.trim();
+    const username = document.getElementById('field-username').value.trim();
+    const prof     = document.getElementById('field-profession').value.trim();
+
+    if (!name)     { toast('Full name is required', 'error'); return; }
+    if (!username) { toast('Username is required', 'error'); return; }
+    if (!/^[a-zA-Z0-9_]{3,50}$/.test(username)) { toast('Invalid username format', 'error'); return; }
+
+    const btn = document.getElementById('profile-save-btn');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
+
+    try {
+        const res = await fetch('/api/update-settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'profile', name, username, profession: prof })
+        });
+        const data = await res.json();
+        if (data.success) {
+            toast('Profile updated successfully!');
+            document.getElementById('nav-name').textContent = name;
+            origProfile.name = name; origProfile.username = username; origProfile.profession = prof;
+        } else {
+            toast(data.error || 'Update failed', 'error');
+        }
+    } catch(e) { toast('Network error', 'error'); }
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Save Changes';
+}
+
+// ── Email ────────────────────────────────────────────────────────
+async function saveEmail() {
+    const email = document.getElementById('field-email').value.trim().toLowerCase();
+    if (!email || !email.includes('@')) { toast('Please enter a valid email address', 'error'); return; }
+    try {
+        const res = await fetch('/api/update-settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'email', email })
+        });
+        const data = await res.json();
+        if (data.success) toast('Email updated!');
+        else toast(data.error || 'Failed to update email', 'error');
+    } catch(e) { toast('Network error', 'error'); }
+}
+
+// ── Password ─────────────────────────────────────────────────────
+async function savePassword() {
+    const current = document.getElementById('field-current-pw').value;
+    const newPw   = document.getElementById('field-new-pw').value;
+    const confirm = document.getElementById('field-confirm-pw').value;
+
+    if (!current)       { toast('Enter your current password', 'error'); return; }
+    if (newPw.length < 8) { toast('New password must be at least 8 characters', 'error'); return; }
+    if (!/[A-Z]/.test(newPw)) { toast('New password needs at least one uppercase letter', 'error'); return; }
+    if (!/[0-9]/.test(newPw)) { toast('New password needs at least one number', 'error'); return; }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(newPw)) { toast('New password needs at least one special character', 'error'); return; }
+    if (newPw !== confirm) { toast('Passwords do not match', 'error'); return; }
+
+    try {
+        const res = await fetch('/api/update-settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'password', current_password: current, new_password: newPw })
+        });
+        const data = await res.json();
+        if (data.success) {
+            toast('Password updated!');
+            ['field-current-pw','field-new-pw','field-confirm-pw'].forEach(id => document.getElementById(id).value = '');
+            checkStrength('');
+            document.getElementById('match-hint').textContent = '';
+        } else {
+            toast(data.error || 'Failed to update password', 'error');
+        }
+    } catch(e) { toast('Network error', 'error'); }
+}
+
+// ── Academic ─────────────────────────────────────────────────────
+const origAcademic = {
+    school:      document.getElementById('field-school').value,
+    study_level: document.getElementById('field-study-level').value,
+    country:     document.getElementById('field-country').value
+};
+
+function resetAcademicForm() {
+    document.getElementById('field-school').value      = origAcademic.school;
+    document.getElementById('field-study-level').value = origAcademic.study_level;
+    document.getElementById('field-country').value     = origAcademic.country;
+    toast('Changes reset', 'info');
+}
+
+async function saveAcademic() {
+    const school      = document.getElementById('field-school').value.trim();
+    const study_level = document.getElementById('field-study-level').value;
+    const country     = document.getElementById('field-country').value.trim();
+
+    if (!school)      { toast('School name is required', 'error'); return; }
+    if (!study_level) { toast('Study level is required', 'error'); return; }
+    if (!country)     { toast('Country is required', 'error'); return; }
+
+    try {
+        const res = await fetch('/api/update-settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'academic', school, study_level, country })
+        });
+        const data = await res.json();
+        if (data.success) {
+            toast('Academic info updated!');
+            document.getElementById('nav-level').textContent = study_level;
+            origAcademic.school = school; origAcademic.study_level = study_level; origAcademic.country = country;
+        } else {
+            toast(data.error || 'Update failed', 'error');
+        }
+    } catch(e) { toast('Network error', 'error'); }
+}
+
+// ── Delete Account ────────────────────────────────────────────────
+function openDeleteConfirm() { document.getElementById('delete-confirm').classList.add('open'); }
+function closeDeleteConfirm() {
+    document.getElementById('delete-confirm').classList.remove('open');
+    document.getElementById('delete-confirm-input').value = '';
+}
+
+async function deleteAccount() {
+    if (document.getElementById('delete-confirm-input').value !== 'DELETE') {
+        toast('Type DELETE to confirm', 'error'); return;
+    }
+    try {
+        const res = await fetch('/api/delete-account', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) { window.location.href = '/'; }
+        else toast(data.error || 'Deletion failed', 'error');
+    } catch(e) { toast('Network error', 'error'); }
+}
+
+document.getElementById('delete-confirm').addEventListener('click', e => {
+    if (e.target.id === 'delete-confirm') closeDeleteConfirm();
+});
+</script>
+</body>
+</html>

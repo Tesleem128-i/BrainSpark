@@ -1854,5 +1854,228 @@ def legal():
 def contact():
     return render_template('contact.html')
 
+# ══════════════════════════════════════════════════════════════════════════════
+#  SETTINGS PAGE
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/settings')
+def settings():
+    if 'user_id' not in session:
+        flash('Please login first')
+        return redirect(url_for('index'))
+    user  = User.query.get(session['user_id'])
+    theme = session.get('theme', 'dark')
+    return render_template('settings.html', user=user, theme=theme)
+
+
+@app.route('/api/update-settings', methods=['POST'])
+def update_settings():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+
+    data    = request.get_json(silent=True) or {}
+    stype   = data.get('type')
+    user_id = session['user_id']
+    user    = User.query.get(user_id)
+
+    if not user:
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+
+    # ── Profile ──────────────────────────────────────────────────
+    if stype == 'profile':
+        import re
+        name       = data.get('name', '').strip()
+        username   = data.get('username', '').strip()
+        profession = data.get('profession', '').strip()
+
+        if not name:
+            return jsonify({'success': False, 'error': 'Full name is required'})
+        if not username:
+            return jsonify({'success': False, 'error': 'Username is required'})
+        if not re.match(r'^[a-zA-Z0-9_]{3,50}$', username):
+            return jsonify({'success': False, 'error': 'Invalid username format'})
+
+        # Check username uniqueness (excluding current user)
+        existing = User.query.filter(
+            db.func.lower(User.username) == username.lower(),
+            User.id != user_id
+        ).first()
+        if existing:
+            return jsonify({'success': False, 'error': 'That username is already taken'})
+
+        try:
+            user.name       = name
+            user.username   = username
+            user.profession = profession if profession else None
+            db.session.commit()
+            session['username'] = username
+            return jsonify({'success': True})
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Profile update error: {e}", exc_info=True)
+            return jsonify({'success': False, 'error': 'Database error. Please try again.'})
+
+    # ── Password ──────────────────────────────────────────────────
+    elif stype == 'password':
+        import re
+        current_pw = data.get('current_password', '')
+        new_pw     = data.get('new_password', '')
+
+        if not current_pw or not new_pw:
+            return jsonify({'success': False, 'error': 'Both current and new passwords are required'})
+        if not user.check_password(current_pw):
+            return jsonify({'success': False, 'error': 'Current password is incorrect'})
+        if len(new_pw) < 8:
+            return jsonify({'success': False, 'error': 'New password must be at least 8 characters'})
+        if not re.search(r'[A-Z]', new_pw):
+            return jsonify({'success': False, 'error': 'New password needs at least one uppercase letter'})
+        if not re.search(r'\d', new_pw):
+            return jsonify({'success': False, 'error': 'New password needs at least one number'})
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', new_pw):
+            return jsonify({'success': False, 'error': 'New password needs at least one special character'})
+
+        try:
+            user.set_password(new_pw)
+            db.session.commit()
+            return jsonify({'success': True})
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Password update error: {e}", exc_info=True)
+            return jsonify({'success': False, 'error': 'Database error. Please try again.'})
+
+    # ── Academic ──────────────────────────────────────────────────
+    elif stype == 'academic':
+        school      = data.get('school', '').strip()
+        study_level = data.get('study_level', '').strip()
+        country     = data.get('country', '').strip()
+
+        if not school:
+            return jsonify({'success': False, 'error': 'School name is required'})
+        if not study_level:
+            return jsonify({'success': False, 'error': 'Study level is required'})
+        if not country:
+            return jsonify({'success': False, 'error': 'Country is required'})
+
+        valid_levels = ['High School', 'Undergraduate', 'Postgraduate', 'PhD', 'Professional', 'Self-learner']
+        if study_level not in valid_levels:
+            return jsonify({'success': False, 'error': 'Invalid study level'})
+
+        try:
+            user.school      = school
+            user.study_level = study_level
+            user.country     = country
+            db.session.commit()
+            return jsonify({'success': True})
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Academic update error: {e}", exc_info=True)
+            return jsonify({'success': False, 'error': 'Database error. Please try again.'})
+
+    # ── Email (blocked) ───────────────────────────────────────────
+    elif stype == 'email':
+        return jsonify({'success': False, 'error': 'Email changes are not permitted. Please contact support.'})
+
+    else:
+        return jsonify({'success': False, 'error': 'Unknown settings type'}), 400
+
+
+@app.route('/api/update-profile-pic', methods=['POST'])
+def update_profile_pic():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+
+    if 'profile_pic' not in request.files:
+        return jsonify({'success': False, 'error': 'No file provided'})
+
+    file = request.files['profile_pic']
+    if not file or not file.filename:
+        return jsonify({'success': False, 'error': 'No file selected'})
+
+    if not allowed_file(file.filename):
+        return jsonify({'success': False, 'error': 'Invalid file type. Use JPG, PNG, WEBP, or GIF.'})
+
+    if file.content_length and file.content_length > 5 * 1024 * 1024:
+        return jsonify({'success': False, 'error': 'File too large. Max 5MB.'})
+
+    # Read and check actual size
+    file_bytes = file.read()
+    if len(file_bytes) > 5 * 1024 * 1024:
+        return jsonify({'success': False, 'error': 'File too large. Max 5MB.'})
+
+    try:
+        user_id  = session['user_id']
+        user     = User.query.get(user_id)
+        ext      = file.filename.rsplit('.', 1)[1].lower()
+        filename = f"{user_id}.{ext}"
+        save_dir = app.config['PROFILE_UPLOAD_FOLDER']
+        os.makedirs(save_dir, exist_ok=True)
+
+        # Remove old profile pic if it has a different extension
+        if user.profile_pic and user.profile_pic != filename:
+            old_path = os.path.join(save_dir, user.profile_pic)
+            if os.path.exists(old_path):
+                try:
+                    os.remove(old_path)
+                except Exception:
+                    pass
+
+        filepath = os.path.join(save_dir, filename)
+        with open(filepath, 'wb') as f_out:
+            f_out.write(file_bytes)
+
+        user.profile_pic = filename
+        db.session.commit()
+        return jsonify({'success': True, 'url': user.get_profile_pic_url()})
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Profile pic update error: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Upload failed. Please try again.'})
+
+
+@app.route('/api/delete-account', methods=['POST'])
+def delete_account():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+
+    user_id = session['user_id']
+    user    = User.query.get(user_id)
+    if not user:
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+
+    try:
+        # Delete profile pic file
+        if user.profile_pic:
+            pic_path = os.path.join(app.config['PROFILE_UPLOAD_FOLDER'], user.profile_pic)
+            if os.path.exists(pic_path):
+                try:
+                    os.remove(pic_path)
+                except Exception:
+                    pass
+
+        # SQLAlchemy cascade should handle related rows if your models have
+        # cascade="all, delete-orphan". If not, delete manually:
+        Message.query.filter(
+            (Message.sender_id == user_id) | (Message.receiver_id == user_id)
+        ).delete(synchronize_session=False)
+
+        Connection.query.filter(
+            (Connection.user_id == user_id) | (Connection.connected_user_id == user_id)
+        ).delete(synchronize_session=False)
+
+        QuizResult.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+        UserTag.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+        GeneratedQuestion.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+
+        db.session.delete(user)
+        db.session.commit()
+        session.clear()
+        return jsonify({'success': True})
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Account deletion error: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Deletion failed. Please try again.'})
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=app.debug)
