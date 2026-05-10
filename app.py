@@ -2173,7 +2173,152 @@ def youtube_search():
     except Exception as e:
         logger.error(f"YouTube search error: {e}", exc_info=True)
         return jsonify({'success': False, 'error': 'Failed to fetch videos'}), 500
+@app.route('/similar-questions')
+def similar_questions_page():
+    if 'user_id' not in session:
+        flash('Please login first')
+        return redirect(url_for('index'))
+    user  = User.query.get(session['user_id'])
+    theme = session.get('theme', 'dark')
+    return render_template('similar_questions.html', user=user, theme=theme)
 
+
+@app.route('/api/generate-similar-questions', methods=['POST'])
+def generate_similar_questions():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+
+    uploaded_pdfs = []
+    for key in request.files:
+        if key.startswith('pdf'):
+            f = request.files[key]
+            if f and f.filename and allowed_file(f.filename):
+                uploaded_pdfs.append(f)
+
+    if not uploaded_pdfs:
+        return jsonify({'success': False, 'error': 'Please upload at least 1 PDF (up to 4).'}), 400
+    uploaded_pdfs = uploaded_pdfs[:4]
+
+    try:
+        question_count = int(request.form.get('question_count', 20))
+        question_count = max(5, min(60, question_count))
+    except ValueError:
+        question_count = 20
+
+    hardness      = request.form.get('hardness', 'same')
+    subject_title = request.form.get('subject_title', '').strip() or 'Generated Exam'
+    include_ans   = request.form.get('include_answers', 'true').lower() == 'true'
+
+    all_texts, file_names = [], []
+    for f in uploaded_pdfs:
+        try:
+            text = extract_pdf_text(f)
+            if text and len(text.strip()) > 30:
+                all_texts.append(text.strip())
+                file_names.append(f.filename)
+        except Exception as e:
+            logger.warning(f"Could not read PDF {f.filename}: {e}")
+
+    if not all_texts:
+        return jsonify({'success': False, 'error': 'No readable text found. Use text-based PDFs, not scanned images.'}), 400
+
+    combined_text = '\n\n---NEXT PDF---\n\n'.join(
+        f"[PDF {i+1}: {file_names[i]}]\n{t[:4000]}" for i, t in enumerate(all_texts)
+    )
+
+    # Step 1: Analyse structure fingerprint
+    analysis_prompt = f"""Analyse these exam papers and extract their structural pattern.
+
+PAPERS:
+{combined_text[:6000]}
+
+Return ONLY valid JSON (no markdown):
+{{
+  "detected_format": "objective|theory|mixed",
+  "option_style": "A B C D",
+  "avg_question_length": "short|medium|long",
+  "difficulty_level": "easy|medium|hard",
+  "main_topics": ["topic1", "topic2", "topic3"],
+  "question_styles": ["definition", "application", "calculation", "comparison", "scenario"],
+  "subject_domain": "string"
+}}"""
+
+    try:
+        ar = model.generate_content(analysis_prompt).text.strip()
+        s, e = ar.find('{'), ar.rfind('}') + 1
+        fingerprint = json.loads(ar[s:e] if s != -1 and e > s else '{}')
+    except Exception:
+        fingerprint = {
+            'detected_format': 'objective', 'option_style': 'A B C D',
+            'avg_question_length': 'medium', 'difficulty_level': 'medium',
+            'main_topics': ['General'], 'question_styles': ['definition', 'application'],
+            'subject_domain': subject_title
+        }
+
+    effective_difficulty = fingerprint.get('difficulty_level', 'medium') if hardness == 'same' else hardness
+    detected_format = fingerprint.get('detected_format', 'objective')
+    topics_str      = ', '.join(fingerprint.get('main_topics', ['General Content']))
+    q_styles_str    = ', '.join(fingerprint.get('question_styles', ['definition']))
+
+    # Step 2: Generate questions
+    if detected_format == 'theory':
+        gen_prompt = f"""Generate a NEW theory exam that mirrors the style of the analysed papers.
+
+Subject: {fingerprint.get('subject_domain', subject_title)}
+Topics: {topics_str}
+Styles: {q_styles_str}
+Difficulty: {effective_difficulty}
+Count: {question_count}
+
+Return ONLY valid JSON:
+{{
+  "paper_title": "string",
+  "subject": "string",
+  "difficulty": "{effective_difficulty}",
+  "format": "theory",
+  "instructions": "string",
+  "questions": [
+    {{"number": 1, "question": "...", "marks": 5, "type": "short_answer|essay|calculation", "model_answer": "...", "topic": "..."}}
+  ]
+}}"""
+    else:
+        gen_prompt = f"""Generate a NEW multiple-choice exam that mirrors the style of the analysed papers.
+
+Subject: {fingerprint.get('subject_domain', subject_title)}
+Topics: {topics_str}
+Styles: {q_styles_str}
+Difficulty: {effective_difficulty}
+Count: {question_count}
+
+Return ONLY valid JSON:
+{{
+  "paper_title": "string",
+  "subject": "string",
+  "difficulty": "{effective_difficulty}",
+  "format": "objective",
+  "instructions": "Answer ALL questions. Choose the BEST option.",
+  "questions": [
+    {{"number": 1, "question": "...", "options": ["A. text", "B. text", "C. text", "D. text"], "answer": "A", "explanation": "...", "topic": "...", "marks": 1}}
+  ]
+}}"""
+
+    try:
+        gr = model.generate_content(gen_prompt).text.strip()
+        s2, e2 = gr.find('{'), gr.rfind('}') + 1
+        paper_data = json.loads(gr[s2:e2] if s2 != -1 and e2 > s2 else gr)
+    except Exception as ex:
+        logger.error(f"Question generation failed: {ex}", exc_info=True)
+        return jsonify({'success': False, 'error': f'AI generation failed: {str(ex)[:200]}'}), 500
+
+    questions = paper_data.get('questions', [])
+    if not questions:
+        return jsonify({'success': False, 'error': 'AI returned no questions. Please try again.'}), 500
+
+    return jsonify({
+        'success': True, 'paper': paper_data,
+        'source_files': file_names, 'fingerprint': fingerprint,
+        'question_count': len(questions), 'include_answers': include_ans
+    })
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=app.debug)
