@@ -16,6 +16,7 @@ import json
 import tempfile
 from datetime import datetime, timedelta
 import logging
+from models import db, User, Quiz, QuizResult, Connection, UserTag, Message, ChatGroup, ChatGroupMember, GroupMessage, BrainstormSession, BrainstormNote, GroupJoinRequest, Poll, PollOption, PollVote, GeneratedQuestion, TopicMastery, WrongAnswer
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -1807,6 +1808,50 @@ def save_quiz_result():
         if 'quiz_questions' in session:
             del session['quiz_questions']
             session.modified = True
+
+        # ── Auto-update mastery from answer data ──────────────────────────
+        if answers and isinstance(answers, dict):
+            quiz_questions_raw = data.get('questions', [])  # frontend must send these
+            mastery_payload    = []
+            for q in quiz_questions_raw:
+                q_text      = q.get('question', '')
+                topic       = q.get('topic', 'General')
+                user_ans    = str(answers.get(q_text, '')).strip().upper()
+                correct_ans = str(q.get('answer', '')).strip().upper()
+                mastery_payload.append({
+                    'topic':          topic,
+                    'correct':        user_ans == correct_ans,
+                    'question_text':  q_text,
+                    'correct_answer': correct_ans,
+                    'user_answer':    user_ans
+                })
+            if mastery_payload:
+                # In-process call so we don't need an HTTP round-trip
+                from flask import current_app
+                with current_app.test_request_context():
+                    try:
+                        for r in mastery_payload:
+                            topic   = r['topic']
+                            correct = r['correct']
+                            mastery = TopicMastery.query.filter_by(user_id=user_id, topic=topic).first()
+                            if not mastery:
+                                mastery = TopicMastery(user_id=user_id, topic=topic)
+                                db.session.add(mastery)
+                            mastery.total_questions += 1
+                            mastery.attempts = (mastery.attempts or 0) + 1
+                            if correct:
+                                mastery.correct_answers += 1
+                            else:
+                                db.session.add(WrongAnswer(
+                                    user_id=user_id, topic=topic,
+                                    question_text=r['question_text'],
+                                    correct_answer=r['correct_answer'],
+                                    user_answer=r['user_answer']
+                                ))
+                        db.session.commit()
+                    except Exception:
+                        db.session.rollback()
+            session.modified = True
         return jsonify({'success': True, 'message': 'Quiz result saved successfully!', 'result_id': result.id}), 200
     except Exception as e:
         logger.error(f'Error saving quiz result: {str(e)}', exc_info=True)
@@ -2128,6 +2173,62 @@ def youtube_search():
     except Exception as e:
         logger.error(f"YouTube search error: {e}", exc_info=True)
         return jsonify({'success': False, 'error': 'Failed to fetch videos'}), 500
+@app.route('/api/mastery-map')
+def mastery_map():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    user_id = session['user_id']
+    masteries = TopicMastery.query.filter_by(user_id=user_id).order_by(TopicMastery.updated_at.desc()).all()
+    return jsonify({'success': True, 'topics': [{
+        'topic':           m.topic,
+        'mastery_score':   m.mastery_score,
+        'level':           m.level,
+        'attempts':        m.attempts,
+        'total_questions': m.total_questions,
+        'correct_answers': m.correct_answers,
+        'updated_at':      m.updated_at.isoformat()
+    } for m in masteries]})
 
+
+@app.route('/api/update-mastery', methods=['POST'])
+def update_mastery():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    user_id = session['user_id']
+    data    = request.json or {}
+    results = data.get('results', [])
+    # results = [{ topic, correct, question_text, correct_answer, user_answer }, ...]
+
+    for r in results:
+        topic   = r.get('topic', 'General').strip()
+        correct = bool(r.get('correct', False))
+        if not topic:
+            continue
+
+        mastery = TopicMastery.query.filter_by(user_id=user_id, topic=topic).first()
+        if not mastery:
+            mastery = TopicMastery(user_id=user_id, topic=topic)
+            db.session.add(mastery)
+
+        mastery.total_questions += 1
+        mastery.attempts        = (mastery.attempts or 0) + 1
+        if correct:
+            mastery.correct_answers += 1
+        else:
+            # Log wrong answer for future drill mode
+            db.session.add(WrongAnswer(
+                user_id=user_id,
+                topic=topic,
+                question_text=r.get('question_text', ''),
+                correct_answer=r.get('correct_answer', ''),
+                user_answer=r.get('user_answer', '')
+            ))
+
+    try:
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=app.debug)

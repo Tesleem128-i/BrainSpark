@@ -431,6 +431,27 @@
             .ai-modal { width: 100%; height: 90vh; border-radius: 20px 20px 0 0; }
             .modal-overlay { padding: 0; align-items: flex-end; justify-content: stretch; }
         }
+        .mastery-bubble {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    width: 90px; height: 90px; border-radius: 50%; cursor: pointer;
+    transition: all 0.3s; text-align: center; padding: 0.5rem;
+    border: 2px solid transparent; position: relative;
+}
+.mastery-bubble:hover { transform: scale(1.08); filter: brightness(1.1); }
+.mastery-bubble .bubble-topic {
+    font-size: 0.65rem; font-weight: 600; line-height: 1.2;
+    overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical; color: #fff;
+}
+.mastery-bubble .bubble-score {
+    font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 800;
+    color: #fff; margin-bottom: 0.15rem;
+}
+.mastery-not_started  { background: rgba(90,90,112,0.3); border-color: rgba(90,90,112,0.4); }
+.mastery-learning     { background: rgba(226,75,74,0.25); border-color: rgba(226,75,74,0.5); }
+.mastery-practicing   { background: rgba(239,159,39,0.25); border-color: rgba(239,159,39,0.5); }
+.mastery-mastered     { background: rgba(123,164,255,0.25); border-color: rgba(123,164,255,0.5); }
+.mastery-expert       { background: rgba(0,201,141,0.25); border-color: rgba(0,201,141,0.5); }
     </style>
 </head>
 <body>
@@ -485,6 +506,9 @@
     <div class="sidebar-label">Account</div>
     <button class="sidebar-link" onclick="window.location.href='/settings'"><i class="fas fa-gear"></i> Settings</button>
     <button class="sidebar-link" onclick="logout()" style="color:#ff4f30"><i class="fas fa-sign-out-alt"></i> Logout</button>
+    <button class="sidebar-link" onclick="scrollTo('mastery-section')">
+    <i class="fas fa-map"></i> Mastery Map
+</button>
 </div>
 
 <!-- MAIN -->
@@ -557,6 +581,40 @@
 </div>
 </div>
 
+<div class="panel reveal" id="mastery-section" style="margin-bottom:1.5rem;">
+    <div class="panel-header">
+        <div>
+            <div class="panel-eyebrow">Knowledge Map</div>
+            <div class="panel-title">Topic Mastery</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadMasteryMap()" style="font-size:0.78rem;">
+            <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+    </div>
+    <div class="panel-body">
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;font-size:0.75rem;">
+            <span style="display:flex;align-items:center;gap:0.4rem;color:var(--muted);">
+                <span style="width:10px;height:10px;border-radius:50%;background:#e24b4a;display:inline-block;"></span> Learning
+            </span>
+            <span style="display:flex;align-items:center;gap:0.4rem;color:var(--muted);">
+                <span style="width:10px;height:10px;border-radius:50%;background:#ef9f27;display:inline-block;"></span> Practicing
+            </span>
+            <span style="display:flex;align-items:center;gap:0.4rem;color:var(--muted);">
+                <span style="width:10px;height:10px;border-radius:50%;background:#7ba4ff;display:inline-block;"></span> Mastered
+            </span>
+            <span style="display:flex;align-items:center;gap:0.4rem;color:var(--muted);">
+                <span style="width:10px;height:10px;border-radius:50%;background:#00c98d;display:inline-block;"></span> Expert
+            </span>
+        </div>
+        <div id="mastery-map-container" style="display:flex;flex-wrap:wrap;gap:0.75rem;min-height:80px;align-items:flex-start;">
+            <div class="empty-state" style="padding:2rem 1rem;width:100%;">
+                <div class="empty-state-icon"><i class="fas fa-map"></i></div>
+                <h4>No mastery data yet</h4>
+                <p>Complete a quiz to see your topic mastery map.</p>
+            </div>
+        </div>
+    </div>
+</div>
 <!-- ════════════════════════════ AI CHAT MODAL ════════════════════════════ -->
 <div class="modal-overlay" id="ai-modal">
     <div class="ai-modal" id="ai-modal-inner">
@@ -1215,6 +1273,43 @@ async function fetchYouTubeVideos(query, containerId) {
         if (loader) loader.outerHTML = `<div class="yt-error">Could not load videos.</div>`;
     }
 }
+async function loadMasteryMap() {
+    try {
+        const res  = await fetch('/api/mastery-map');
+        const data = await res.json();
+        const container = document.getElementById('mastery-map-container');
+        if (!data.success || !data.topics.length) {
+            container.innerHTML = `<div class="empty-state" style="padding:2rem 1rem;width:100%;">
+                <div class="empty-state-icon"><i class="fas fa-map"></i></div>
+                <h4>No mastery data yet</h4>
+                <p>Complete a quiz to see your topic mastery map.</p>
+            </div>`;
+            return;
+        }
+
+        const levelColor = {
+            not_started: '#5a5a70',
+            learning:    '#e24b4a',
+            practicing:  '#ef9f27',
+            mastered:    '#7ba4ff',
+            expert:      '#00c98d'
+        };
+
+        container.innerHTML = data.topics.map(t => `
+            <div class="mastery-bubble mastery-${t.level}"
+                 title="${t.topic}: ${t.mastery_score}% (${t.attempts} attempt${t.attempts !== 1 ? 's' : ''})"
+                 onclick="alert('${t.topic}\\n\\nScore: ${t.mastery_score}%\\nAttempts: ${t.attempts}\\nCorrect: ${t.correct_answers}/${t.total_questions}')">
+                <div class="bubble-score">${t.mastery_score}%</div>
+                <div class="bubble-topic">${t.topic}</div>
+            </div>`).join('');
+    } catch(e) {
+        console.error('Mastery map error:', e);
+    }
+}
+window.addEventListener('load', () => {
+    loadDashboardData();
+    loadMasteryMap();   // <-- add this line
+});
 </script>
 </body>
 </html>

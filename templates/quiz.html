@@ -1080,6 +1080,18 @@ function formatTime(s) {
 //  INIT
 // ──────────────────────────────────────────────────────────────
 window.addEventListener('load', loadQuiz);
+// In your existing submitQuizResult() or similar function:
+const payload = {
+    score:      finalScore,
+    time_taken: timeTaken,
+    answers:    userAnswers,       // already sending this
+    questions:  quizQuestions      // ADD THIS — the full question array with topic fields
+};
+await fetch('/api/save-quiz-result', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+});
 </script>
 </body>
 </html>
