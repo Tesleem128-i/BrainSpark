@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generate Similar Questions – Brainspark</title>
+<link rel="icon" type="image/png" href="/static/image/KNOWITNOW.png">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+:root{
+    --ink:#f0efe8;--ink2:#c8c6bc;
+    --surface:#0a0a14;--surface2:#0d0d1a;--surface3:#13131f;
+    --card:rgba(255,255,255,0.04);--card-border:rgba(255,255,255,0.08);
+    --muted:#5a5a70;
+    --accent:#ff4f30;--accent2:#ff8c5a;
+    --gold:#f5c842;--blue:#3b6bff;--blue2:#7ba4ff;--green:#00c98d;
+    --radius:16px;--radius-sm:8px;
+    --transition:0.4s cubic-bezier(0.16,1,0.3,1);
+}
+[data-theme="light"]{
+    --ink:#0a0a14;--ink2:#1c1c2e;
+    --surface:#f5f4f0;--surface2:#ffffff;--surface3:#ededea;
+    --card:rgba(0,0,0,0.03);--card-border:rgba(0,0,0,0.07);--muted:#7a7a8c;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink);min-height:100vh;overflow-x:hidden}
+a{text-decoration:none;color:inherit}
+::selection{background:var(--accent);color:#fff}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opacity:0.018;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:var(--accent);border-radius:3px}
+
+/* ── NAV ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:0 3rem;height:68px;display:flex;align-items:center;justify-content:space-between;background:rgba(10,10,20,0.75);backdrop-filter:blur(20px);border-bottom:1px solid var(--card-border)}
+[data-theme="light"] nav{background:rgba(245,244,240,0.85)}
+.nav-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.4rem;letter-spacing:-0.02em;background:linear-gradient(135deg,#ff4f30,#ff8c5a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.nav-right{display:flex;align-items:center;gap:1rem}
+.icon-btn{width:36px;height:36px;border-radius:9px;border:1px solid var(--card-border);background:var(--card);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);font-size:0.9rem;transition:all 0.2s}
+.icon-btn:hover{border-color:var(--accent);color:var(--accent)}
+.nav-user{display:flex;align-items:center;gap:0.75rem;padding-left:1rem;border-left:1px solid var(--card-border)}
+.nav-user .name{font-size:0.875rem;font-weight:600;color:var(--ink)}
+.nav-user .level{font-size:0.72rem;color:var(--muted)}
+.nav-avatar{width:36px;height:36px;border-radius:10px;object-fit:cover;border:2px solid var(--accent)}
+
+/* ── LAYOUT ── */
+.page-wrap{padding-top:68px;min-height:100vh;display:flex}
+.sidebar{width:240px;flex-shrink:0;position:fixed;top:68px;left:0;bottom:0;background:rgba(10,10,20,0.6);border-right:1px solid var(--card-border);backdrop-filter:blur(20px);padding:2rem 1.25rem;display:flex;flex-direction:column;gap:0.5rem;overflow-y:auto;z-index:50}
+[data-theme="light"] .sidebar{background:rgba(255,255,255,0.85)}
+.sidebar-label{font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);padding:1rem 0.75rem 0.5rem;margin-top:0.5rem}
+.sidebar-link{display:flex;align-items:center;gap:0.75rem;padding:0.65rem 0.85rem;border-radius:var(--radius-sm);font-size:0.875rem;font-weight:500;color:var(--muted);transition:all 0.2s;cursor:pointer;border:none;background:none;width:100%;text-align:left}
+.sidebar-link:hover{background:var(--card);color:var(--ink)}
+.sidebar-link.active{background:rgba(255,79,48,0.12);color:var(--accent)}
+.sidebar-link i{width:16px;text-align:center;font-size:0.875rem}
+.main{flex:1;margin-left:240px;padding:2.5rem;min-height:calc(100vh - 68px)}
+
+/* ── HERO ── */
+.hero{position:relative;border-radius:24px;overflow:hidden;padding:3rem;margin-bottom:2rem;min-height:180px;display:flex;align-items:flex-end}
+.hero-bg{position:absolute;inset:0}
+.hero-bg img{width:100%;height:100%;object-fit:cover;filter:brightness(0.25) saturate(1.5)}
+.hero-bg::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(59,107,255,0.25) 0%,rgba(10,10,20,0.7) 60%,rgba(10,10,20,0.95) 100%)}
+.hero-content{position:relative;z-index:1}
+.hero-badge{display:inline-flex;align-items:center;gap:0.4rem;padding:0.3rem 0.85rem;border-radius:50px;background:rgba(59,107,255,0.15);border:1px solid rgba(59,107,255,0.35);color:#7ba4ff;font-size:0.72rem;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:0.75rem}
+.hero-title{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;color:#fff;line-height:1.1;letter-spacing:-0.02em;margin-bottom:0.5rem}
+.hero-title em{font-style:normal;color:var(--blue2)}
+.hero-sub{font-size:0.95rem;color:rgba(255,255,255,0.5)}
+
+/* ── CARDS ── */
+.grid-2{display:grid;grid-template-columns:1.4fr 1fr;gap:1.5rem;margin-bottom:1.5rem}
+.panel{background:var(--card);border:1px solid var(--card-border);border-radius:var(--radius);overflow:hidden;backdrop-filter:blur(10px)}
+.panel-header{padding:1.5rem 1.5rem 0;display:flex;align-items:center;justify-content:space-between}
+.panel-title{font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:700;color:var(--ink)}
+.panel-body{padding:1.5rem}
+.panel-eyebrow{font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--blue2);display:flex;align-items:center;gap:0.4rem;margin-bottom:0.4rem}
+.panel-eyebrow::before{content:'';width:14px;height:1.5px;background:var(--blue2);border-radius:1px}
+
+/* ── PDF DROP SLOTS ── */
+.pdf-slots{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.25rem}
+.pdf-slot{border:2px dashed rgba(59,107,255,0.3);border-radius:var(--radius-sm);padding:1.25rem 0.75rem;text-align:center;cursor:pointer;transition:all 0.25s;position:relative;min-height:90px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.4rem}
+.pdf-slot:hover,.pdf-slot.dragover{border-color:var(--blue2);background:rgba(59,107,255,0.06)}
+.pdf-slot.filled{border-color:var(--green);border-style:solid;background:rgba(0,201,141,0.05)}
+.pdf-slot.filled:hover{border-color:var(--accent);background:rgba(255,79,48,0.05)}
+.pdf-slot-icon{font-size:1.4rem;color:var(--blue2);opacity:0.7}
+.pdf-slot.filled .pdf-slot-icon{color:var(--green);opacity:1}
+.pdf-slot-label{font-size:0.75rem;color:var(--muted);font-weight:500}
+.pdf-slot.filled .pdf-slot-label{color:var(--green);word-break:break-all;font-size:0.7rem;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 4px}
+.pdf-slot-num{position:absolute;top:6px;left:8px;font-size:0.65rem;font-weight:700;color:var(--blue2);opacity:0.6}
+.pdf-slot.filled .pdf-slot-num{color:var(--green);opacity:1}
+.pdf-slot-remove{position:absolute;top:4px;right:4px;width:18px;height:18px;border-radius:50%;background:rgba(255,79,48,0.15);border:none;color:var(--accent);font-size:0.65rem;cursor:pointer;display:none;align-items:center;justify-content:center;transition:all 0.2s}
+.pdf-slot.filled .pdf-slot-remove{display:flex}
+.pdf-slot-remove:hover{background:var(--accent);color:#fff}
+
+/* ── SETTINGS ── */
+.settings-row{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.25rem}
+.field-label{font-size:0.78rem;font-weight:600;color:var(--muted);letter-spacing:0.03em;margin-bottom:0.4rem}
+.field-select,.field-input{width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--card-border);border-radius:var(--radius-sm);padding:0.6rem 0.85rem;color:var(--ink);font-family:'DM Sans',sans-serif;font-size:0.875rem;transition:border-color 0.2s;outline:none}
+[data-theme="light"] .field-select,[data-theme="light"] .field-input{background:rgba(0,0,0,0.04)}
+.field-select:focus,.field-input:focus{border-color:var(--blue2)}
+.field-full{grid-column:1/-1}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:0.5rem;padding:0.7rem 1.5rem;border-radius:50px;border:none;font-family:'DM Sans',sans-serif;font-size:0.875rem;font-weight:600;cursor:pointer;transition:all var(--transition)}
+.btn-primary{background:var(--blue);color:#fff;box-shadow:0 4px 20px rgba(59,107,255,0.35)}
+.btn-primary:hover{background:var(--blue2);transform:translateY(-1px);box-shadow:0 8px 24px rgba(59,107,255,0.45)}
+.btn-accent{background:var(--accent);color:#fff;box-shadow:0 4px 20px rgba(255,79,48,0.35)}
+.btn-accent:hover{background:var(--accent2);transform:translateY(-1px)}
+.btn-ghost{background:var(--card);color:var(--ink);border:1px solid var(--card-border)}
+.btn-ghost:hover{border-color:var(--blue2);color:var(--blue2)}
+.btn-full{width:100%;justify-content:center;border-radius:var(--radius-sm)}
+.btn-sm{padding:0.45rem 1rem;font-size:0.8rem}
+.btn:disabled{opacity:0.45;cursor:not-allowed;transform:none!important}
+.btn-green{background:var(--green);color:#fff;box-shadow:0 4px 20px rgba(0,201,141,0.3)}
+.btn-green:hover{filter:brightness(1.1);transform:translateY(-1px)}
+
+/* ── PROGRESS ── */
+.progress-bar{width:100%;height:3px;background:var(--card-border);border-radius:2px;overflow:hidden;margin-top:0.75rem}
+.progress-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--blue),var(--blue2));border-radius:2px;transition:width 0.3s;animation:progress-pulse 1.5s ease-in-out infinite}
+@keyframes progress-pulse{0%,100%{opacity:1}50%{opacity:0.6}}
+
+/* ── FINGERPRINT CARD ── */
+.fingerprint-card{background:rgba(59,107,255,0.06);border:1px solid rgba(59,107,255,0.18);border-radius:var(--radius-sm);padding:1rem;margin-bottom:1.25rem}
+.fingerprint-title{font-size:0.75rem;font-weight:700;color:var(--blue2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:0.75rem;display:flex;align-items:center;gap:0.4rem}
+.fingerprint-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.5rem}
+.fp-item{font-size:0.78rem}
+.fp-item .fp-k{color:var(--muted);margin-bottom:0.1rem}
+.fp-item .fp-v{color:var(--ink);font-weight:600}
+.fp-topics{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:0.35rem;margin-top:0.25rem}
+.fp-tag{padding:0.2rem 0.6rem;border-radius:50px;background:rgba(59,107,255,0.1);border:1px solid rgba(59,107,255,0.2);font-size:0.72rem;color:var(--blue2);font-weight:600}
+
+/* ── PAPER PREVIEW ── */
+#paper-output{display:none}
+.paper-header-card{background:linear-gradient(135deg,rgba(59,107,255,0.1),rgba(255,79,48,0.06));border:1px solid var(--card-border);border-radius:var(--radius);padding:1.75rem;margin-bottom:1.25rem;text-align:center}
+.paper-title{font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:800;color:var(--ink);margin-bottom:0.3rem}
+.paper-meta{font-size:0.82rem;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:1rem;flex-wrap:wrap;margin-bottom:0.75rem}
+.paper-meta span{display:flex;align-items:center;gap:0.3rem}
+.paper-instructions{font-size:0.85rem;color:var(--ink2);background:rgba(255,79,48,0.06);border:1px solid rgba(255,79,48,0.15);border-radius:8px;padding:0.75rem 1rem;border-left:3px solid var(--accent)}
+.q-card{background:var(--card);border:1px solid var(--card-border);border-radius:var(--radius-sm);padding:1.25rem;margin-bottom:0.75rem;transition:all 0.2s}
+.q-card:hover{border-color:rgba(59,107,255,0.3);background:rgba(59,107,255,0.03)}
+.q-num{font-size:0.7rem;font-weight:700;color:var(--blue2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:0.4rem;display:flex;align-items:center;justify-content:space-between}
+.q-text{font-size:0.95rem;color:var(--ink);font-weight:500;line-height:1.6;margin-bottom:0.75rem}
+.q-options{display:grid;grid-template-columns:1fr 1fr;gap:0.4rem;margin-bottom:0.6rem}
+.q-opt{padding:0.45rem 0.75rem;border-radius:7px;font-size:0.82rem;color:var(--ink2);background:rgba(255,255,255,0.03);border:1px solid var(--card-border);transition:all 0.2s}
+.q-opt.correct{background:rgba(0,201,141,0.1);border-color:rgba(0,201,141,0.35);color:var(--green)}
+.q-explanation{font-size:0.78rem;color:var(--muted);border-top:1px solid var(--card-border);padding-top:0.5rem;margin-top:0.5rem;line-height:1.5;display:none}
+.q-explanation.show{display:block}
+.q-topic-badge{padding:0.15rem 0.55rem;border-radius:50px;background:rgba(255,79,48,0.08);border:1px solid rgba(255,79,48,0.18);font-size:0.67rem;color:var(--accent);font-weight:600}
+.marks-badge{padding:0.15rem 0.55rem;border-radius:50px;background:rgba(59,107,255,0.1);border:1px solid rgba(59,107,255,0.2);font-size:0.67rem;color:var(--blue2);font-weight:600}
+
+/* theory */
+.q-answer-box{background:rgba(0,201,141,0.05);border:1px solid rgba(0,201,141,0.2);border-radius:7px;padding:0.75rem;font-size:0.82rem;color:var(--ink2);line-height:1.6;margin-top:0.5rem;display:none}
+.q-answer-box.show{display:block}
+
+/* ── ACTIONS BAR ── */
+.actions-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;margin-bottom:1.25rem;padding:1rem 1.25rem;background:var(--card);border:1px solid var(--card-border);border-radius:var(--radius)}
+.actions-bar-left{display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap}
+.toggle-answers-btn{display:flex;align-items:center;gap:0.4rem;padding:0.4rem 0.9rem;border-radius:50px;border:1px solid var(--card-border);background:var(--card);font-size:0.8rem;font-weight:600;cursor:pointer;color:var(--ink2);transition:all 0.2s;font-family:'DM Sans',sans-serif}
+.toggle-answers-btn:hover{border-color:var(--green);color:var(--green)}
+.toggle-answers-btn.active{background:rgba(0,201,141,0.1);border-color:rgba(0,201,141,0.35);color:var(--green)}
+
+/* ── EMPTY / LOADING ── */
+.empty-state{text-align:center;padding:3rem 1rem;color:var(--muted)}
+.empty-state-icon{font-size:2.5rem;margin-bottom:0.75rem;opacity:0.4}
+.empty-state h4{font-size:0.95rem;color:var(--ink);margin-bottom:0.4rem}
+.empty-state p{font-size:0.82rem}
+
+/* ── REVEAL ── */
+.reveal{opacity:0;transform:translateY(20px);transition:opacity 0.6s ease,transform 0.6s ease}
+.reveal.visible{opacity:1;transform:translateY(0)}
+
+/* ── DOWNLOAD PRINT ── */
+@media print{
+    nav,.sidebar,.actions-bar,.no-print{display:none!important}
+    .main{margin-left:0!important;padding:0!important}
+    .q-explanation,.q-answer-box{display:block!important}
+    .q-opt.correct{background:#d4f7ed!important;border-color:#00c98d!important}
+    body{background:#fff!important;color:#000!important}
+    .paper-header-card,.q-card{border:1px solid #ddd!important;background:#fff!important}
+}
+
+@media(max-width:1100px){.grid-2{grid-template-columns:1fr}}
+@media(max-width:768px){.sidebar{transform:translateX(-100%)}.main{margin-left:0;padding:1.25rem}.pdf-slots{grid-template-columns:1fr 1fr}.q-options{grid-template-columns:1fr}nav{padding:0 1.25rem}}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+    <div style="display:flex;align-items:center;gap:1.5rem;">
+        <button class="icon-btn" onclick="window.location.href='/dashboard'" title="Back to dashboard">
+            <i class="fas fa-arrow-left"></i>
+        </button>
+        <a href="/dashboard" class="nav-logo">Brainspark</a>
+    </div>
+    <div class="nav-right">
+        <button class="icon-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">
+            <i class="fas fa-moon" id="theme-icon"></i>
+        </button>
+        <button class="icon-btn" onclick="window.location.href='/settings'" title="Settings">
+            <i class="fas fa-gear"></i>
+        </button>
+        <div class="nav-user">
+            <div style="text-align:right">
+                <div class="name">{{ user.name }}</div>
+                <div class="level">{{ user.study_level }}</div>
+            </div>
+            <img src="{{ user.get_profile_pic_url() }}" alt="{{ user.name }}" class="nav-avatar">
+        </div>
+    </div>
+</nav>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+    <div class="sidebar-label">Navigate</div>
+    <button class="sidebar-link" onclick="window.location.href='/dashboard'"><i class="fas fa-house"></i> Dashboard</button>
+    <button class="sidebar-link active"><i class="fas fa-copy"></i> Similar Questions</button>
+    <button class="sidebar-link" onclick="window.location.href='/quiz'"><i class="fas fa-file-upload"></i> Upload Quiz</button>
+    <button class="sidebar-link" onclick="window.location.href='/study-buddies'"><i class="fas fa-users"></i> Study Buddies</button>
+    <div style="flex:1"></div>
+    <div class="sidebar-label">Account</div>
+    <button class="sidebar-link" onclick="window.location.href='/settings'"><i class="fas fa-gear"></i> Settings</button>
+</div>
+
+<!-- MAIN -->
+<div class="page-wrap">
+<div class="main">
+
+    <!-- HERO -->
+    <div class="hero reveal">
+        <div class="hero-bg">
+            <img src="https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=1400&q=70&fit=crop" alt="">
+        </div>
+        <div class="hero-content">
+            <div class="hero-badge"><i class="fas fa-wand-magic-sparkles"></i> AI Structure Mirroring</div>
+            <h1 class="hero-title">Generate <em>Similar Questions</em></h1>
+            <p class="hero-sub">Upload up to 4 past exam PDFs — the AI reads the structure and creates a brand-new paper in the same style.</p>
+        </div>
+    </div>
+
+    <!-- UPLOAD + SETTINGS -->
+    <div class="grid-2 reveal">
+        <div class="panel">
+            <div class="panel-header"><div><div class="panel-eyebrow">Step 1</div><div class="panel-title">Upload Past Exam PDFs</div></div></div>
+            <div class="panel-body">
+                <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1rem;">Add 1–4 PDFs. The AI compares structure across all of them for richer pattern matching.</p>
+                <div class="pdf-slots" id="pdf-slots">
+                    <!-- Generated by JS -->
+                </div>
+                <p style="font-size:0.75rem;color:var(--muted);margin-bottom:1.25rem;text-align:center;">
+                    <i class="fas fa-info-circle"></i> Use text-based PDFs — scanned images won't extract correctly
+                </p>
+
+                <div class="panel-eyebrow" style="margin-bottom:0.75rem;"><i class="fas fa-sliders" style="margin-right:4px;font-size:0.7rem;"></i> Step 2 — Configure Output</div>
+                <div>
+                    <div class="field-label">Exam / Subject Title</div>
+                    <input type="text" id="subject-title" class="field-input" placeholder="e.g. Biochemistry Final Exam 2025" style="margin-bottom:0.75rem;">
+                </div>
+                <div class="settings-row">
+                    <div>
+                        <div class="field-label">Number of Questions</div>
+                        <input type="number" id="q-count" class="field-input" min="5" max="60" value="20">
+                    </div>
+                    <div>
+                        <div class="field-label">Difficulty</div>
+                        <select id="hardness" class="field-select">
+                            <option value="same" selected>🔄 Same as source</option>
+                            <option value="easy">🟢 Easy</option>
+                            <option value="medium">🟡 Medium</option>
+                            <option value="hard">🔴 Hard</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1.25rem;">
+                    <input type="checkbox" id="include-answers" checked style="accent-color:var(--blue);width:15px;height:15px;">
+                    <label for="include-answers" style="font-size:0.82rem;color:var(--ink2);cursor:pointer;">Include answer key & explanations</label>
+                </div>
+                <button class="btn btn-primary btn-full" id="generate-btn" onclick="generateSimilar()">
+                    <i class="fas fa-wand-magic-sparkles"></i> Analyse & Generate Paper
+                </button>
+                <div class="progress-bar" id="gen-progress" style="display:none">
+                    <div class="progress-fill" id="gen-progress-fill"></div>
+                </div>
+                <p id="gen-status" style="font-size:0.78rem;color:var(--muted);text-align:center;margin-top:0.6rem;display:none;"></p>
+            </div>
+        </div>
+
+        <!-- FINGERPRINT + TIPS -->
+        <div>
+            <div class="panel" style="margin-bottom:1rem;">
+                <div class="panel-header"><div><div class="panel-eyebrow">Detected Structure</div><div class="panel-title">Pattern Fingerprint</div></div></div>
+                <div class="panel-body">
+                    <div id="fingerprint-area">
+                        <div class="empty-state" style="padding:2rem 1rem;">
+                            <div class="empty-state-icon"><i class="fas fa-fingerprint"></i></div>
+                            <h4>No papers analysed yet</h4>
+                            <p>The detected exam structure will appear here after generation.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="panel">
+                <div class="panel-header"><div><div class="panel-eyebrow">How it works</div><div class="panel-title">AI Process</div></div></div>
+                <div class="panel-body">
+                    <div style="display:flex;flex-direction:column;gap:0.85rem;">
+                        <div style="display:flex;gap:0.75rem;align-items:flex-start;">
+                            <div style="width:28px;height:28px;border-radius:8px;background:rgba(59,107,255,0.15);color:var(--blue2);display:flex;align-items:center;justify-content:center;font-size:0.8rem;flex-shrink:0;font-weight:700">1</div>
+                            <div><div style="font-size:0.85rem;font-weight:600;color:var(--ink);margin-bottom:0.15rem">Extract & Read</div><div style="font-size:0.78rem;color:var(--muted)">Reads all uploaded PDFs and extracts text content</div></div>
+                        </div>
+                        <div style="display:flex;gap:0.75rem;align-items:flex-start;">
+                            <div style="width:28px;height:28px;border-radius:8px;background:rgba(255,79,48,0.15);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:0.8rem;flex-shrink:0;font-weight:700">2</div>
+                            <div><div style="font-size:0.85rem;font-weight:600;color:var(--ink);margin-bottom:0.15rem">Fingerprint Structure</div><div style="font-size:0.78rem;color:var(--muted)">Identifies format, question styles, topics, difficulty & option patterns</div></div>
+                        </div>
+                        <div style="display:flex;gap:0.75rem;align-items:flex-start;">
+                            <div style="width:28px;height:28px;border-radius:8px;background:rgba(0,201,141,0.15);color:var(--green);display:flex;align-items:center;justify-content:center;font-size:0.8rem;flex-shrink:0;font-weight:700">3</div>
+                            <div><div style="font-size:0.85rem;font-weight:600;color:var(--ink);margin-bottom:0.15rem">Generate & Mirror</div><div style="font-size:0.78rem;color:var(--muted)">Creates brand-new questions in the exact same structural style</div></div>
+                        </div>
+                        <div style="display:flex;gap:0.75rem;align-items:flex-start;">
+                            <div style="width:28px;height:28px;border-radius:8px;background:rgba(245,200,66,0.15);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:0.8rem;flex-shrink:0;font-weight:700">4</div>
+                            <div><div style="font-size:0.85rem;font-weight:600;color:var(--ink);margin-bottom:0.15rem">Download</div><div style="font-size:0.78rem;color:var(--muted)">Print or save as PDF directly from your browser</div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PAPER OUTPUT -->
+    <div id="paper-output" class="reveal">
+
+        <!-- Actions bar -->
+        <div class="actions-bar no-print">
+            <div class="actions-bar-left">
+                <div style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;color:var(--ink)">
+                    <span id="output-q-count">0</span> Questions Generated
+                </div>
+                <button class="toggle-answers-btn" id="toggle-answers-btn" onclick="toggleAnswers()">
+                    <i class="fas fa-eye-slash"></i> <span id="toggle-answers-text">Show Answers</span>
+                </button>
+            </div>
+            <div style="display:flex;gap:0.6rem;flex-wrap:wrap;">
+                <button class="btn btn-ghost btn-sm" onclick="generateSimilar()">
+                    <i class="fas fa-rotate-right"></i> Regenerate
+                </button>
+                <button class="btn btn-green btn-sm" onclick="downloadPaper()">
+                    <i class="fas fa-download"></i> Download PDF
+                </button>
+                <button class="btn btn-accent btn-sm" onclick="printPaper()">
+                    <i class="fas fa-print"></i> Print
+                </button>
+            </div>
+        </div>
+
+        <!-- Paper content (printed) -->
+        <div id="paper-content"></div>
+
+    </div>
+
+</div><!-- /main -->
+</div><!-- /page-wrap -->
+
+<script>
+// ── Theme ──────────────────────────────────────────────────────
+let isDark = true;
+function toggleTheme(){
+    isDark=!isDark;
+    document.documentElement.setAttribute('data-theme',isDark?'dark':'light');
+    document.getElementById('theme-icon').className=isDark?'fas fa-moon':'fas fa-sun';
+    localStorage.setItem('theme',isDark?'dark':'light');
+    fetch('/toggle_mode',{method:'POST'});
+}
+(function(){
+    const s=localStorage.getItem('theme')||'dark';
+    isDark=s==='dark';
+    document.documentElement.setAttribute('data-theme',s);
+    document.getElementById('theme-icon').className=isDark?'fas fa-moon':'fas fa-sun';
+})();
+
+const revealObserver=new IntersectionObserver(entries=>{
+    entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');revealObserver.unobserve(e.target);}});
+},{threshold:0.08});
+document.querySelectorAll('.reveal').forEach(el=>revealObserver.observe(el));
+
+// ── PDF slots ──────────────────────────────────────────────────
+const MAX_SLOTS = 4;
+let slotFiles   = [null, null, null, null]; // File | null per slot
+
+function initSlots(){
+    const container = document.getElementById('pdf-slots');
+    container.innerHTML = '';
+    for(let i=0;i<MAX_SLOTS;i++){
+        const slot = document.createElement('div');
+        slot.className   = 'pdf-slot';
+        slot.id          = `slot-${i}`;
+        slot.onclick     = () => triggerSlotPicker(i);
+        slot.ondragover  = e => { e.preventDefault(); slot.classList.add('dragover'); };
+        slot.ondragleave = () => slot.classList.remove('dragover');
+        slot.ondrop      = e => { e.preventDefault(); slot.classList.remove('dragover'); handleDrop(i, e); };
+        slot.innerHTML   = `
+            <span class="pdf-slot-num">PDF ${i+1}</span>
+            <button class="pdf-slot-remove" title="Remove" onclick="removeSlot(event,${i})"><i class="fas fa-xmark"></i></button>
+            <div class="pdf-slot-icon"><i class="fas fa-file-pdf"></i></div>
+            <div class="pdf-slot-label">${i===0?'Required':'Optional'}</div>`;
+        container.appendChild(slot);
+        // Hidden input
+        const inp = document.createElement('input');
+        inp.type   = 'file';
+        inp.accept = '.pdf';
+        inp.id     = `file-input-${i}`;
+        inp.style.display='none';
+        inp.onchange = () => setSlotFile(i, inp.files[0]);
+        document.body.appendChild(inp);
+    }
+}
+function triggerSlotPicker(i){ document.getElementById(`file-input-${i}`).click(); }
+function handleDrop(i, e){
+    const f = e.dataTransfer.files[0];
+    if(f && f.name.toLowerCase().endsWith('.pdf')) setSlotFile(i, f);
+    else alert('Please drop a PDF file.');
+}
+function setSlotFile(i, file){
+    if(!file) return;
+    if(file.size > 15*1024*1024){ alert('File too large. Max 15MB per PDF.'); return; }
+    slotFiles[i] = file;
+    renderSlot(i);
+}
+function removeSlot(e, i){
+    e.stopPropagation();
+    slotFiles[i] = null;
+    document.getElementById(`file-input-${i}`).value = '';
+    renderSlot(i);
+}
+function renderSlot(i){
+    const slot  = document.getElementById(`slot-${i}`);
+    const file  = slotFiles[i];
+    const label = slot.querySelector('.pdf-slot-label');
+    const icon  = slot.querySelector('.pdf-slot-icon');
+    if(file){
+        slot.classList.add('filled');
+        icon.innerHTML  = '<i class="fas fa-check-circle"></i>';
+        label.textContent = file.name;
+    } else {
+        slot.classList.remove('filled');
+        icon.innerHTML  = '<i class="fas fa-file-pdf"></i>';
+        label.textContent = i===0?'Required':'Optional';
+    }
+}
+
+function getFilledSlots(){ return slotFiles.filter(f=>f!==null); }
+
+// ── Generate ───────────────────────────────────────────────────
+let papersAnswersVisible = false;
+let lastPaperData        = null;
+
+async function generateSimilar(){
+    const filled = getFilledSlots();
+    if(!filled.length){ alert('Please upload at least one PDF.'); return; }
+
+    const btn = document.getElementById('generate-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analysing…';
+    document.getElementById('gen-progress').style.display='block';
+    document.getElementById('gen-status').style.display='block';
+
+    const statusEl = document.getElementById('gen-status');
+    const stages   = ['📖 Reading PDFs…','🔍 Fingerprinting structure…','✍️ Generating questions…','✅ Finalising paper…'];
+    let si=0;
+    const statusTimer = setInterval(()=>{ statusEl.textContent=stages[Math.min(si++,stages.length-1)]; },1800);
+    animateProgressBar('gen-progress-fill');
+
+    const fd = new FormData();
+    slotFiles.forEach((f,i)=>{ if(f) fd.append(`pdf${i}`, f); });
+    fd.append('question_count', document.getElementById('q-count').value);
+    fd.append('hardness',       document.getElementById('hardness').value);
+    fd.append('subject_title',  document.getElementById('subject-title').value.trim());
+    fd.append('include_answers', document.getElementById('include-answers').checked ? 'true':'false');
+
+    try{
+        const res  = await fetch('/api/generate-similar-questions',{method:'POST',body:fd});
+        const data = await res.json();
+        clearInterval(statusTimer);
+        if(data.success){
+            lastPaperData = data;
+            renderFingerprint(data.fingerprint, data.source_files);
+            renderPaper(data.paper, document.getElementById('include-answers').checked);
+            document.getElementById('paper-output').style.display='block';
+            document.getElementById('output-q-count').textContent = data.question_count;
+            setTimeout(()=>document.getElementById('paper-output').scrollIntoView({behavior:'smooth',block:'start'}),200);
+        } else {
+            alert('❌ '+data.error);
+        }
+    } catch(e){
+        clearInterval(statusTimer);
+        alert('Network error. Please try again.');
+    } finally {
+        btn.disabled=false;
+        btn.innerHTML='<i class="fas fa-wand-magic-sparkles"></i> Analyse & Generate Paper';
+        document.getElementById('gen-progress').style.display='none';
+        document.getElementById('gen-status').style.display='none';
+        document.getElementById('gen-progress-fill').style.width='0%';
+    }
+}
+
+function animateProgressBar(id){
+    const el=document.getElementById(id);
+    if(!el) return;
+    let w=0;
+    const t=setInterval(()=>{ w=Math.min(w+(Math.random()*5),88); el.style.width=w+'%'; if(w>=88) clearInterval(t); },400);
+}
+
+// ── Fingerprint ────────────────────────────────────────────────
+function renderFingerprint(fp, files){
+    const area = document.getElementById('fingerprint-area');
+    const topicsHtml = (fp.main_topics||[]).map(t=>`<span class="fp-tag">${esc(t)}</span>`).join('');
+    const stylesHtml = (fp.question_styles||[]).map(s=>`<span class="fp-tag" style="background:rgba(255,79,48,0.08);border-color:rgba(255,79,48,0.2);color:var(--accent2);">${esc(s)}</span>`).join('');
+    const filesHtml  = files.map(f=>`<span class="fp-tag" style="background:rgba(0,201,141,0.08);border-color:rgba(0,201,141,0.2);color:var(--green);">${esc(f)}</span>`).join('');
+    area.innerHTML=`
+        <div class="fingerprint-card">
+            <div class="fingerprint-title"><i class="fas fa-fingerprint"></i> Structure Fingerprint</div>
+            <div class="fingerprint-grid">
+                <div class="fp-item"><div class="fp-k">Format</div><div class="fp-v">${esc(fp.detected_format||'objective')}</div></div>
+                <div class="fp-item"><div class="fp-k">Difficulty</div><div class="fp-v">${esc(fp.difficulty_level||'medium')}</div></div>
+                <div class="fp-item"><div class="fp-k">Question Length</div><div class="fp-v">${esc(fp.avg_question_length||'medium')}</div></div>
+                <div class="fp-item"><div class="fp-k">Option Style</div><div class="fp-v">${esc(fp.option_style||'A B C D')}</div></div>
+                <div class="fp-item" style="grid-column:1/-1"><div class="fp-k" style="margin-bottom:0.35rem">Topics Detected</div><div class="fp-topics">${topicsHtml}</div></div>
+                <div class="fp-item" style="grid-column:1/-1"><div class="fp-k" style="margin-bottom:0.35rem">Question Styles</div><div class="fp-topics">${stylesHtml}</div></div>
+                <div class="fp-item" style="grid-column:1/-1"><div class="fp-k" style="margin-bottom:0.35rem">Source Files</div><div class="fp-topics">${filesHtml}</div></div>
+            </div>
+        </div>`;
+}
+
+// ── Paper render ───────────────────────────────────────────────
+function renderPaper(paper, showAnswers){
+    papersAnswersVisible = showAnswers;
+    const container = document.getElementById('paper-content');
+    const qs        = paper.questions || [];
+    const isTheory  = paper.format === 'theory';
+    const total     = qs.reduce((s,q)=>s+(q.marks||1),0);
+
+    const headerHtml = `
+        <div class="paper-header-card">
+            <div class="paper-title">${esc(paper.paper_title||'Generated Exam Paper')}</div>
+            <div class="paper-meta">
+                <span><i class="fas fa-book"></i> ${esc(paper.subject||'')}</span>
+                <span><i class="fas fa-list-ol"></i> ${qs.length} Questions</span>
+                <span><i class="fas fa-star"></i> ${total} Marks</span>
+                <span><i class="fas fa-signal"></i> ${esc(paper.difficulty||'')}</span>
+            </div>
+            ${paper.instructions?`<div class="paper-instructions"><strong>Instructions:</strong> ${esc(paper.instructions)}</div>`:''}
+        </div>`;
+
+    const questionsHtml = qs.map((q,idx)=>{
+        const num   = q.number || (idx+1);
+        const topic = q.topic ? `<span class="q-topic-badge">${esc(q.topic)}</span>` : '';
+        const marks = `<span class="marks-badge">${q.marks||1} mark${(q.marks||1)!==1?'s':''}</span>`;
+
+        if(isTheory){
+            return `
+                <div class="q-card">
+                    <div class="q-num">
+                        <span>Question ${num}</span>
+                        <div style="display:flex;gap:0.35rem;">${topic}${marks}</div>
+                    </div>
+                    <div class="q-text">${esc(q.question)}</div>
+                    ${showAnswers&&q.model_answer?`
+                    <div style="font-size:0.75rem;font-weight:600;color:var(--green);margin-bottom:0.35rem;"><i class="fas fa-check-circle"></i> Model Answer</div>
+                    <div class="q-answer-box show">${esc(q.model_answer)}</div>`:''}
+                </div>`;
+        } else {
+            const opts = (q.options||[]).map(o=>{
+                const letter = o.charAt(0);
+                const isAns  = showAnswers && letter === (q.answer||'').trim();
+                return `<div class="q-opt${isAns?' correct':''}">${esc(o)}${isAns?' <i class="fas fa-check" style="float:right;margin-top:2px;"></i>':''}</div>`;
+            }).join('');
+            const expHtml = showAnswers&&q.explanation?`
+                <div class="q-explanation show">
+                    <strong><i class="fas fa-lightbulb" style="color:var(--gold);"></i> Explanation:</strong> ${esc(q.explanation)}
+                </div>`:'';
+            return `
+                <div class="q-card">
+                    <div class="q-num">
+                        <span>Question ${num}</span>
+                        <div style="display:flex;gap:0.35rem;">${topic}${marks}</div>
+                    </div>
+                    <div class="q-text">${esc(q.question)}</div>
+                    <div class="q-options">${opts}</div>
+                    ${expHtml}
+                </div>`;
+        }
+    }).join('');
+
+    container.innerHTML = headerHtml + questionsHtml;
+    updateToggleBtn();
+}
+
+function toggleAnswers(){
+    if(!lastPaperData) return;
+    papersAnswersVisible = !papersAnswersVisible;
+    renderPaper(lastPaperData.paper, papersAnswersVisible);
+    updateToggleBtn();
+}
+function updateToggleBtn(){
+    const btn  = document.getElementById('toggle-answers-btn');
+    const text = document.getElementById('toggle-answers-text');
+    if(papersAnswersVisible){
+        btn.classList.add('active');
+        btn.querySelector('i').className='fas fa-eye-slash';
+        text.textContent='Hide Answers';
+    } else {
+        btn.classList.remove('active');
+        btn.querySelector('i').className='fas fa-eye';
+        text.textContent='Show Answers';
+    }
+}
+
+function printPaper(){ window.print(); }
+
+function downloadPaper(){
+    // Show answers before print/save, then restore
+    const wasVisible = papersAnswersVisible;
+    if(!wasVisible){ papersAnswersVisible=true; renderPaper(lastPaperData.paper,true); }
+    setTimeout(()=>{
+        window.print();
+        if(!wasVisible){ papersAnswersVisible=false; renderPaper(lastPaperData.paper,false); }
+    },300);
+}
+
+function esc(str){
+    if(str===null||str===undefined) return '';
+    return String(str)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/\n/g,'<br>');
+}
+
+// ── Init ───────────────────────────────────────────────────────
+initSlots();
+</script>
+</body>
+</html>
