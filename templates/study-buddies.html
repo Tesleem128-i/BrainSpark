@@ -905,6 +905,24 @@ let gcMediaRecorder = null, gcAudioChunks = [], gcRecTimer = null, gcRecSeconds 
 let bsCurrentSessionId = null, bsCurrentGroupId = null, bsDocSaveTimer = null;
 let bsCurrentTeacherId = null, bsCurrentUserId = null;
 
+// Whiteboard state
+let wbCtx = null, wbDrawing = false, wbColor = '#ff4f30', wbSize = 4, wbTool = 'pen', wbHistory = [], wbTextInput = null;
+
+// Live voice broadcast state
+let liveVoiceRecorder = null, liveVoiceChunks = [], liveVoiceBroadcasting = false;
+
+// Hand raise state
+let myHandRaiseId = null, myHandStatus = null;
+
+// Polling intervals
+let _wbSyncTimer = null, _wbPollInterval = null, _handPollInterval = null, _teacherHandPollInterval = null;
+
+// Teacher voice intro state
+let tvMediaRecorder = null, tvAudioChunks = [], tvRecTimer = null, tvRecSeconds = 0, tvRecording = false, tvAudioBlob = null;
+
+// Notification state
+let notifOpen = false;
+
 // ═══════════════════════════════════════════════════════════════════════════
 //  THEME
 // ═══════════════════════════════════════════════════════════════════════════
@@ -930,7 +948,7 @@ function autoResizeTA(el) { el.style.height = 'auto'; el.style.height = Math.min
 function showToast(msg, type='info') {
     const t = document.createElement('div');
     const colors = {info:'var(--blue)',success:'var(--green)',error:'var(--accent)',warn:'var(--gold)'};
-    t.style.cssText = `position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 20px;background:${colors[type]||colors.info};color:#fff;border-radius:12px;font-weight:600;font-size:.875rem;font-family:'DM Sans',sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.3);animation:fadeInUp .3s ease;max-width:320px;`;
+    t.style.cssText = `position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 20px;background:${colors[type]||colors.info};color:#fff;border-radius:12px;font-weight:600;font-size:.875rem;font-family:'DM Sans',sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.3);max-width:320px;`;
     t.textContent = msg;
     document.body.appendChild(t);
     setTimeout(() => t.remove(), 3000);
@@ -944,6 +962,17 @@ function formatDateSep(iso) {
     return d.toLocaleDateString([], {weekday:'long',month:'long',day:'numeric'});
 }
 function scrollToBottom(id='chat-messages') { const el = document.getElementById(id); if (el) el.scrollTop = el.scrollHeight; }
+function hexToRgba(hex, alpha) {
+    hex = hex.replace('#','');
+    const r=parseInt(hex.slice(0,2),16), g=parseInt(hex.slice(2,4),16), b=parseInt(hex.slice(4,6),16);
+    return `rgba(${r},${g},${b},${alpha})`;
+}
+function stringToColor(str) {
+    let h=0; for(let i=0;i<str.length;i++) h=str.charCodeAt(i)+((h<<5)-h);
+    const colors=['#ff6244','#7ba4ff','#00c98d','#f5c842','#a855f7','#f97316'];
+    return colors[Math.abs(h)%colors.length];
+}
+function logout(){ if(confirm('Logout?')) fetch('/logout',{method:'POST'}).then(()=>location.href='/'); }
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  TABS
@@ -1157,14 +1186,11 @@ async function sendMessage() {
     const container = document.getElementById('chat-messages');
     const emptyState = container.querySelector('.empty-state');
     if (emptyState) emptyState.remove();
-    // Optimistic
     const tempMsg = {id:'tmp-'+Date.now(),sender_id:'me',content,created_at:new Date().toISOString(),is_read:false,reply_to_content:waReplyTo?.content,reply_to_sender:waReplyTo?.sender};
     container.appendChild(buildDMBubble(tempMsg,-1));
     scrollToBottom('chat-messages');
     input.value=''; autoResizeTA(input); cancelReply();
-    try {
-        await fetch('/api/send-message', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({receiver_id:waCurrentUserId,content})});
-    } catch {}
+    try { await fetch('/api/send-message', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({receiver_id:waCurrentUserId,content})}); } catch {}
     clearWAImage();
 }
 
@@ -1193,7 +1219,7 @@ function showDMCtxMenu(e, msgId, idx, contentEnc, isSent) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  EMOJI PICKER (generic)
+//  EMOJI PICKER
 // ═══════════════════════════════════════════════════════════════════════════
 function toggleEmojiPicker(panelId, inputId) {
     const panel = document.getElementById(panelId);
@@ -1324,14 +1350,11 @@ async function selectGCGroup(groupId, groupName, isAdmin, creatorId, desc, eleme
     const initials = groupName.charAt(0).toUpperCase();
     document.getElementById('gc-header-avatar').textContent = initials;
     document.getElementById('gc-header-name').textContent = groupName;
-    // Update info panel
     document.getElementById('gc-info-avatar').textContent = initials;
     document.getElementById('gc-info-name').textContent = groupName;
     document.getElementById('gc-info-desc').textContent = desc;
     document.getElementById('gc-admin-actions').style.display = isAdmin ? '' : 'none';
-    // Load members
     await loadGCMembers(groupId);
-    // Load messages
     await loadGCMessages(groupId);
 }
 
@@ -1395,15 +1418,9 @@ function renderGCMessage(container, msg, currentUserId) {
     const row = document.createElement('div');
     row.className = `gc-msg-row ${isSent?'sent':'received'}`;
     row.dataset.msgId = msg.id;
-
-    // Avatar
     const avatarHtml = `<img src="${msg.sender_pic||'/static/image/KNOWITNOW.png'}" class="gc-msg-avatar" title="${escHtml(msg.sender_name||'')}">`;
-
-    // Reply block
     let replyHtml = '';
     if (msg.reply_to) replyHtml = `<div class="gc-reply-preview ${isSent?'':'received'}"><div class="rp-name">${escHtml(msg.reply_to.sender_name||'')}</div><div class="rp-text">${escHtml(msg.reply_to.content||'')}</div></div>`;
-
-    // Content
     let contentHtml = '';
     const isDeleted = msg.is_deleted;
     if (isDeleted) {
@@ -1411,60 +1428,30 @@ function renderGCMessage(container, msg, currentUserId) {
     } else if (msg.message_type==='image' && msg.image_url) {
         const imgSrc = '/' + msg.image_url.replace(/^\/+/, '');
         const safeImgSrc = imgSrc.replace(/'/g, '%27');
-        contentHtml = `<div style="cursor:pointer;" onclick="openLightbox('${safeImgSrc}')">
-            <img src="${imgSrc}" alt="Image"
-                 style="max-width:220px;max-height:200px;border-radius:10px;object-fit:cover;display:block;margin-bottom:4px;"
-                 onerror="this.outerHTML='<div style=padding:8px;background:rgba(255,79,48,.1);border-radius:8px;font-size:.8rem;color:var(--accent)>Image unavailable</div>'">
-        </div>`;
+        contentHtml = `<div style="cursor:pointer;" onclick="openLightbox('${safeImgSrc}')"><img src="${imgSrc}" alt="Image" style="max-width:220px;max-height:200px;border-radius:10px;object-fit:cover;display:block;margin-bottom:4px;" onerror="this.outerHTML='<div style=padding:8px;background:rgba(255,79,48,.1);border-radius:8px;font-size:.8rem;color:var(--accent)>Image unavailable</div>'"></div>`;
         if (msg.content && msg.content !== '📷 Image') contentHtml += `<div style="margin-top:4px;">${escHtml(msg.content)}</div>`;
-
     } else if (msg.message_type==='pdf' && msg.pdf_url) {
         const pdfSrc = '/' + msg.pdf_url.replace(/^\/+/, '');
-        contentHtml = `<a href="${pdfSrc}" target="_blank" rel="noopener"
-            style="display:flex;align-items:center;gap:10px;padding:10px 14px;
-                   background:rgba(249,115,22,0.12);border:1px solid rgba(249,115,22,.3);
-                   border-radius:12px;text-decoration:none;color:inherit;margin-bottom:4px;">
-            <i class="fas fa-file-pdf" style="font-size:1.4rem;color:#f97316;flex-shrink:0;"></i>
-            <div>
-                <div style="font-weight:600;font-size:.875rem;">${escHtml(msg.content||'Shared PDF')}</div>
-                <div style="font-size:.73rem;opacity:.65;">Tap to open PDF</div>
-            </div>
-            <i class="fas fa-external-link-alt" style="margin-left:auto;opacity:.5;font-size:.8rem;"></i>
-        </a>`;
-
+        contentHtml = `<a href="${pdfSrc}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(249,115,22,0.12);border:1px solid rgba(249,115,22,.3);border-radius:12px;text-decoration:none;color:inherit;margin-bottom:4px;"><i class="fas fa-file-pdf" style="font-size:1.4rem;color:#f97316;flex-shrink:0;"></i><div><div style="font-weight:600;font-size:.875rem;">${escHtml(msg.content||'Shared PDF')}</div><div style="font-size:.73rem;opacity:.65;">Tap to open PDF</div></div><i class="fas fa-external-link-alt" style="margin-left:auto;opacity:.5;font-size:.8rem;"></i></a>`;
     } else if (msg.message_type==='voice' && msg.voice_url) {
         const voiceSrc = '/' + msg.voice_url.replace(/^\/+/, '');
-        contentHtml = `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;min-width:200px;">
-            <i class="fas fa-microphone-alt" style="color:var(--green);flex-shrink:0;"></i>
-            <audio controls src="${voiceSrc}" preload="none"
-                   style="flex:1;height:32px;min-width:160px;max-width:220px;"
-                   onerror="this.outerHTML='<span style=font-size:.8rem;color:var(--muted)>Voice unavailable</span>'">
-            </audio>
-        </div>`;
+        contentHtml = `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;min-width:200px;"><i class="fas fa-microphone-alt" style="color:var(--green);flex-shrink:0;"></i><audio controls src="${voiceSrc}" preload="none" style="flex:1;height:32px;min-width:160px;max-width:220px;" onerror="this.outerHTML='<span style=font-size:.8rem;color:var(--muted)>Voice unavailable</span>'"></audio></div>`;
     } else if (msg.message_type==='poll' && msg.poll) {
         const poll=msg.poll; const total=poll.total_votes||0;
-        contentHtml = `<div style="min-width:220px;"><div style="font-size:.7rem;font-weight:700;color:var(--blue2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">📊 POLL</div>
-            <div style="font-weight:600;font-size:.875rem;margin-bottom:10px;">${escHtml(poll.question)}</div>
-            ${poll.options.map(opt=>{const pct=total>0?Math.round((opt.votes/total)*100):0;return`<button onclick="votePoll(${poll.id},${opt.id})" class="poll-opt ${opt.has_voted?'voted':''}" style="margin-bottom:6px;"><div style="display:flex;justify-content:space-between;"><span>${escHtml(opt.text)}</span><span style="font-size:.72rem;opacity:.7;">${opt.votes} (${pct}%)</span></div><div class="poll-bar"><div class="poll-bar-fill" style="width:${pct}%;"></div></div></button>`;}).join('')}
-            <div style="font-size:.72rem;opacity:.6;margin-top:4px;">${total} votes</div></div>`;
+        contentHtml = `<div style="min-width:220px;"><div style="font-size:.7rem;font-weight:700;color:var(--blue2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">📊 POLL</div><div style="font-weight:600;font-size:.875rem;margin-bottom:10px;">${escHtml(poll.question)}</div>${poll.options.map(opt=>{const pct=total>0?Math.round((opt.votes/total)*100):0;return`<button onclick="votePoll(${poll.id},${opt.id})" class="poll-opt ${opt.has_voted?'voted':''}" style="margin-bottom:6px;"><div style="display:flex;justify-content:space-between;"><span>${escHtml(opt.text)}</span><span style="font-size:.72rem;opacity:.7;">${opt.votes} (${pct}%)</span></div><div class="poll-bar"><div class="poll-bar-fill" style="width:${pct}%;"></div></div></button>`;}).join('')}<div style="font-size:.72rem;opacity:.6;margin-top:4px;">${total} votes</div></div>`;
     } else if (msg.message_type==='ai') {
         contentHtml = `<div><div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;"><span style="font-size:.72rem;font-weight:700;background:rgba(168,85,247,.2);color:var(--spark);padding:2px 8px;border-radius:99px;letter-spacing:.06em;">⚡ SPARKAI</span></div><div>${escHtml(msg.content||'').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>')}</div></div>`;
     } else {
-        // Highlight @mentions
         let c = escHtml(msg.content||'');
         c = c.replace(/@(\w+)/g,'<span style="color:var(--spark);font-weight:700;">@$1</span>');
         contentHtml = `<div>${c}</div>`;
     }
-
-    // Reactions
     let reactHtml = '';
     if (msg.reactions && Object.keys(msg.reactions).length) {
         reactHtml = `<div class="gc-reactions-row">${Object.entries(msg.reactions).map(([emoji,users])=>`<span class="gc-react-pill" onclick="addGCReaction(${msg.id},'${emoji}')">${emoji} ${users.length}</span>`).join('')}</div>`;
     }
-
     const isEdited = msg.is_edited ? '<span style="font-size:.65rem;opacity:.5;margin-left:4px;">edited</span>' : '';
-    const bubbleClass = msg.message_type==='ai' ? 'gc-bubble ai-bubble' : `gc-bubble`;
-
+    const bubbleClass = msg.message_type==='ai' ? 'gc-bubble ai-bubble' : 'gc-bubble';
     row.innerHTML = `
         ${!isSent ? avatarHtml : ''}
         <div>
@@ -1476,23 +1463,14 @@ function renderGCMessage(container, msg, currentUserId) {
             ${reactHtml}
         </div>
         ${isSent ? avatarHtml : ''}`;
-
-    // Double-click to reply
     if (!isDeleted) row.querySelector('.'+bubbleClass.split(' ')[0])?.addEventListener('dblclick',()=>setGCReply(msg.id,isSent?'You':msg.sender_name||'',msg.content||''));
     container.appendChild(row);
 }
 
-function stringToColor(str) {
-    let h=0; for(let i=0;i<str.length;i++) h=str.charCodeAt(i)+((h<<5)-h);
-    const colors=['#ff6244','#7ba4ff','#00c98d','#f5c842','#a855f7','#f97316'];
-    return colors[Math.abs(h)%colors.length];
-}
-
-// ── GC Reply ────────────────────────────────────────────
 function setGCReply(id,sender,content) { gcReplyTo={id,sender,content}; document.getElementById('gc-reply-sender').textContent=sender; document.getElementById('gc-reply-content').textContent=content; document.getElementById('gc-reply-bar').style.display=''; document.getElementById('gc-msg-input').focus(); }
 function cancelGCReply() { gcReplyTo=null; document.getElementById('gc-reply-bar').style.display='none'; }
+function handleGCScroll(el){const fab=document.getElementById('gc-scroll-fab');if(fab)fab.style.display=(el.scrollHeight-el.scrollTop-el.clientHeight<80)?'none':'';}
 
-// ── GC Context Menu ─────────────────────────────────────
 let _gcCtxMenu = null;
 function showGCCtxMenu(e, msgId, contentEnc, isSent, isDeleted) {
     e.preventDefault();
@@ -1505,8 +1483,8 @@ function showGCCtxMenu(e, msgId, contentEnc, isSent, isDeleted) {
         actions.push({icon:'fa-reply',label:'Reply',fn:()=>setGCReply(msgId,isSent?'You':'them',content)});
         actions.push({icon:'fa-copy',label:'Copy',fn:()=>navigator.clipboard?.writeText(content)});
         actions.push({icon:'fa-smile',label:'React',fn:()=>showGCReactPicker(msgId,e.clientX,e.clientY)});
-        if (isSent) { actions.push({icon:'fa-edit',label:'Edit',fn:()=>editGCMessage(msgId,content)}); }
-        if (isSent || gcCurrentGroupIsAdmin) { actions.push({icon:'fa-trash',label:'Delete',danger:true,fn:()=>deleteGCMessage(msgId)}); }
+        if (isSent) actions.push({icon:'fa-edit',label:'Edit',fn:()=>editGCMessage(msgId,content)});
+        if (isSent || gcCurrentGroupIsAdmin) actions.push({icon:'fa-trash',label:'Delete',danger:true,fn:()=>deleteGCMessage(msgId)});
     }
     actions.forEach(a=>{const d=document.createElement('div');d.className='wa-ctx-item'+(a.danger?' danger':'');d.innerHTML=`<i class="fas ${a.icon}" style="width:14px;"></i> ${a.label}`;d.onclick=()=>{a.fn();_gcCtxMenu?.remove();_gcCtxMenu=null;};_gcCtxMenu.appendChild(d);});
     const x=Math.min(e.clientX,window.innerWidth-180),y=Math.min(e.clientY,window.innerHeight-actions.length*42-20);
@@ -1526,20 +1504,16 @@ function showGCReactPicker(msgId,x,y) {
 async function addGCReaction(msgId, emoji) {
     try { const data=await fetch('/api/react-group-message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message_id:msgId,emoji})}).then(r=>r.json()); if(data.success) loadGCMessages(gcCurrentGroupId); } catch {}
 }
-
 async function editGCMessage(msgId, currentContent) {
     const newContent = prompt('Edit message:', currentContent); if (!newContent || newContent===currentContent) return;
     const data=await fetch('/api/edit-group-message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message_id:msgId,content:newContent})}).then(r=>r.json());
     if (data.success) loadGCMessages(gcCurrentGroupId); else showToast('❌ '+(data.error||'Failed'),'error');
 }
-
 async function deleteGCMessage(msgId) {
     if (!confirm('Delete this message?')) return;
     const data=await fetch('/api/delete-group-message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message_id:msgId})}).then(r=>r.json());
     if (data.success) loadGCMessages(gcCurrentGroupId); else showToast('❌ '+(data.error||'Failed'),'error');
 }
-
-function handleGCScroll(el){const fab=document.getElementById('gc-scroll-fab');if(fab)fab.style.display=(el.scrollHeight-el.scrollTop-el.clientHeight<80)?'none':'';}
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  MENTION SYSTEM (@)
@@ -1560,7 +1534,6 @@ function handleGCInput(el) {
 function showMentionDropdown(q) {
     const dropdown = document.getElementById('gc-mention-dropdown');
     dropdown.innerHTML = '';
-    // SparkAI always first
     const sparkMatches = !q || 'sparkai'.startsWith(q.toLowerCase());
     if (sparkMatches) {
         const item=document.createElement('div');item.className='mention-item spark-ai';
@@ -1568,7 +1541,6 @@ function showMentionDropdown(q) {
         item.onclick=()=>selectMention('SparkAI');
         dropdown.appendChild(item);
     }
-    // Members
     gcMembers.filter(m=>`${m.name} ${m.username}`.toLowerCase().includes(q.toLowerCase())).slice(0,5).forEach(m=>{
         const item=document.createElement('div');item.className='mention-item';
         item.innerHTML=`<img src="${m.profile_pic||'/static/image/KNOWITNOW.png'}" alt=""><div><div class="mi-name">${escHtml(m.name)}</div><div class="mi-handle">@${escHtml(m.username)}</div></div>`;
@@ -1585,7 +1557,6 @@ function selectMention(username) {
     inp.focus();
     hideMentionDropdown();
 }
-
 function hideMentionDropdown() { const d=document.getElementById('gc-mention-dropdown');if(d)d.style.display='none'; }
 
 function handleGCKeydown(e) {
@@ -1606,16 +1577,12 @@ async function sendGCMessage() {
     const input = document.getElementById('gc-msg-input');
     const content = input.value.trim();
     hideMentionDropdown();
-
     if (!content && !gcSelectedFile) return;
-
-    // Extract mentions
     const mentions = [];
     const mentionRegex = /@(\w+)/g;
     let m;
     while ((m=mentionRegex.exec(content||''))!==null) mentions.push(m[1]);
     const sparkAIMentioned = mentions.some(x=>x.toLowerCase()==='sparkai');
-
     try {
         let res;
         if (gcSelectedFile) {
@@ -1630,29 +1597,18 @@ async function sendGCMessage() {
         } else {
             res = await fetch('/api/send-group-message', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_id:gcCurrentGroupId,content,reply_to_id:gcReplyTo?.id||null,mentions})}).then(r=>r.json());
         }
-
         input.value=''; autoResizeTA(input); cancelGCReply(); clearGCFile();
-
         if (res.success) {
             await loadGCMessages(gcCurrentGroupId);
-            // If SparkAI mentioned and there's an AI reply from backend
-            if (sparkAIMentioned && res.brain_ai_reply) {
-                // Message already included in loadGCMessages
-            }
-            // Client-side SparkAI if backend doesn't handle it
-            else if (sparkAIMentioned && !res.brain_ai_reply && content) {
-                await clientSparkAIReply(content);
-            }
+            if (sparkAIMentioned && !res.brain_ai_reply && content) await clientSparkAIReply(content);
         } else showToast('❌ '+(res.error||'Failed'),'error');
     } catch { showToast('❌ Send failed','error'); }
 }
 
 async function clientSparkAIReply(question) {
-    // fallback: call the group AI endpoint and show the response
     try {
         const data = await fetch('/api/ask-ai-group',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question,group_id:gcCurrentGroupId,context:`Study group: ${gcCurrentGroupName}`})}).then(r=>r.json());
         if (data.success) {
-            // Post as a message from admin/bot
             await fetch('/api/send-group-message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_id:gcCurrentGroupId,content:`🤖 **SparkAI:** ${data.explanation}`,message_type:'ai'})});
             await loadGCMessages(gcCurrentGroupId);
         }
@@ -1674,7 +1630,7 @@ function handleGCFileSelect(e, type) {
 function clearGCFile() { gcSelectedFile=null; gcSelectedFileType=null; document.getElementById('gc-file-preview').style.display='none'; document.getElementById('gc-image-input').value=''; document.getElementById('gc-pdf-input').value=''; }
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  VOICE RECORDING
+//  VOICE RECORDING (GROUP CHAT)
 // ═══════════════════════════════════════════════════════════════════════════
 async function toggleVoiceRecording() {
     if (gcMediaRecorder && gcMediaRecorder.state==='recording') { stopAndSendVoice(); return; }
@@ -1686,48 +1642,10 @@ async function toggleVoiceRecording() {
         gcMediaRecorder.start();
         document.getElementById('gc-voice-recorder').style.display = 'flex';
         document.getElementById('gc-voice-btn').style.color = '#e03030';
-        // Build waveform bars
         const wf = document.getElementById('gc-waveform'); wf.innerHTML='';
         for(let i=0;i<20;i++){const b=document.createElement('div');b.className='voice-bar';b.style.animationDelay=(i*0.05)+'s';b.style.animationDuration=(0.3+Math.random()*0.4)+'s';wf.appendChild(b);}
         gcRecTimer = setInterval(()=>{gcRecSeconds++;const m=Math.floor(gcRecSeconds/60),s=gcRecSeconds%60;document.getElementById('gc-rec-time').textContent=`${m}:${s<10?'0':''}${s}`;},1000);
     } catch { showToast('Microphone access denied','error'); }
-}
-async function teacherBroadcastVoice() {
-    // Teacher records a clip; it gets posted to the group chat automatically
-    if (!bsCurrentGroupId) { showToast('No active session','warn'); return; }
-    const btn = document.getElementById('bs-broadcast-btn');
-    if (gcMediaRecorder && gcMediaRecorder.state === 'recording') {
-        // Stop and send
-        clearInterval(gcRecTimer);
-        gcMediaRecorder.stop();
-        gcMediaRecorder.onstop = async () => {
-            const blob = new Blob(gcAudioChunks, {type:'audio/webm'});
-            const fd = new FormData();
-            fd.append('group_id', bsCurrentGroupId);
-            fd.append('message_type', 'voice');
-            fd.append('content', '🎙️ Teacher broadcast');
-            fd.append('voice', blob, 'broadcast.webm');
-            try {
-                await fetch('/api/send-group-message', {method:'POST', body:fd});
-                showToast('📢 Voice broadcast sent to group!', 'success');
-            } catch {}
-            gcMediaRecorder.stream.getTracks().forEach(t=>t.stop());
-            gcMediaRecorder = null;
-        };
-        btn.innerHTML = '<i class="fas fa-microphone"></i> Broadcast Voice';
-        btn.style.background = 'var(--spark)';
-    } else {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({audio:true});
-            gcAudioChunks = [];
-            gcMediaRecorder = new MediaRecorder(stream);
-            gcMediaRecorder.ondataavailable = e => gcAudioChunks.push(e.data);
-            gcMediaRecorder.start();
-            btn.innerHTML = '<i class="fas fa-stop"></i> Stop & Send';
-            btn.style.background = '#e03030';
-            showToast('🔴 Recording... click Stop & Send when done','info');
-        } catch { showToast('Mic access denied','error'); }
-    }
 }
 
 async function stopAndSendVoice() {
@@ -1768,27 +1686,22 @@ function cancelVoiceRecording() {
 // ═══════════════════════════════════════════════════════════════════════════
 function toggleGCInfo() {
     const panel = document.getElementById('gc-info-panel');
-    const isHidden = panel.style.display === 'none' || panel.style.display === '';
-    panel.style.display = isHidden ? 'flex' : 'none';
+    panel.style.display = (panel.style.display === 'none' || panel.style.display === '') ? 'flex' : 'none';
 }
-
 function copyGroupLink() {
     const link = `${window.location.origin}/study-buddies?join=${gcCurrentGroupId}`;
     navigator.clipboard?.writeText(link).then(()=>showToast('🔗 Invite link copied!','success')).catch(()=>prompt('Copy this link:',link));
 }
-
 function showRenameGroupModal() {
     document.getElementById('rename-input').value = gcCurrentGroupName;
     document.getElementById('rename-desc-input').value = document.getElementById('gc-info-desc').textContent || '';
     openModal('rename-modal');
 }
-
 async function renameGroup() {
     const newName = document.getElementById('rename-input').value.trim();
     const newDesc = document.getElementById('rename-desc-input').value.trim();
     if (!newName) { showToast('Group name required','warn'); return; }
     try {
-        // We'll use a custom endpoint or the settings update; if not available, do a direct DB call via existing pattern
         const data = await fetch('/api/rename-group', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_id:gcCurrentGroupId,name:newName,description:newDesc})}).then(r=>r.json());
         if (data.success||data.message) {
             showToast('✅ Group renamed!','success');
@@ -1800,13 +1713,8 @@ async function renameGroup() {
             document.getElementById('gc-header-avatar').textContent=newName.charAt(0).toUpperCase();
             closeModal('rename-modal'); loadMyGroups();
         } else showToast('❌ '+(data.error||'Failed'),'error');
-    } catch {
-        // Fallback: update UI only
-        showToast('⚠️ Rename endpoint not yet available on server — UI updated locally','warn');
-        gcCurrentGroupName=newName; document.getElementById('gc-header-name').textContent=newName; closeModal('rename-modal');
-    }
+    } catch { showToast('⚠️ Rename endpoint not yet available — UI updated locally','warn'); gcCurrentGroupName=newName; document.getElementById('gc-header-name').textContent=newName; closeModal('rename-modal'); }
 }
-
 async function showAddMemberModal() {
     openModal('add-member-modal');
     const list = document.getElementById('add-member-list');
@@ -1822,29 +1730,20 @@ async function showAddMemberModal() {
         list.appendChild(item);
     });
 }
-
 function filterAddMemberList(q) {
-    const items = document.querySelectorAll('#add-member-list .member-item');
-    items.forEach(item => { const text=item.textContent.toLowerCase(); item.style.display=q&&!text.includes(q.toLowerCase())?'none':''; });
+    document.querySelectorAll('#add-member-list .member-item').forEach(item => { item.style.display=q&&!item.textContent.toLowerCase().includes(q.toLowerCase())?'none':''; });
 }
-
 async function addMemberToGroup(userId, name) {
     const data = await fetch('/api/add-member-to-group',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_id:gcCurrentGroupId,user_id:userId})}).then(r=>r.json());
     if (data.success) { showToast(`✅ ${name} added!`,'success'); closeModal('add-member-modal'); loadGCMembers(gcCurrentGroupId); }
     else showToast('❌ '+(data.error||'Failed'),'error');
 }
-
 async function leaveGroupConfirm() {
-    if (!confirm(`Leave "${gcCurrentGroupName}"? You will need to rejoin to access messages.`)) return;
+    if (!confirm(`Leave "${gcCurrentGroupName}"?`)) return;
     const data = await fetch('/api/leave-group',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_id:gcCurrentGroupId})}).then(r=>r.json());
     if (data.success) { showToast('You left the group','info'); gcCurrentGroupId=null; document.getElementById('gc-chat-area').style.display='none'; document.getElementById('gc-no-group').style.display=''; document.getElementById('gc-info-panel').style.display='none'; loadMyGroups(); }
-    else {
-        // Fallback — use remove-member endpoint on self
-        const me = await fetch('/api/get-connections').then(r=>r.json()); // get my id from session
-        showToast('⚠️ Leave endpoint not yet on server. Ask admin to remove you.','warn');
-    }
+    else showToast('❌ '+(data.error||'Failed'),'error');
 }
-
 async function deleteGroupConfirm() {
     if (!confirm(`DELETE "${gcCurrentGroupName}"? This cannot be undone!`)) return;
     if (!confirm('Are you sure? All messages will be lost!')) return;
@@ -1875,9 +1774,6 @@ async function votePoll(pollId,optionId){
 setInterval(async()=>{
     if(!gcCurrentGroupId) return;
     const container=document.getElementById('gc-msgs');
-    const lastMsg=container.querySelector('.gc-msg-row:last-child');
-    const lastId=lastMsg?.dataset.msgId;
-    if(!lastId||lastId.startsWith('tmp')) return;
     try {
         const data=await fetch(`/api/get-group-messages/${gcCurrentGroupId}`).then(r=>r.json());
         if(!data.messages?.length) return;
@@ -1922,14 +1818,10 @@ async function rejectJoinRequest(id){if(!confirm('Reject?'))return;const data=aw
 // ═══════════════════════════════════════════════════════════════════════════
 //  NOTIFICATIONS
 // ═══════════════════════════════════════════════════════════════════════════
-let notifOpen=false;
 function toggleNotificationPanel(){const p=document.getElementById('notification-panel');notifOpen=!notifOpen;p.style.display=notifOpen?'':'none';if(notifOpen)loadNotifications();}
 document.addEventListener('click',e=>{const w=document.getElementById('notification-wrapper');if(w&&!w.contains(e.target)&&notifOpen){document.getElementById('notification-panel').style.display='none';notifOpen=false;}});
-
-async function markAllNotifRead(){
-    await fetch('/api/mark-notifications-read',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({all:true})});
-    loadNotifications();
-}
+async function markAllNotifRead(){ await fetch('/api/mark-notifications-read',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({all:true})}); loadNotifications(); }
+async function markNotifRead(id){try{await fetch('/api/mark-notifications-read',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids:[id]})});}catch{}}
 
 async function loadNotifications(){
     try {
@@ -1946,39 +1838,11 @@ async function loadNotifications(){
             item.style.cssText='padding:10px;border-bottom:1px solid var(--border);cursor:pointer;border-radius:8px;transition:background .15s;';
             item.onmouseover=()=>item.style.background='var(--surface2)';
             item.onmouseout=()=>item.style.background='';
-            // Route click by type
             item.onclick=()=>{
                 markNotifRead(n.id);
                 if(n.link_type==='dm'||n.type==='message'){document.getElementById('notification-panel').style.display='none';notifOpen=false;document.querySelector('[data-tab="messages"]').click();if(n.link_id)setTimeout(()=>openDMChat(n.link_id),300);}
                 else if(n.link_type==='group'||n.type==='group_message'){document.getElementById('notification-panel').style.display='none';notifOpen=false;document.querySelector('[data-tab="my-groups"]').click();}
-                else if (n.link_type === 'brainstorm') {
-    document.getElementById('notification-panel').style.display = 'none';
-    notifOpen = false;
-    markNotifRead(n.id);
-    document.querySelector('[data-tab="brainstorm"]').click();
-    if (n.link_id) {
-        setTimeout(async () => {
-            try {
-                const data = await fetch('/api/join-brainstorm-session', {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({session_id: n.link_id})
-                }).then(r => r.json());
-                if (data.success && data.session) {
-                    bsCurrentSessionId = data.session.id;
-                    bsCurrentGroupId = data.session.group_id;
-                    bsCurrentTeacherId = data.session.teacher_id || null;
-                    showToast('🧠 Joined brainstorm session!', 'success');
-                    await showLiveArea(data.session.title, data.session.group_id);
-                    setTimeout(initWhiteboard, 400);
-                    loadSessionNotes(data.session.id);
-                    loadRecentSessions();
-                } else {
-                    showToast('❌ ' + (data.error || 'Could not join session'), 'error');
-                }
-            } catch { showToast('Connection error joining session', 'error'); }
-        }, 700);
-    }
-}
+                else if(n.link_type==='brainstorm'){document.getElementById('notification-panel').style.display='none';notifOpen=false;document.querySelector('[data-tab="brainstorm"]').click();if(n.link_id)setTimeout(()=>joinBrainstormFromNotif(n.link_id,null),700);}
             };
             const icons={message:'💬',group_message:'👥',connection:'🤝',join_request:'🔔',join_approved:'✅',join_rejected:'❌',mention:'@',reaction:'😊',brainstorm_scheduled:'📅',brainstorm_starting:'🧠',brainai_mention:'⚡'};
             const icon=icons[n.type||n.notif_type]||'🔔';
@@ -1988,8 +1852,8 @@ async function loadNotifications(){
                     <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.8rem;color:var(--ink);margin-bottom:2px;">${escHtml(n.title||n.notif_type||'Notification')}</div>
                     <div style="font-size:.78rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(n.body||n.content||'')}</div>
                     <div style="font-size:.7rem;color:var(--muted);margin-top:3px;">${n.created_at?new Date(n.created_at).toLocaleString():''}</div>
-                    ${n.type==='join_request'||n.notif_type==='join_request' ? `<div style="display:flex;gap:6px;margin-top:6px;"><button onclick="event.stopPropagation();acceptJoinRequest(${n.link_id})" class="btn btn-green btn-sm"><i class="fas fa-check"></i> Accept</button><button onclick="event.stopPropagation();rejectJoinRequest(${n.link_id})" class="btn btn-red btn-sm"><i class="fas fa-times"></i> Reject</button></div>` : ''}
-            ${(n.notif_type==='brainstorm_scheduled'||n.notif_type==='brainstorm_starting') && n.link_id ? `<div style="margin-top:6px;"><button onclick="event.stopPropagation();joinBrainstormFromNotif(${n.link_id},this)" class="btn btn-blue btn-sm" style="border-radius:50px;"><i class="fas fa-brain"></i> Join Session</button></div>` : ''}
+                    ${n.type==='join_request'||n.notif_type==='join_request'?`<div style="display:flex;gap:6px;margin-top:6px;"><button onclick="event.stopPropagation();acceptJoinRequest(${n.link_id})" class="btn btn-green btn-sm"><i class="fas fa-check"></i> Accept</button><button onclick="event.stopPropagation();rejectJoinRequest(${n.link_id})" class="btn btn-red btn-sm"><i class="fas fa-times"></i> Reject</button></div>`:''}
+                    ${(n.notif_type==='brainstorm_scheduled'||n.notif_type==='brainstorm_starting')&&n.link_id?`<div style="margin-top:6px;"><button onclick="event.stopPropagation();joinBrainstormFromNotif(${n.link_id},this)" class="btn btn-blue btn-sm" style="border-radius:50px;"><i class="fas fa-brain"></i> Join Session</button></div>`:''}
                 </div>
             </div>`;
             list.appendChild(item);
@@ -1997,10 +1861,8 @@ async function loadNotifications(){
     } catch {}
 }
 
-async function markNotifRead(id){try{await fetch('/api/mark-notifications-read',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids:[id]})});}catch{}}
-
 // ═══════════════════════════════════════════════════════════════════════════
-//  BRAINSTORM
+//  BRAINSTORM — SCHEDULE & GROUPS
 // ═══════════════════════════════════════════════════════════════════════════
 async function loadBSGroups() {
     const sel = document.getElementById('bs-group');
@@ -2026,122 +1888,519 @@ async function scheduleBSSession() {
     if(!groupId){showToast('Please select a group','warn');return;}
     const btn=event.target;const orig=btn.innerHTML;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';btn.disabled=true;
     try {
-        const data=await fetch('/api/schedule-brainstorm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_id:groupId,title,description:desc,scheduled_time:time,teacher_id:document.getElementById('bs-teacher-select')?.value||null})}).then(r=>r.json());
+        const data=await fetch('/api/schedule-brainstorm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_id:groupId,title,description:desc,scheduled_time:time})}).then(r=>r.json());
         if(data.success){showToast('📅 Session scheduled! Members notified.','success');['bs-title','bs-time','bs-desc'].forEach(id=>document.getElementById(id).value='');loadRecentSessions();}
         else showToast('❌ '+(data.error||'Failed'),'error');
     } catch { showToast('Error scheduling session','error'); }
     finally{btn.innerHTML=orig;btn.disabled=false;}
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  BRAINSTORM — WHITEBOARD (FIXED)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Returns true if current user is allowed to draw
+function canDraw() {
+    if (!bsCurrentTeacherId) return true;                                              // no teacher set → everyone can draw
+    if (bsCurrentUserId && String(bsCurrentUserId) === String(bsCurrentTeacherId)) return true;  // I am the teacher
+    if (gcCurrentGroupIsAdmin) return true;                                            // admin always can
+    return false;
+}
+
+function updateWBCursor() {
+    const c = document.getElementById('bs-whiteboard'); if (!c) return;
+    const draw = canDraw();
+    c.style.cursor = !draw ? 'not-allowed' : wbTool==='eraser' ? 'cell' : wbTool==='text' ? 'text' : 'crosshair';
+    const tools = document.getElementById('wb-teacher-tools');
+    const label = document.getElementById('wb-viewer-label');
+    if (tools) tools.style.display = draw ? '' : 'none';
+    if (label) label.style.display = draw ? 'none' : '';
+}
+
+function initWhiteboard() {
+    const canvas = document.getElementById('bs-whiteboard'); if (!canvas) return;
+    // Clone to remove stale listeners
+    const fresh = canvas.cloneNode(true);
+    canvas.parentNode.replaceChild(fresh, canvas);
+    const c = document.getElementById('bs-whiteboard');
+    wbCtx = c.getContext('2d');
+    wbCtx.lineCap = 'round'; wbCtx.lineJoin = 'round';
+    // Fill white background
+    wbCtx.fillStyle = '#fff'; wbCtx.fillRect(0, 0, c.width, c.height);
+    c.addEventListener('mousedown',  wbStart);
+    c.addEventListener('mousemove',  wbMove);
+    c.addEventListener('mouseup',    wbEnd);
+    c.addEventListener('mouseleave', wbEnd);
+    c.addEventListener('touchstart', e=>{e.preventDefault();wbStart(e.touches[0]);},{passive:false});
+    c.addEventListener('touchmove',  e=>{e.preventDefault();wbMove(e.touches[0]);},{passive:false});
+    c.addEventListener('touchend',   e=>{e.preventDefault();wbEnd();},            {passive:false});
+    c.addEventListener('click', wbClickText);
+    wbHistory = [];
+    wbSaveHistory();
+    updateWBCursor();
+}
+
+function wbGetPos(e){
+    const c=document.getElementById('bs-whiteboard');
+    const r=c.getBoundingClientRect();
+    return {x:(e.clientX-r.left)*(c.width/r.width), y:(e.clientY-r.top)*(c.height/r.height)};
+}
+
+function wbStart(e){
+    if (!canDraw() || wbTool==='text') return;
+    wbDrawing=true;
+    const pos=wbGetPos(e);
+    wbCtx.beginPath(); wbCtx.moveTo(pos.x,pos.y);
+}
+
+function wbMove(e){
+    if (!wbDrawing || !canDraw()) return;
+    const pos=wbGetPos(e);
+    wbCtx.globalCompositeOperation = wbTool==='eraser' ? 'destination-out' : 'source-over';
+    wbCtx.strokeStyle = wbColor;
+    wbCtx.lineWidth   = wbTool==='marker' ? wbSize*2.5 : wbTool==='eraser' ? wbSize*3 : wbSize;
+    wbCtx.globalAlpha = wbTool==='marker' ? 0.4 : 1;
+    wbCtx.lineTo(pos.x,pos.y); wbCtx.stroke(); wbCtx.beginPath(); wbCtx.moveTo(pos.x,pos.y);
+}
+
+function wbEnd(){
+    if (!wbDrawing) return;
+    wbDrawing=false; wbCtx.globalAlpha=1; wbCtx.globalCompositeOperation='source-over';
+    wbSaveHistory();
+    autoSyncWhiteboard();
+}
+
+function wbClickText(e){
+    if (wbTool!=='text' || !canDraw()) return;
+    const c=document.getElementById('bs-whiteboard');
+    const pos=wbGetPos(e);
+    if (wbTextInput) { wbTextInput.remove(); wbTextInput=null; }
+    const inp=document.createElement('input');
+    inp.type='text'; inp.placeholder='Type here, press Enter';
+    inp.style.cssText=`position:fixed;left:${e.clientX}px;top:${e.clientY}px;z-index:9999;padding:4px 8px;border:2px dashed ${wbColor};border-radius:6px;background:rgba(255,255,255,0.95);color:#000;font-family:'DM Sans',sans-serif;font-size:${Math.max(12,wbSize*3)}px;min-width:120px;outline:none;`;
+    document.body.appendChild(inp); wbTextInput=inp; inp.focus();
+    inp.addEventListener('keydown',function(ev){
+        if(ev.key==='Enter'){
+            const txt=inp.value.trim();
+            if(txt){ wbCtx.font=`${Math.max(14,wbSize*3)}px 'DM Sans',sans-serif`; wbCtx.fillStyle=wbColor; wbCtx.globalAlpha=1; wbCtx.globalCompositeOperation='source-over'; wbCtx.fillText(txt,pos.x,pos.y); wbSaveHistory(); autoSyncWhiteboard(); }
+            inp.remove(); wbTextInput=null;
+        }
+        if(ev.key==='Escape'){inp.remove();wbTextInput=null;}
+    });
+    inp.addEventListener('blur',function(){ setTimeout(()=>{if(wbTextInput===inp){inp.remove();wbTextInput=null;}},150); });
+}
+
+function wbSaveHistory(){
+    const c=document.getElementById('bs-whiteboard'); if(!c||!wbCtx) return;
+    wbHistory.push(wbCtx.getImageData(0,0,c.width,c.height));
+    if(wbHistory.length>30) wbHistory.shift();
+}
+
+function undoWB(){
+    if (!canDraw()) return;
+    if (wbHistory.length<2) return;
+    wbHistory.pop();
+    const c=document.getElementById('bs-whiteboard');
+    wbCtx.putImageData(wbHistory[wbHistory.length-1],0,0);
+    autoSyncWhiteboard();
+}
+
+function clearWB(){
+    if (!canDraw()) { showToast('Only the teacher can clear the board','warn'); return; }
+    if (!confirm('Clear the whiteboard?')) return;
+    const c=document.getElementById('bs-whiteboard');
+    wbCtx.clearRect(0,0,c.width,c.height);
+    wbCtx.fillStyle='#fff'; wbCtx.fillRect(0,0,c.width,c.height);
+    wbSaveHistory();
+    autoSyncWhiteboard();
+}
+
+function setWBColor(c){
+    wbColor=c;
+    document.querySelectorAll('#wb-colors button').forEach(b=>b.style.borderColor='transparent');
+    event.target.style.borderColor='#000';
+    if(wbTool==='eraser') setWBTool('pen');
+}
+
+function setWBTool(t){
+    wbTool=t;
+    updateWBCursor();
+}
+
+function saveWBImage(){
+    const c=document.getElementById('bs-whiteboard'); if(!c) return;
+    const a=document.createElement('a'); a.href=c.toDataURL('image/png'); a.download='whiteboard.png'; a.click();
+}
+
+// Auto-sync whiteboard to server after each stroke (teacher/admin only)
+async function autoSyncWhiteboard() {
+    if (!bsCurrentSessionId || !canDraw()) return;
+    clearTimeout(_wbSyncTimer);
+    _wbSyncTimer = setTimeout(async () => {
+        const c = document.getElementById('bs-whiteboard'); if (!c) return;
+        const imageData = c.toDataURL('image/png');
+        try {
+            await fetch('/api/save-whiteboard',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:bsCurrentSessionId,image_data:imageData})});
+            const st=document.getElementById('bs-wb-sync-status');
+            if(st){st.textContent='✅ Board synced';setTimeout(()=>st.textContent='',2000);}
+        } catch {}
+    }, 1500);
+}
+
+// Poll server whiteboard for non-drawing viewers
+function startWBPolling() {
+    if (_wbPollInterval) clearInterval(_wbPollInterval);
+    _wbPollInterval = setInterval(async () => {
+        if (!bsCurrentSessionId || canDraw()) return;
+        try {
+            const data = await fetch(`/api/get-whiteboard/${bsCurrentSessionId}`).then(r=>r.json());
+            if (!data.success || !data.image_data) return;
+            const c = document.getElementById('bs-whiteboard'); if (!c) return;
+            const img = new Image();
+            img.onload = () => { wbCtx.clearRect(0,0,c.width,c.height); wbCtx.drawImage(img,0,0,c.width,c.height); };
+            img.src = data.image_data;
+        } catch {}
+    }, 3000);
+}
+
+function stopWBPolling() { if (_wbPollInterval) clearInterval(_wbPollInterval); _wbPollInterval=null; }
+
+function addImageToWhiteboard(e) {
+    const file=e.target.files[0]; if(!file) return;
+    const c=document.getElementById('bs-whiteboard');
+    if(!wbCtx){showToast('Open a session first','warn');return;}
+    const img=new Image();
+    img.onload=()=>{
+        const maxW=c.width*0.8,maxH=c.height*0.6;
+        let w=img.naturalWidth,h=img.naturalHeight;
+        if(w>maxW){h=h*(maxW/w);w=maxW;}
+        if(h>maxH){w=w*(maxH/h);h=maxH;}
+        wbCtx.globalAlpha=1;wbCtx.globalCompositeOperation='source-over';
+        wbCtx.drawImage(img,(c.width-w)/2,(c.height-h)/4,w,h);
+        wbSaveHistory(); autoSyncWhiteboard();
+        showToast('Image added to whiteboard','success');
+    };
+    img.onerror=()=>showToast('Could not load image','error');
+    img.src=URL.createObjectURL(file);
+    e.target.value='';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  BRAINSTORM — LIVE SESSION (FIXED)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// showLiveArea: fetches userId first, defaults admin as teacher, updates all UI
+async function showLiveArea(title, groupId) {
+    document.getElementById('bs-live-area').style.display = '';
+    document.getElementById('bs-live-title').textContent = title;
+
+    // 1. Always fetch current user ID fresh
+    try {
+        const r = await fetch('/api/dashboard-stats').then(x=>x.json());
+        if (r.success) bsCurrentUserId = r.user_id;
+    } catch {}
+
+    // 2. Sync admin status
+    if (groupId) {
+        try {
+            const gd = await fetch('/api/get-groups').then(r=>r.json());
+            const g = gd.groups?.find(x=>String(x.id)===String(groupId));
+            if (g) gcCurrentGroupIsAdmin = g.your_role === 'admin';
+        } catch {}
+    }
+
+    // 3. DEFAULT: admin becomes teacher if none set
+    if (!bsCurrentTeacherId && gcCurrentGroupIsAdmin && bsCurrentUserId) {
+        bsCurrentTeacherId = bsCurrentUserId;
+        if (bsCurrentSessionId) {
+            fetch('/api/set-session-teacher',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:bsCurrentSessionId,teacher_id:bsCurrentUserId})}).catch(()=>{});
+        }
+    }
+
+    const isTeacher = bsCurrentUserId && bsCurrentTeacherId && String(bsCurrentUserId)===String(bsCurrentTeacherId);
+
+    // 4. Teacher label
+    const tLabel=document.getElementById('bs-teacher-label');
+    if(tLabel) tLabel.textContent = isTeacher ? '🎓 You are the teacher' : '';
+
+    // 5. Voice broadcast button — teacher only
+    const voiceBtn=document.getElementById('bs-voice-broadcast-btn');
+    if(voiceBtn) voiceBtn.style.display = isTeacher ? '' : 'none';
+
+    // 6. Raise-hand button — members only (not teacher)
+    const handBtn=document.getElementById('bs-raise-hand-btn');
+    if(handBtn) handBtn.style.display = !isTeacher ? '' : 'none';
+
+    // 7. Assign-teacher UI — admins only
+    const assignWrap=document.getElementById('bs-assign-teacher-wrap');
+    if(assignWrap) assignWrap.style.display = gcCurrentGroupIsAdmin ? 'flex' : 'none';
+
+    // 8. End vs Leave
+    const endBtn=document.getElementById('bs-end-btn');
+    const leaveBtn=document.getElementById('bs-leave-btn');
+    if(endBtn)   endBtn.style.display   = gcCurrentGroupIsAdmin ? '' : 'none';
+    if(leaveBtn) leaveBtn.style.display = gcCurrentGroupIsAdmin ? 'none' : '';
+
+    // 9. Raised-hands panel — teacher only
+    const handsPanel=document.getElementById('bs-hands-panel');
+    if(handsPanel) handsPanel.style.display = isTeacher ? '' : 'none';
+
+    // 10. Group name label
+    try {
+        const gd=await fetch('/api/get-groups').then(r=>r.json());
+        const g=gd.groups?.find(x=>String(x.id)===String(groupId));
+        document.getElementById('bs-live-group').textContent = g?g.name:'';
+    } catch {}
+
+    // 11. Populate teacher picker (admin only)
+    if (gcCurrentGroupIsAdmin && (gcCurrentGroupId||groupId)) {
+        const gid = gcCurrentGroupId || groupId;
+        try {
+            const md=await fetch(`/api/get-group-members/${gid}`).then(r=>r.json());
+            const pick=document.getElementById('bs-teacher-pick');
+            if(pick&&md.success){
+                pick.innerHTML='<option value="">Assign teacher…</option>';
+                md.members.forEach(m=>{
+                    const opt=document.createElement('option');
+                    opt.value=m.id;
+                    opt.textContent=`${m.name} (@${m.username})`+(String(m.id)===String(bsCurrentTeacherId)?' ✓':'');
+                    pick.appendChild(opt);
+                });
+            }
+        } catch {}
+    }
+
+    document.getElementById('bs-notes-grid').innerHTML='';
+    if(bsCurrentSessionId) loadSessionNotes(bsCurrentSessionId);
+
+    // Start WB polling for non-drawing viewers
+    if (!isTeacher) startWBPolling(); else stopWBPolling();
+    if (isTeacher) startTeacherHandPolling();
+}
+
+// Start live session — admin is default teacher
 async function startLiveSession() {
     const title=document.getElementById('bs-title').value.trim()||'Live Session';
     const groupId=document.getElementById('bs-group').value;
     if(!groupId){showToast('Please select a group first','warn');return;}
     const data=await fetch('/api/schedule-brainstorm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_id:groupId,title,description:document.getElementById('bs-desc').value.trim(),scheduled_time:new Date().toISOString()})}).then(r=>r.json());
-    if(data.success){
-        bsCurrentSessionId=data.session_id;bsCurrentGroupId=groupId;
-        bsCurrentTeacherId=data.teacher_id||null;
-        // Mark as ongoing
-        await fetch('/api/update-session-status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:data.session_id,status:'ongoing'})});
-        showToast('🚀 Live session started! Members notified.','success');
-        await showLiveArea(title, groupId);
-        setTimeout(initWhiteboard, 400);
-        loadRecentSessions();
-    } else showToast('❌ '+(data.error||'Failed'),'error');
-}
-async function showLiveArea(title, groupId) {
-    document.getElementById('bs-live-area').style.display = '';
-    document.getElementById('bs-live-title').textContent = title;
-
-    // Always fetch current user ID fresh — never rely on stale cache
-    try {
-        const r = await fetch('/api/dashboard-stats').then(x => x.json());
-        if (r.success) bsCurrentUserId = r.user_id;
-    } catch {}
-
-    // Sync admin status if we don't already have it
-    if (!gcCurrentGroupIsAdmin && groupId) {
-        try {
-            const gd = await fetch('/api/get-groups').then(r => r.json());
-            const g = gd.groups?.find(x => String(x.id) === String(groupId));
-            if (g) gcCurrentGroupIsAdmin = g.your_role === 'admin';
-        } catch {}
+    if(!data.success){showToast('❌ '+(data.error||'Failed'),'error');return;}
+    bsCurrentSessionId=data.session_id; bsCurrentGroupId=groupId; gcCurrentGroupIsAdmin=true;
+    // Fetch userId if needed
+    if(!bsCurrentUserId){try{const r=await fetch('/api/dashboard-stats').then(x=>x.json());if(r.success)bsCurrentUserId=r.user_id;}catch{}}
+    // Admin becomes teacher by default
+    bsCurrentTeacherId=bsCurrentUserId;
+    if(bsCurrentSessionId&&bsCurrentUserId){
+        fetch('/api/set-session-teacher',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:bsCurrentSessionId,teacher_id:bsCurrentUserId})}).catch(()=>{});
     }
-
-    // Show/hide broadcast controls section
-    const broadcastControls = document.getElementById('bs-broadcast-controls');
-    const isTeacher = bsCurrentTeacherId && bsCurrentUserId && (String(bsCurrentTeacherId) === String(bsCurrentUserId));
-    const canBroadcast = isTeacher || gcCurrentGroupIsAdmin;
-    if (broadcastControls) broadcastControls.style.display = canBroadcast ? '' : 'none';
-
-    // Show assign-teacher UI only for admins
-    const assignTeacherBtn = document.getElementById('bs-assign-teacher-btn');
-    if (assignTeacherBtn) assignTeacherBtn.style.display = gcCurrentGroupIsAdmin ? '' : 'none';
-
-    // Show broadcast button only to teacher (or admin as fallback)
-    const bw = document.getElementById('bs-broadcast-btn-wrap');
-    if (bw) bw.style.display = (isTeacher || gcCurrentGroupIsAdmin) ? '' : 'none';
-
-    // Populate teacher picker for admins
-    if (gcCurrentGroupIsAdmin && gcCurrentGroupId) {
-        try {
-            const memberData = await fetch(`/api/get-group-members/${gcCurrentGroupId}`).then(r => r.json());
-            const pick = document.getElementById('bs-teacher-pick');
-            if (pick && memberData.success) {
-                pick.innerHTML = '<option value="">Select teacher…</option>';
-                memberData.members.forEach(m => {
-                    const opt = document.createElement('option');
-                    opt.value = m.id;
-                    opt.textContent = `${m.name} (@${m.username})${m.id == bsCurrentTeacherId ? ' ✓ current' : ''}`;
-                    pick.appendChild(opt);
-                });
-            }
-            if (bsCurrentTeacherId && memberData.success) {
-                const t = memberData.members?.find(m => m.id == bsCurrentTeacherId);
-                const label = document.getElementById('bs-current-teacher');
-                if (label && t) label.textContent = `Current teacher: ${t.name}`;
-            }
-        } catch {}
-    }
-
-    // Set group name label
-    fetch('/api/get-groups').then(r => r.json()).then(d => {
-        const g = d.groups?.find(x => x.id == groupId);
-        document.getElementById('bs-live-group').textContent = g ? g.name : '';
-    });
-
-    // Show End button only to admins, Leave to everyone else
-    const endBtn = document.getElementById('bs-end-btn');
-    const leaveBtn = document.getElementById('bs-leave-btn');
-    if (endBtn) endBtn.style.display = gcCurrentGroupIsAdmin ? '' : 'none';
-    if (leaveBtn) leaveBtn.style.display = gcCurrentGroupIsAdmin ? 'none' : '';
-
-    document.getElementById('bs-notes-grid').innerHTML = '';
-    if (bsCurrentSessionId) loadSessionNotes(bsCurrentSessionId);
+    await fetch('/api/update-session-status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:data.session_id,status:'ongoing'})});
+    showToast('🚀 Live session started! Members notified.','success');
+    await showLiveArea(title,groupId);
+    setTimeout(initWhiteboard,400);
+    startTeacherHandPolling();
+    loadRecentSessions();
 }
 
 async function endLiveSession() {
     if(!bsCurrentSessionId) return;
-    if(!confirm('End this live session?')) return;
+    if(!confirm('End this live session for everyone?')) return;
     await fetch('/api/update-session-status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:bsCurrentSessionId,status:'completed'})});
+    if(liveVoiceBroadcasting) stopLiveVoice();
+    stopWBPolling();
+    if(_handPollInterval) clearInterval(_handPollInterval);
+    if(_teacherHandPollInterval) clearInterval(_teacherHandPollInterval);
     showToast('Session ended','info');
     document.getElementById('bs-live-area').style.display='none';
-    bsCurrentSessionId=null; bsCurrentGroupId=null;
+    bsCurrentSessionId=null; bsCurrentGroupId=null; bsCurrentTeacherId=null;
     loadRecentSessions();
 }
 
+async function leaveLiveSession() {
+    if(!bsCurrentSessionId) return;
+    if(!confirm('Leave this brainstorm session?')) return;
+    await fetch('/api/leave-brainstorm-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:bsCurrentSessionId})}).catch(()=>{});
+    if(myHandStatus){await fetch('/api/lower-hand',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:bsCurrentSessionId})}).catch(()=>{});}
+    if(liveVoiceBroadcasting) stopLiveVoice();
+    stopWBPolling();
+    if(_handPollInterval) clearInterval(_handPollInterval);
+    if(_teacherHandPollInterval) clearInterval(_teacherHandPollInterval);
+    myHandRaiseId=null; myHandStatus=null;
+    document.getElementById('bs-live-area').style.display='none';
+    bsCurrentSessionId=null; bsCurrentGroupId=null; bsCurrentTeacherId=null;
+    showToast('You left the session. You can rejoin any time from Recent Sessions.','info');
+    loadRecentSessions();
+}
+
+// Open / rejoin a session from the cards
+async function openSession(s) {
+    bsCurrentSessionId=s.id; bsCurrentGroupId=s.group_id;
+    bsCurrentTeacherId=s.teacher_id||null; gcCurrentGroupIsAdmin=s.is_admin||false;
+    try {
+        const joined=await fetch('/api/join-brainstorm-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:s.id})}).then(r=>r.json());
+        if(!joined.success){showToast('❌ '+(joined.error||'Cannot join'),'error');return;}
+    } catch {showToast('Connection error','error');return;}
+    await showLiveArea(s.title,s.group_id);
+    setTimeout(initWhiteboard,400);
+    loadSessionNotes(s.id);
+    const isTeacher=bsCurrentUserId&&bsCurrentTeacherId&&String(bsCurrentUserId)===String(bsCurrentTeacherId);
+    if(isTeacher) startTeacherHandPolling();
+    if(s.status==='scheduled'&&s.is_admin){
+        if(confirm(`Start "${s.title}" now? Members will be notified.`)){
+            await fetch('/api/update-session-status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:s.id,status:'ongoing'})});
+            showToast('🚀 Session started!','success'); loadRecentSessions();
+        }
+    } else if(s.status==='scheduled'){
+        showToast(`📖 Viewing scheduled session: ${s.title}`,'info');
+    } else if(s.status==='completed'){
+        showToast(`📋 Reviewing past session: ${s.title}`,'info');
+    }
+}
+
+// Assign teacher (admin only)
+async function assignSessionTeacher() {
+    if(!bsCurrentSessionId){showToast('No active session','warn');return;}
+    const teacherId=document.getElementById('bs-teacher-pick')?.value;
+    if(!teacherId){showToast('Please select a member','warn');return;}
+    const data=await fetch('/api/set-session-teacher',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:bsCurrentSessionId,teacher_id:parseInt(teacherId)})}).then(r=>r.json());
+    if(data.success){
+        bsCurrentTeacherId=parseInt(teacherId);
+        showToast(`✅ ${data.teacher_name} is now the teacher!`,'success');
+        await showLiveArea(document.getElementById('bs-live-title').textContent,bsCurrentGroupId);
+        setTimeout(initWhiteboard,200);
+    } else showToast('❌ '+(data.error||'Failed'),'error');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  BRAINSTORM — LIVE VOICE BROADCAST (FIXED — was missing)
+// ═══════════════════════════════════════════════════════════════════════════
+async function toggleLiveVoice() {
+    if (liveVoiceBroadcasting) { stopLiveVoice(); return; }
+    if (!bsCurrentGroupId) { showToast('No active session group','warn'); return; }
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+        liveVoiceChunks = [];
+        liveVoiceRecorder = new MediaRecorder(stream, {mimeType:'audio/webm'});
+        liveVoiceRecorder.ondataavailable = e => { if(e.data.size>0) liveVoiceChunks.push(e.data); };
+        liveVoiceRecorder.onstop = async () => {
+            if (!liveVoiceChunks.length) return;
+            const blob = new Blob(liveVoiceChunks,{type:'audio/webm'});
+            liveVoiceChunks = [];
+            const fd = new FormData();
+            fd.append('group_id', bsCurrentGroupId);
+            fd.append('message_type','voice');
+            fd.append('content','🎙️ Teacher live audio');
+            fd.append('voice', blob, 'live_audio.webm');
+            try { await fetch('/api/send-group-message',{method:'POST',body:fd}); showToast('📢 Audio sent to group','success'); } catch {}
+            stream.getTracks().forEach(t=>t.stop());
+            liveVoiceRecorder = null;
+        };
+        liveVoiceRecorder.start();
+        liveVoiceBroadcasting = true;
+        const btn=document.getElementById('bs-voice-broadcast-btn');
+        if(btn){btn.innerHTML='<i class="fas fa-stop"></i> Stop & Send';btn.style.background='#e03030';}
+        const vs=document.getElementById('bs-voice-status');
+        if(vs){vs.style.display='flex';document.getElementById('bs-voice-status-text').textContent='🔴 Recording… click Stop & Send when done';}
+        showToast('🎙️ Recording started — click "Stop & Send" to broadcast','info');
+    } catch { showToast('Microphone access denied','error'); }
+}
+
+function stopLiveVoice() {
+    if (!liveVoiceRecorder) return;
+    liveVoiceRecorder.stop();
+    liveVoiceBroadcasting = false;
+    const btn=document.getElementById('bs-voice-broadcast-btn');
+    if(btn){btn.innerHTML='<i class="fas fa-microphone"></i> Go Live';btn.style.background='';}
+    const vs=document.getElementById('bs-voice-status');
+    if(vs) vs.style.display='none';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  BRAINSTORM — HAND RAISE
+// ═══════════════════════════════════════════════════════════════════════════
+async function toggleRaiseHand() {
+    if (!bsCurrentSessionId) { showToast('No active session','warn'); return; }
+    if (myHandStatus === 'raised') {
+        await fetch('/api/lower-hand',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:bsCurrentSessionId})});
+        myHandRaiseId=null; myHandStatus=null;
+        document.getElementById('bs-raise-hand-btn').innerHTML='<i class="fas fa-hand-paper"></i> Raise Hand';
+        document.getElementById('bs-question-input-wrap').style.display='none';
+        showToast('Hand lowered','info'); return;
+    }
+    const data=await fetch('/api/raise-hand',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:bsCurrentSessionId})}).then(r=>r.json());
+    if(data.success){
+        myHandRaiseId=data.raise_id; myHandStatus='raised';
+        document.getElementById('bs-raise-hand-btn').innerHTML='<i class="fas fa-hand-paper"></i> Lower Hand';
+        showToast('✋ Hand raised! Wait for teacher to acknowledge.','info');
+        startHandPolling();
+    } else showToast('❌ '+(data.error||'Failed'),'error');
+}
+
+function startHandPolling() {
+    if (_handPollInterval) clearInterval(_handPollInterval);
+    _handPollInterval = setInterval(async()=>{
+        if(!bsCurrentSessionId){clearInterval(_handPollInterval);return;}
+        try {
+            const data=await fetch(`/api/check-my-hand/${bsCurrentSessionId}`).then(r=>r.json());
+            if(data.status==='acknowledged'&&myHandStatus!=='acknowledged'){
+                myHandStatus='acknowledged'; myHandRaiseId=data.raise_id;
+                document.getElementById('bs-question-input-wrap').style.display='';
+                showToast('✅ Teacher acknowledged you! Type your question.','success');
+            }
+        } catch {}
+    },4000);
+}
+
+function startTeacherHandPolling() {
+    if (_teacherHandPollInterval) clearInterval(_teacherHandPollInterval);
+    _teacherHandPollInterval = setInterval(async()=>{
+        if(!bsCurrentSessionId) return;
+        const isTeacher=bsCurrentUserId&&bsCurrentTeacherId&&String(bsCurrentUserId)===String(bsCurrentTeacherId);
+        if(!isTeacher) return;
+        try {
+            const data=await fetch(`/api/get-raised-hands/${bsCurrentSessionId}`).then(r=>r.json());
+            if(!data.success) return;
+            const count=data.hands?.length||0;
+            const badge=document.getElementById('bs-hands-count'); if(badge) badge.textContent=count;
+            const list=document.getElementById('bs-hands-list'); if(!list) return;
+            list.innerHTML='';
+            data.hands.forEach(h=>{
+                const item=document.createElement('div');
+                item.style.cssText='display:flex;align-items:center;gap:10px;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:10px;';
+                item.innerHTML=`<img src="${h.user_pic||'/static/image/KNOWITNOW.png'}" style="width:28px;height:28px;border-radius:8px;object-fit:cover;"><div style="flex:1;min-width:0;"><div style="font-size:.8rem;font-weight:700;color:var(--ink);">${escHtml(h.user_name)}</div>${h.question_text?`<div style="font-size:.75rem;color:var(--muted);">${escHtml(h.question_text)}</div>`:'<div style="font-size:.73rem;color:var(--muted);font-style:italic;">Waiting for question…</div>'}</div><div style="display:flex;gap:5px;">${h.status!=='acknowledged'?`<button onclick="acknowledgeHand(${h.id})" class="btn btn-green btn-sm" style="border-radius:50px;"><i class="fas fa-check"></i></button>`:''}<button onclick="dismissHand(${h.id})" class="btn btn-ghost btn-sm" style="border-radius:50px;"><i class="fas fa-times"></i></button></div>`;
+                list.appendChild(item);
+            });
+        } catch {}
+    },5000);
+}
+
+async function acknowledgeHand(raiseId) {
+    const data=await fetch('/api/acknowledge-hand',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({raise_id:raiseId})}).then(r=>r.json());
+    if(data.success) showToast('✅ Acknowledged!','success');
+}
+async function dismissHand(raiseId) {
+    await fetch('/api/dismiss-hand',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({raise_id:raiseId})}).then(r=>r.json());
+}
+async function submitMyQuestion() {
+    if(!myHandRaiseId) return;
+    const q=document.getElementById('bs-question-text').value.trim(); if(!q) return;
+    const data=await fetch('/api/submit-question',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({raise_id:myHandRaiseId,question:q})}).then(r=>r.json());
+    if(data.success){showToast('❓ Question submitted!','success');document.getElementById('bs-question-text').value='';document.getElementById('bs-question-input-wrap').style.display='none';myHandStatus='raised';}
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  BRAINSTORM — NOTES, AI, SESSIONS
+// ═══════════════════════════════════════════════════════════════════════════
 async function addBSNote() {
     if(!bsCurrentSessionId){showToast('No active session','warn');return;}
-    const content=document.getElementById('bs-note-input').value.trim();
-    if(!content)return;
-    const color=document.getElementById('bs-note-color').value;
+    const content=document.getElementById('bs-note-input')?.value.trim(); if(!content) return;
+    const color=document.getElementById('bs-note-color')?.value||'#ff4f30';
     const data=await fetch('/api/add-brainstorm-note',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:bsCurrentSessionId,content,color,note_type:'text'})}).then(r=>r.json());
     if(data.success){document.getElementById('bs-note-input').value='';renderBSNote(data.note);}
     else showToast('❌ '+(data.error||'Failed'),'error');
 }
 
 function renderBSNote(note) {
-    const grid=document.getElementById('bs-notes-grid');
+    const grid=document.getElementById('bs-notes-grid'); if(!grid) return;
     const card=document.createElement('div');
     card.className='bs-note-card';
     card.style.background=hexToRgba(note.color||'#ff4f30',0.12);
@@ -2156,131 +2415,14 @@ function renderBSNote(note) {
     grid.appendChild(card);
 }
 
-async function upvoteNote(noteId, btn) {
+async function upvoteNote(noteId,btn) {
     const data=await fetch('/api/upvote-brainstorm-note',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({note_id:noteId})}).then(r=>r.json());
     if(data.success){const span=btn.querySelector('span');if(span)span.textContent=data.upvotes;}
 }
 
 async function loadSessionNotes(sessionId) {
     const data=await fetch(`/api/get-brainstorm-notes/${sessionId}`).then(r=>r.json());
-    if(data.success&&data.notes){data.notes.forEach(n=>renderBSNote(n));}
-}
-
-let bsDocDirty=false;
-async function autoSaveDoc(){
-    bsDocDirty=true;
-    document.getElementById('bs-doc-save-status').textContent='Unsaved…';
-    clearTimeout(bsDocSaveTimer);
-    bsDocSaveTimer=setTimeout(async()=>{
-        if(!bsCurrentSessionId)return;
-        const doc=document.getElementById('bs-shared-doc').value;
-        const data=await fetch('/api/update-session-doc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:bsCurrentSessionId,shared_doc:doc})}).then(r=>r.json()).catch(()=>({success:false}));
-        document.getElementById('bs-doc-save-status').textContent=data.success?'✅ Auto-saved':'❌ Save failed';
-        bsDocDirty=false;
-    },2000);
-}
-
-async function exportNotes() {
-    if(!bsCurrentSessionId){showToast('No active session','warn');return;}
-    const data=await fetch(`/api/get-brainstorm-notes/${bsCurrentSessionId}`).then(r=>r.json());
-    const doc=document.getElementById('bs-shared-doc').value;
-    const title=document.getElementById('bs-live-title').textContent;
-    let text=`# ${title}\nExported: ${new Date().toLocaleString()}\n\n## Notes\n\n`;
-    (data.notes||[]).forEach(n=>{text+=`- [${n.user_name}]: ${n.content}\n`;});
-    if(doc){text+=`\n## Shared Document\n\n${doc}`;}
-    const blob=new Blob([text],{type:'text/markdown'});
-    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`brainstorm-${Date.now()}.md`;a.click();
-}
-
-async function loadRecentSessions() {
-    const container = document.getElementById('recent-sessions');
-    container.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:32px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i></div>';
-    try {
-        const gd = await fetch('/api/get-groups').then(r => r.json());
-        if (!gd.success || !gd.groups?.length) {
-            container.innerHTML = '<div style="grid-column:1/-1;" class="empty-state"><i class="fas fa-calendar-alt"></i><p>No sessions yet. Join a group and schedule one!</p></div>';
-            return;
-        }
-        // Fetch all groups in parallel — one failure won't kill the rest
-        const results = await Promise.allSettled(
-            gd.groups.map(g =>
-                fetch(`/api/get-group-sessions/${g.id}`)
-                    .then(r => r.json())
-                    .then(sd => sd.success ? sd.sessions : [])
-                    .catch(() => [])
-            )
-        );
-        let all = results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
-        all.sort((a, b) => new Date(b.scheduled_time) - new Date(a.scheduled_time));
-        if (!all.length) {
-            container.innerHTML = '<div style="grid-column:1/-1;" class="empty-state"><i class="fas fa-calendar-plus"></i><p>No sessions yet!</p></div>';
-            return;
-        }
-        container.innerHTML = '';
-        const now = new Date();
-        all.slice(0, 12).forEach(s => {
-            const dt = new Date(s.scheduled_time);
-            const isLive = s.status === 'ongoing';
-            const isUpcoming = dt >= now && s.status === 'scheduled';
-            const card = document.createElement('div');
-            card.className = `session-card ${isLive ? 'live' : isUpcoming ? 'upcoming' : ''}`;
-            card.onclick = () => openSession(s);
-            card.innerHTML = `
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
-                    <div style="flex:1;min-width:0;">
-                        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.875rem;color:var(--ink);margin-bottom:2px;">${escHtml(s.title)}</div>
-                        <div style="font-size:.75rem;color:var(--blue2);font-weight:600;">${escHtml(s.group_name || '')}</div>
-                    </div>
-                    ${isLive ? '<span class="live-badge"><span style="width:6px;height:6px;background:#fff;border-radius:50%;display:inline-block;margin-right:3px;"></span>LIVE</span>' : isUpcoming ? '<span class="tag tag-blue">Upcoming</span>' : '<span class="tag tag-muted">Past</span>'}
-                </div>
-                <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px;">${escHtml(s.description || 'No description')}</div>
-                <div style="display:flex;justify-content:space-between;font-size:.75rem;color:var(--muted);">
-                    <span><i class="far fa-clock" style="margin-right:4px;"></i>${dt.toLocaleString()}</span>
-                    <span>${s.note_count || 0} notes</span>
-                </div>`;
-            container.appendChild(card);
-        });
-    } catch(e) {
-        container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error loading sessions. Refresh to retry.</p></div>';
-    }
-}
-
-async function openSession(s) {
-    bsCurrentSessionId = s.id;
-    bsCurrentGroupId = s.group_id;
-    bsCurrentTeacherId = s.teacher_id || null;
-    gcCurrentGroupIsAdmin = s.is_admin || false;
-
-    // Join the session via API (validates membership)
-    try {
-        const joined = await fetch('/api/join-brainstorm-session', {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({session_id: s.id})
-        }).then(r => r.json());
-        if (!joined.success) { showToast('❌ ' + (joined.error || 'Cannot join session'), 'error'); return; }
-    } catch { showToast('Connection error', 'error'); return; }
-
-    // All statuses open the live area so notes and whiteboard are always viewable
-    await showLiveArea(s.title, s.group_id);
-
-    // If session is scheduled and current user is admin, offer to start it
-    if (s.status === 'scheduled' && s.is_admin) {
-        if (confirm(`Start "${s.title}" now? Members will be notified.`)) {
-            await fetch('/api/update-session-status', {
-                method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({session_id: s.id, status: 'ongoing'})
-            });
-            showToast('🚀 Session started! Members notified.', 'success');
-            loadRecentSessions();
-        }
-    } else if (s.status === 'scheduled') {
-        showToast(`📖 Viewing scheduled session: ${s.title}`, 'info');
-    } else if (s.status === 'completed') {
-        showToast(`📋 Viewing past session: ${s.title}`, 'info');
-    }
-
-    setTimeout(initWhiteboard, 400);
-    if (s.id) loadSessionNotes(s.id);
+    if(data.success&&data.notes) data.notes.forEach(n=>renderBSNote(n));
 }
 
 async function askSparkAI(inputId, responseId, useContext=false) {
@@ -2289,7 +2431,7 @@ async function askSparkAI(inputId, responseId, useContext=false) {
     if(!question){showToast('Please enter a question','warn');return;}
     const btn=event.target;const orig=btn.innerHTML;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';btn.disabled=true;
     try {
-        const context = useContext && bsCurrentGroupId ? `Brainstorm session: ${document.getElementById('bs-live-title').textContent||''}. Notes: ${document.getElementById('bs-notes-grid').textContent.slice(0,500)}` : '';
+        const context=useContext&&bsCurrentGroupId?`Brainstorm session: ${document.getElementById('bs-live-title').textContent||''}. Notes: ${document.getElementById('bs-notes-grid').textContent.slice(0,500)}`:'';
         const data=await fetch('/api/ask-ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question,context})}).then(r=>r.json());
         if(data.success){
             const rd=document.getElementById(responseId);
@@ -2301,171 +2443,71 @@ async function askSparkAI(inputId, responseId, useContext=false) {
     finally{btn.innerHTML=orig;btn.disabled=false;}
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-//  UTILITY FUNCTIONS
-// ═══════════════════════════════════════════════════════════════════════════
-function hexToRgba(hex, alpha) {
-    hex=hex.replace('#','');
-    const r=parseInt(hex.slice(0,2),16),g=parseInt(hex.slice(2,4),16),b=parseInt(hex.slice(4,6),16);
-    return `rgba(${r},${g},${b},${alpha})`;
+async function loadRecentSessions() {
+    const container=document.getElementById('recent-sessions');
+    container.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:32px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i></div>';
+    try {
+        const gd=await fetch('/api/get-groups').then(r=>r.json());
+        if(!gd.success||!gd.groups?.length){container.innerHTML='<div style="grid-column:1/-1;" class="empty-state"><i class="fas fa-calendar-alt"></i><p>No sessions yet. Join a group and schedule one!</p></div>';return;}
+        const results=await Promise.allSettled(gd.groups.map(g=>fetch(`/api/get-group-sessions/${g.id}`).then(r=>r.json()).then(sd=>sd.success?sd.sessions:[]).catch(()=>[])));
+        let all=results.flatMap(r=>r.status==='fulfilled'?r.value:[]);
+        all.sort((a,b)=>new Date(b.scheduled_time)-new Date(a.scheduled_time));
+        if(!all.length){container.innerHTML='<div style="grid-column:1/-1;" class="empty-state"><i class="fas fa-calendar-plus"></i><p>No sessions yet!</p></div>';return;}
+        container.innerHTML='';
+        const now=new Date();
+        all.slice(0,12).forEach(s=>{
+            const dt=new Date(s.scheduled_time);
+            const isLive=s.status==='ongoing', isUpcoming=dt>=now&&s.status==='scheduled';
+            const card=document.createElement('div');
+            card.className=`session-card ${isLive?'live':isUpcoming?'upcoming':''}`;
+            card.onclick=()=>openSession(s);
+            card.innerHTML=`
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.875rem;color:var(--ink);margin-bottom:2px;">${escHtml(s.title)}</div>
+                        <div style="font-size:.75rem;color:var(--blue2);font-weight:600;">${escHtml(s.group_name||'')}</div>
+                    </div>
+                    ${isLive?'<span class="live-badge"><span style="width:6px;height:6px;background:#fff;border-radius:50%;display:inline-block;margin-right:3px;"></span>LIVE</span>':isUpcoming?'<span class="tag tag-blue">Upcoming</span>':'<span class="tag tag-muted">Past</span>'}
+                </div>
+                <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px;">${escHtml(s.description||'No description')}</div>
+                <div style="display:flex;justify-content:space-between;font-size:.75rem;color:var(--muted);">
+                    <span><i class="far fa-clock" style="margin-right:4px;"></i>${dt.toLocaleString()}</span>
+                    <span>${s.note_count||0} notes</span>
+                </div>`;
+            container.appendChild(card);
+        });
+    } catch { container.innerHTML='<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error loading sessions. Refresh to retry.</p></div>'; }
 }
 
-function logout(){ if(confirm('Logout?')) fetch('/logout',{method:'POST'}).then(()=>location.href='/'); }
-
-// ═══════════════════════════════════════════════════════════════════════════
-//  INIT
-// ═══════════════════════════════════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', () => {
-    applyTheme(localStorage.getItem('theme')||'dark');
-    loadBuddies();
-    loadNotifications();
-    setInterval(loadNotifications, 30000);
-    // Get current user ID for teacher check
-    fetch('/api/dashboard-stats').then(r=>r.json()).then(d=>{ if(d.success) bsCurrentUserId=d.user_id; }).catch(()=>{});
-
-    // Check URL params for direct group join
-    const params = new URLSearchParams(window.location.search);
-    const joinId = params.get('join');
-    if (joinId) {
-        document.querySelector('[data-tab="my-groups"]').click();
-        setTimeout(()=>showToast(`Opening group ${joinId}…`,'info'), 500);
-    }
-});
-// ═══════════════════════════════════════════════════════════════
-//  WHITEBOARD
-// ═══════════════════════════════════════════════════════════════
-let wbCtx=null, wbDrawing=false, wbColor='#ff4f30', wbSize=4, wbTool='pen', wbHistory=[], wbTextMode=false;
-
-function initWhiteboard(){
-    const canvas=document.getElementById('bs-whiteboard'); if(!canvas) return;
-    wbCtx=canvas.getContext('2d');
-    wbCtx.lineCap='round'; wbCtx.lineJoin='round';
-    canvas.addEventListener('mousedown',wbStart);
-    canvas.addEventListener('mousemove',wbMove);
-    canvas.addEventListener('mouseup',wbEnd);
-    canvas.addEventListener('mouseleave',wbEnd);
-    canvas.addEventListener('touchstart',e=>{e.preventDefault();wbStart(e.touches[0]);},{passive:false});
-    canvas.addEventListener('touchmove',e=>{e.preventDefault();wbMove(e.touches[0]);},{passive:false});
-    canvas.addEventListener('touchend',e=>{e.preventDefault();wbEnd();},{passive:false});
-    canvas.addEventListener('click',wbClickText);
-    wbSaveHistory();
-}
-
-function wbGetPos(e){
-    const canvas=document.getElementById('bs-whiteboard');
-    const r=canvas.getBoundingClientRect();
-    const scaleX=canvas.width/r.width, scaleY=canvas.height/r.height;
-    return {x:(e.clientX-r.left)*scaleX, y:(e.clientY-r.top)*scaleY};
-}
-
-function wbStart(e){
-    if(wbTool==='text') return;
-    wbDrawing=true;
-    const pos=wbGetPos(e);
-    wbCtx.beginPath(); wbCtx.moveTo(pos.x,pos.y);
-}
-
-function wbMove(e){
-    if(!wbDrawing) return;
-    const pos=wbGetPos(e);
-    wbCtx.globalCompositeOperation=wbTool==='eraser'?'destination-out':'source-over';
-    wbCtx.strokeStyle=wbColor;
-    wbCtx.lineWidth=wbTool==='marker'?wbSize*2.5:wbTool==='eraser'?wbSize*3:wbSize;
-    wbCtx.globalAlpha=wbTool==='marker'?0.4:1;
-    wbCtx.lineTo(pos.x,pos.y); wbCtx.stroke(); wbCtx.beginPath(); wbCtx.moveTo(pos.x,pos.y);
-}
-
-function wbEnd(){
-    if(!wbDrawing) return;
-    wbDrawing=false; wbCtx.globalAlpha=1; wbCtx.globalCompositeOperation='source-over';
-    wbSaveHistory();
-}
-
-let wbTextInput = null;
-function wbClickText(e){
-    if(wbTool!=='text') return;
-    const canvas = document.getElementById('bs-whiteboard');
-    const pos = wbGetPos(e);
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    // Remove any existing text input
-    if(wbTextInput){ wbTextInput.remove(); wbTextInput=null; }
-    // Create inline input over canvas
-    const inp = document.createElement('input');
-    inp.type = 'text';
-    inp.placeholder = 'Type here, press Enter';
-    inp.style.cssText = `position:fixed;left:${e.clientX}px;top:${e.clientY}px;z-index:9999;padding:4px 8px;border:2px dashed ${wbColor};border-radius:6px;background:rgba(255,255,255,0.95);color:#000;font-family:'DM Sans',sans-serif;font-size:${Math.max(12,wbSize*3)}px;min-width:120px;outline:none;`;
-    document.body.appendChild(inp);
-    wbTextInput = inp;
-    inp.focus();
-    inp.addEventListener('keydown', function(ev){
-        if(ev.key === 'Enter'){
-            const txt = inp.value.trim();
-            if(txt){
-                wbCtx.font = `${Math.max(14,wbSize*3)}px 'DM Sans',sans-serif`;
-                wbCtx.fillStyle = wbColor;
-                wbCtx.globalAlpha = 1;
-                wbCtx.globalCompositeOperation = 'source-over';
-                wbCtx.fillText(txt, pos.x, pos.y);
-                wbSaveHistory();
-            }
-            inp.remove(); wbTextInput = null;
+async function joinBrainstormFromNotif(sessionId, btn) {
+    if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Joining…';}
+    try {
+        const data=await fetch('/api/join-brainstorm-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sessionId})}).then(r=>r.json());
+        if(data.success&&data.session){
+            document.getElementById('notification-panel').style.display='none'; notifOpen=false;
+            bsCurrentSessionId=data.session.id; bsCurrentGroupId=data.session.group_id; bsCurrentTeacherId=data.session.teacher_id||null;
+            document.querySelector('[data-tab="brainstorm"]').click();
+            setTimeout(async()=>{
+                await showLiveArea(data.session.title,data.session.group_id);
+                setTimeout(initWhiteboard,400);
+                loadSessionNotes(data.session.id);
+                const isTeacher=bsCurrentUserId&&bsCurrentTeacherId&&String(bsCurrentUserId)===String(bsCurrentTeacherId);
+                if(isTeacher) startTeacherHandPolling();
+                showToast('🧠 Joined session!','success');
+            },500);
+        } else {
+            showToast('❌ '+(data.error||'Could not join'),'error');
+            if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-brain"></i> Join Session';}
         }
-        if(ev.key === 'Escape'){ inp.remove(); wbTextInput = null; }
-    });
-    inp.addEventListener('blur', function(){
-        setTimeout(()=>{ if(wbTextInput===inp){ inp.remove(); wbTextInput=null; } }, 150);
-    });
+    } catch { showToast('Connection error','error'); if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-brain"></i> Join Session';} }
 }
 
-function wbSaveHistory(){
-    const canvas=document.getElementById('bs-whiteboard'); if(!canvas||!wbCtx) return;
-    wbHistory.push(wbCtx.getImageData(0,0,canvas.width,canvas.height));
-    if(wbHistory.length>30) wbHistory.shift();
-}
-
-function undoWB(){
-    if(wbHistory.length<2) return;
-    wbHistory.pop();
-    const canvas=document.getElementById('bs-whiteboard');
-    wbCtx.putImageData(wbHistory[wbHistory.length-1],0,0);
-}
-
-function clearWB(){
-    if(!confirm('Clear whiteboard?')) return;
-    const canvas=document.getElementById('bs-whiteboard');
-    wbCtx.clearRect(0,0,canvas.width,canvas.height);
-    wbCtx.fillStyle='#fff'; wbCtx.fillRect(0,0,canvas.width,canvas.height);
-    wbSaveHistory();
-}
-
-function setWBColor(c){
-    wbColor=c;
-    document.querySelectorAll('#wb-colors button').forEach(b=>b.style.borderColor='transparent');
-    event.target.style.borderColor='var(--ink)';
-    if(wbTool==='eraser') setWBTool('pen');
-}
-
-function setWBTool(t){
-    wbTool=t;
-    const canvas=document.getElementById('bs-whiteboard');
-    if(canvas) canvas.style.cursor=t==='eraser'?'cell':t==='text'?'text':'crosshair';
-}
-
-function saveWBImage(){
-    const canvas=document.getElementById('bs-whiteboard'); if(!canvas) return;
-    const a=document.createElement('a'); a.href=canvas.toDataURL('image/png'); a.download='whiteboard.png'; a.click();
-}
-
-// ═══════════════════════════════════════════════════════════════
-//  TEACHER VOICE INTRO
-// ═══════════════════════════════════════════════════════════════
-let tvMediaRecorder=null, tvAudioChunks=[], tvRecTimer=null, tvRecSeconds=0, tvRecording=false, tvAudioBlob=null;
-
+// ═══════════════════════════════════════════════════════════════════════════
+//  TEACHER VOICE INTRO MODAL
+// ═══════════════════════════════════════════════════════════════════════════
 function openTeacherVoiceModal(){
     const groupId=document.getElementById('bs-group').value;
     if(!groupId){showToast('Please select a group first','warn');return;}
-    // Only admins can start a session; teacher is assignable from the live session panel
     openModal('teacher-voice-modal');
     tvAudioBlob=null;
     document.getElementById('tv-playback').style.display='none';
@@ -2477,7 +2519,7 @@ function openTeacherVoiceModal(){
 }
 
 async function toggleTeacherVoiceRec(){
-    if(tvRecording){ stopTeacherVoice(); return; }
+    if(tvRecording){stopTeacherVoice();return;}
     try {
         const stream=await navigator.mediaDevices.getUserMedia({audio:true});
         tvAudioChunks=[]; tvRecSeconds=0; tvRecording=true;
@@ -2486,14 +2528,13 @@ async function toggleTeacherVoiceRec(){
         tvMediaRecorder.onstop=()=>{
             tvAudioBlob=new Blob(tvAudioChunks,{type:'audio/webm'});
             const url=URL.createObjectURL(tvAudioBlob);
-            const pb=document.getElementById('tv-playback'); pb.src=url; pb.style.display='';
+            const pb=document.getElementById('tv-playback');pb.src=url;pb.style.display='';
             document.getElementById('tv-start-btn').style.display='flex';
         };
         tvMediaRecorder.start();
         document.getElementById('tv-rec-dot').style.cssText='width:12px;height:12px;border-radius:50%;background:#e03030;flex-shrink:0;animation:recPulse 1s ease-in-out infinite;';
         document.getElementById('tv-record-btn').innerHTML='<i class="fas fa-stop"></i> Stop';
-        // Waveform bars
-        const wf=document.getElementById('tv-waveform'); wf.innerHTML='';
+        const wf=document.getElementById('tv-waveform');wf.innerHTML='';
         for(let i=0;i<16;i++){const b=document.createElement('div');b.style.cssText=`width:3px;border-radius:2px;background:var(--accent);animation:waveAnim ${0.3+Math.random()*0.4}s ease-in-out infinite alternate;animation-delay:${i*0.05}s;`;wf.appendChild(b);}
         tvRecTimer=setInterval(()=>{tvRecSeconds++;const m=Math.floor(tvRecSeconds/60),s=tvRecSeconds%60;document.getElementById('tv-rec-time').textContent=`${m}:${s<10?'0':''}${s}`;},1000);
     } catch { showToast('Microphone access denied','error'); }
@@ -2502,147 +2543,54 @@ async function toggleTeacherVoiceRec(){
 function stopTeacherVoice(){
     if(!tvMediaRecorder) return;
     clearInterval(tvRecTimer); tvRecording=false;
-    tvMediaRecorder.stop();
-    tvMediaRecorder.stream.getTracks().forEach(t=>t.stop());
-    tvMediaRecorder=null;
+    tvMediaRecorder.stop(); tvMediaRecorder.stream.getTracks().forEach(t=>t.stop()); tvMediaRecorder=null;
     document.getElementById('tv-rec-dot').style.cssText='width:12px;height:12px;border-radius:50%;background:var(--green);flex-shrink:0;';
     document.getElementById('tv-waveform').innerHTML='';
     document.getElementById('tv-record-btn').innerHTML='<i class="fas fa-microphone"></i> Re-record';
 }
 
-function skipTeacherVoice(){
-    closeModal('teacher-voice-modal');
-    startLiveSession();
-}
+function skipTeacherVoice(){ closeModal('teacher-voice-modal'); startLiveSession(); }
 
 async function startLiveSessionWithVoice(){
     closeModal('teacher-voice-modal');
     if(tvAudioBlob){
-        // Save voice intro if we have a current group
         const groupId=document.getElementById('bs-group').value;
         if(groupId){
-            const fd=new FormData();
-            fd.append('group_id',groupId); fd.append('message_type','voice');
-            fd.append('content','🎙️ Teacher intro for this session');
-            fd.append('voice',tvAudioBlob,'teacher_intro.webm');
-            try { await fetch('/api/send-group-message',{method:'POST',body:fd}); } catch {}
+            const fd=new FormData(); fd.append('group_id',groupId); fd.append('message_type','voice');
+            fd.append('content','🎙️ Teacher intro for this session'); fd.append('voice',tvAudioBlob,'teacher_intro.webm');
+            try{await fetch('/api/send-group-message',{method:'POST',body:fd});}catch{}
         }
     }
     startLiveSession();
-    setTimeout(initWhiteboard, 400);
-}
-async function assignSessionTeacher() {
-    if (!bsCurrentSessionId) { showToast('No active session','warn'); return; }
-    const sel = document.getElementById('bs-teacher-pick');
-    const teacherId = sel?.value;
-    if (!teacherId) { showToast('Please select a member to assign as teacher','warn'); return; }
-    const data = await fetch('/api/set-session-teacher', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({session_id: bsCurrentSessionId, teacher_id: parseInt(teacherId)})
-    }).then(r=>r.json());
-    if (data.success) {
-        bsCurrentTeacherId = parseInt(teacherId);
-        showToast(`✅ ${data.teacher_name} is now the teacher!`, 'success');
-        document.getElementById('bs-current-teacher').textContent = `Current teacher: ${data.teacher_name}`;
-        // Show broadcast button to teacher if it's the current user
-        const isNowTeacher = String(bsCurrentTeacherId) === String(bsCurrentUserId);
-        document.getElementById('bs-broadcast-btn-wrap').style.display = isNowTeacher ? '' : 'none';
-    } else {
-        showToast('❌ '+(data.error||'Failed'), 'error');
-    }
-}
-async function joinBrainstormFromNotif(sessionId, btn) {
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Joining…'; }
-    try {
-        const data = await fetch('/api/join-brainstorm-session', {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({session_id: sessionId})
-        }).then(r => r.json());
-        if (data.success && data.session) {
-            document.getElementById('notification-panel').style.display = 'none';
-            notifOpen = false;
-            bsCurrentSessionId = data.session.id;
-            bsCurrentGroupId = data.session.group_id;
-            bsCurrentTeacherId = data.session.teacher_id || null;
-            document.querySelector('[data-tab="brainstorm"]').click();
-            setTimeout(async () => {
-                await showLiveArea(data.session.title, data.session.group_id);
-                setTimeout(initWhiteboard, 400);
-                loadSessionNotes(data.session.id);
-                showToast('🧠 Joined session!', 'success');
-            }, 500);
-        } else {
-            showToast('❌ ' + (data.error || 'Could not join'), 'error');
-            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-brain"></i> Join Session'; }
-        }
-    } catch {
-        showToast('Connection error', 'error');
-        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-brain"></i> Join Session'; }
-    }
-}
-async function leaveLiveSession() {
-    if (!bsCurrentSessionId) return;
-    if (!confirm('Leave this brainstorm session?')) return;
-    await fetch('/api/leave-brainstorm-session', {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({session_id: bsCurrentSessionId})
-    }).catch(() => {});
-    showToast('You left the session', 'info');
-    document.getElementById('bs-live-area').style.display = 'none';
-    bsCurrentSessionId = null;
-    bsCurrentGroupId = null;
-    loadRecentSessions();
-}
-
-
-function addImageToWhiteboard(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    const canvas = document.getElementById('bs-whiteboard');
-    if (!wbCtx) { showToast('Open a session first', 'warn'); return; }
-    const img = new Image();
-    img.onload = () => {
-        const maxW = canvas.width * 0.8;
-        const maxH = canvas.height * 0.6;
-        let w = img.naturalWidth, h = img.naturalHeight;
-        if (w > maxW) { h = h * (maxW / w); w = maxW; }
-        if (h > maxH) { w = w * (maxH / h); h = maxH; }
-        const x = (canvas.width - w) / 2;
-        const y = (canvas.height - h) / 4;
-        wbCtx.globalAlpha = 1;
-        wbCtx.globalCompositeOperation = 'source-over';
-        wbCtx.drawImage(img, x, y, w, h);
-        wbSaveHistory();
-        showToast('Image added to whiteboard', 'success');
-    };
-    img.onerror = () => showToast('Could not load image', 'error');
-    img.src = URL.createObjectURL(file);
-    e.target.value = '';
+    setTimeout(initWhiteboard,400);
 }
 
 async function sharePDFFromWhiteboard(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (!gcCurrentGroupId) {
-        showToast('Open a group chat first to share PDF', 'warn');
-        e.target.value = '';
-        return;
-    }
-    showToast('Sharing PDF to group chat…', 'info');
-    const fd = new FormData();
-    fd.append('group_id', gcCurrentGroupId);
-    fd.append('message_type', 'pdf');
-    fd.append('content', '📄 ' + file.name);
-    fd.append('pdf', file);
+    const file=e.target.files[0]; if(!file) return;
+    if(!gcCurrentGroupId){showToast('Open a group chat first to share PDF','warn');e.target.value='';return;}
+    showToast('Sharing PDF to group chat…','info');
+    const fd=new FormData(); fd.append('group_id',gcCurrentGroupId); fd.append('message_type','pdf'); fd.append('content','📄 '+file.name); fd.append('pdf',file);
     try {
-        const data = await fetch('/api/send-group-message', {method: 'POST', body: fd}).then(r => r.json());
-        if (data.success) showToast('✅ PDF shared to group chat!', 'success');
-        else showToast('❌ ' + (data.error || 'Share failed'), 'error');
-    } catch { showToast('Share failed', 'error'); }
-    e.target.value = '';
+        const data=await fetch('/api/send-group-message',{method:'POST',body:fd}).then(r=>r.json());
+        if(data.success) showToast('✅ PDF shared to group chat!','success');
+        else showToast('❌ '+(data.error||'Share failed'),'error');
+    } catch { showToast('Share failed','error'); }
+    e.target.value='';
 }
 
-
+// ═══════════════════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+    applyTheme(localStorage.getItem('theme')||'dark');
+    loadBuddies();
+    loadNotifications();
+    setInterval(loadNotifications, 30000);
+    fetch('/api/dashboard-stats').then(r=>r.json()).then(d=>{ if(d.success) bsCurrentUserId=d.user_id; }).catch(()=>{});
+    const params=new URLSearchParams(window.location.search);
+    const joinId=params.get('join');
+    if(joinId){ document.querySelector('[data-tab="my-groups"]').click(); setTimeout(()=>showToast(`Opening group ${joinId}…`,'info'),500); }
+});
 </script>
 <!-- Teacher Voice Intro Modal -->
 <div id="teacher-voice-modal" class="modal-overlay" style="display:none;">
