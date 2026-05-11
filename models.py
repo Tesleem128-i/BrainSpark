@@ -414,31 +414,4 @@ class HandRaise(db.Model):
 
     def __repr__(self):
         return f'<HandRaise {self.user_id} in session {self.session_id}>'
-        id = db.Column(db.Integer, primary_key=True)
-        session_id = db.Column(db.Integer, db.ForeignKey('brainstorm_session.id'), nullable=False)
-        user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-        status = db.Column(db.String(20), default='raised')  # raised, acknowledged, answered, dismissed
-        question_text = db.Column(db.Text, nullable=True)
-        created_at = db.Column(db.DateTime, default=datetime.utcnow)
-        answered_at = db.Column(db.DateTime, nullable=True)
-
-    user = db.relationship('User', backref='hand_raises')
-    session = db.relationship('BrainstormSession', backref='hand_raises')
-    
-class HandRaise(db.Model):
-    __tablename__ = 'hand_raise'
-    id            = db.Column(db.Integer, primary_key=True)
-    session_id    = db.Column(db.Integer, db.ForeignKey('brainstorm_session.id'), nullable=False)
-    user_id       = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    status        = db.Column(db.String(20), default='raised')
-    question_text = db.Column(db.Text)
-    created_at    = db.Column(db.DateTime, default=datetime.utcnow)
-    answered_at   = db.Column(db.DateTime)
-
-    user    = db.relationship('User', foreign_keys=[user_id])
-    session = db.relationship('BrainstormSession', foreign_keys=[session_id])
-    def __repr__(self):
-        return f'<HandRaise {self.user.username} in session {self.session_id}>'
-
-    def __repr__(self):
-        return f'<AppNotification {self.notif_type} for user {self.user_id}>'
+        
