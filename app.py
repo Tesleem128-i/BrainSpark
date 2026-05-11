@@ -794,9 +794,9 @@ def find_study_buddies():
     if filter_type == 'country' and user.country:
         query = query.filter(user.country == user.country)
     elif filter_type == 'school' and user.school:
-        query = query.filter(user.school.ilike(user.school))
+        query = query.filter(user.school.ilike(f'%{user.school}%'))
     elif filter_type == 'profession' and user.profession:
-        query = query.filter(user.profession.ilike(user.profession))
+        query = query.filter(user.profession.ilike(f'%{user.profession}%'))
     elif filter_type == 'level' and user.study_level:
         query = query.filter(user.study_level == user.study_level)
     if is_search:
@@ -887,7 +887,46 @@ def get_my_tags():
     tags = UserTag.query.filter_by(user_id=session['user_id']).order_by(UserTag.created_at.desc()).all()
     return jsonify({'success': True, 'tags': [{'id': t.id, 'tag': t.tag} for t in tags]})
 
-
+@app.route('/api/accept-connection-request', methods=['POST'])
+def accept_connection_request():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    data = request.json or {}
+    requester_id = data.get('requester_id')
+    action = data.get('action', 'accept')  # 'accept' or 'reject'
+    if not requester_id:
+        return jsonify({'error': 'requester_id required'}), 400
+    user_id = session['user_id']
+    # Mark the notification as read
+    AppNotification.query.filter_by(
+        user_id=user_id, notif_type='connection_request',
+        link_id=requester_id
+    ).update({'is_read': True})
+    if action == 'reject':
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Request declined.'})
+    # Check not already connected
+    existing = Connection.query.filter(
+        ((Connection.user_id == user_id) & (Connection.connected_user_id == requester_id)) |
+        ((Connection.user_id == requester_id) & (Connection.connected_user_id == user_id))
+    ).first()
+    if existing:
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Already connected.'})
+    try:
+        db.session.add(Connection(user_id=user_id, connected_user_id=requester_id))
+        db.session.add(Connection(user_id=requester_id, connected_user_id=user_id))
+        db.session.flush()
+        me = User.query.get(user_id)
+        _create_notification(requester_id, 'connection_accepted',
+                             f'{me.name} accepted your request!',
+                             f'You are now connected with {me.name}.',
+                             'dm', user_id)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Connected!'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 @app.route('/api/connect-user', methods=['POST'])
 def connect_user():
     if 'user_id' not in session:
