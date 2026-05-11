@@ -1825,9 +1825,14 @@ function _startExViewPolling(){
     try{
       const data=await fetch(`/api/get-whiteboard/${bsSessionId}`).then(r=>r.json());
       if(!data.success||!data.image_data)return;
-      const c=document.getElementById('ex-canvas');if(!c||!_exCtx)return;
+      // Always update canvas if it exists, regardless of current view
+      const c=document.getElementById('ex-canvas');
+      if(!c||!_exCtx)return;
       const img=new Image();
-      img.onload=()=>{_exCtx.clearRect(0,0,c.width,c.height);_exCtx.drawImage(img,0,0,c.width,c.height);};
+      img.onload=()=>{
+        _exCtx.clearRect(0,0,c.width,c.height);
+        _exCtx.drawImage(img,0,0,c.width,c.height);
+      };
       img.src=data.image_data;
     }catch{}
   },3000);
@@ -1923,10 +1928,16 @@ async function showBSOverlay(title,desc){
     if(bsIsAdmin){const pick=document.getElementById('bs-coord-pick');pick.innerHTML='<option value="">Assign coordinator…</option>';gcMembers.forEach(m=>{const opt=document.createElement('option');opt.value=m.id;opt.textContent=`${m.name} (@${m.username})`+(String(m.id)===String(bsCoordId)?' ✓':'');pick.appendChild(opt);});}
     // Init Jitsi video (default view)
     const titleText=document.getElementById('bs-session-title').textContent||'Session';
-    setTimeout(()=>initJitsi(titleText),400);
+  setTimeout(()=>initJitsi(titleText),400);
+// Pre-init whiteboard canvas for members so polling can update it
+if(!isCoord()){
+  switchBSView('whiteboard');
+  setTimeout(()=>switchBSView('video'),100);
+} 
     // Start polling
     if(coord)startCoordHandPolling();else startMemberHandPolling();
     startBSChatPolling();
+if(!isCoord()) _startExViewPolling();;
     // Load existing group chat messages in BS chat panel
     loadBSChatMessages();
     // Reset to video view
@@ -1974,7 +1985,8 @@ function closeBSOverlay(){
   bsSessionId=null;bsGroupId=null;bsCoordId=null;
   _sessionNotes=[];
 }
-function stopAllBSPolling(){if(_wbPollInterval)clearInterval(_wbPollInterval);if(_handPollInterval)clearInterval(_handPollInterval);if(_teacherHandPollInterval)clearInterval(_teacherHandPollInterval);if(_bsChatPollInterval)clearInterval(_bsChatPollInterval);_wbPollInterval=_handPollInterval=_teacherHandPollInterval=_bsChatPollInterval=null;}
+function stopAllBSPolling(){if(_wbPollInterval)clearInterval(_wbPollInterval);if(_handPollInterval)clearInterval(_handPollInterval);if(_teacherHandPollInterval)clearInterval(_teacherHandPollInterval);if(_bsChatPollInterval)clearInterval(_bsChatPollInterval);_wbPollInterval=_handPollInterval=_teacherHandPollInterval=_bsChatPollInterval=null;
+if(_exViewPollInterval){clearInterval(_exViewPollInterval);_exViewPollInterval=null;}}
 
 // ═══════════════════════════════════════════════════════════
 //  WHITEBOARD
