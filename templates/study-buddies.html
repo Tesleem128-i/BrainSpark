@@ -64,7 +64,7 @@
         .page-title em{font-style:normal;color:var(--accent);}
         .page-subtitle{font-size:1rem;color:rgba(255,255,255,.45);font-weight:300;}
 
-        .main-wrap{max-width:1300px;margin:0 auto;padding:16px 6vw 0;display:flex;flex-direction:column;height:calc(100vh - 72px - 80px);overflow:hidden;}
+        .main-wrap{max-width:1300px;margin:0 auto;padding:16px 6vw 0;display:flex;flex-direction:column;height:calc(100vh - 72px - 100px);overflow:hidden;}
         .tabs-rail{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:16px;overflow-x:auto;scrollbar-width:none;flex-shrink:0;}
         .tabs-rail::-webkit-scrollbar{display:none;}
         .tab-btn{flex-shrink:0;padding:0 20px;height:48px;background:transparent;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.875rem;font-weight:500;color:var(--muted);display:flex;align-items:center;gap:7px;position:relative;transition:color .2s;white-space:nowrap;}
@@ -289,6 +289,12 @@
         .empty-state i{font-size:2.5rem;opacity:.2;display:block;margin-bottom:12px;}
         .empty-state p{font-size:.9rem;}
 
+        .buddies-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;}
+        .buddies-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;}
+        .buddy-filter-pill{display:inline-flex;align-items:center;gap:5px;padding:5px 13px;border-radius:50px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-family:'dm sans',sans-serif;font-size:.78rem;font-weight:600;transition:all .2s;white-space:nowrap;}
+        .buddy-filter-pill:hover{border-color:var(--accent);color:var(--accent);}
+        .buddy-filter-pill.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+
         @media(max-width:768px){
             .nav-links{display:none;}.hamburger{display:block;}
             .btn-nav-logout span{display:none;}
@@ -367,23 +373,49 @@
 
     <!-- TAB 1: FIND BUDDIES -->
     <div id="find-buddies" class="tab-content active">
-        <div class="card" style="margin-bottom:20px;">
-            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
+        <div class="card" style="margin-bottom:12px;flex-shrink:0;padding:16px;">
+            <!-- Search row -->
+            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:14px;">
                 <div style="flex:1;min-width:180px;">
-                    <label style="font-size:.75rem;font-weight:600;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.04em;text-transform:uppercase;">Search by name</label>
-                    <input type="text" id="buddy-search" placeholder="Search students…" class="inp" onkeypress="if(event.key==='Enter')loadBuddies()">
+                    <label style="font-size:.72rem;font-weight:700;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.08em;text-transform:uppercase;">Search students</label>
+                    <input type="text" id="buddy-search" placeholder="Search by name or username…" class="inp" oninput="onBuddySearchInput()" onkeypress="if(event.key==='Enter')applyBuddyFilters()">
                 </div>
-                <button onclick="loadBuddies()" class="btn btn-accent"><i class="fas fa-search"></i> Find</button>
+                <button onclick="applyBuddyFilters()" class="btn btn-accent"><i class="fas fa-search"></i> Search</button>
+            </div>
+            <!-- Filter pills -->
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+                <span style="font-size:.72rem;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-right:4px;">Show:</span>
+                <button class="buddy-filter-pill active" data-filter="suggested" onclick="setBuddyFilter('suggested',this)">
+                    <i class="fas fa-star"></i> Suggested
+                </button>
+                <button class="buddy-filter-pill" data-filter="country" onclick="setBuddyFilter('country',this)">
+                    <i class="fas fa-globe-africa"></i> Same Country
+                </button>
+                <button class="buddy-filter-pill" data-filter="school" onclick="setBuddyFilter('school',this)">
+                    <i class="fas fa-university"></i> Same School
+                </button>
+                <button class="buddy-filter-pill" data-filter="profession" onclick="setBuddyFilter('profession',this)">
+                    <i class="fas fa-briefcase"></i> Same Profession
+                </button>
+                <button class="buddy-filter-pill" data-filter="level" onclick="setBuddyFilter('level',this)">
+                    <i class="fas fa-graduation-cap"></i> Same Level
+                </button>
+                <button class="buddy-filter-pill" data-filter="all" onclick="setBuddyFilter('all',this)">
+                    <i class="fas fa-users"></i> Everyone
+                </button>
             </div>
         </div>
-        <div id="buddies-list" class="buddies-grid"></div>
+        <div id="buddy-filter-desc" style="font-size:.78rem;color:var(--muted);margin-bottom:12px;flex-shrink:0;padding:0 2px;">
+            ⭐ Showing suggested buddies based on your profile
+        </div>
+        <div id="buddies-list" class="buddies-grid" style="overflow-y:auto;flex:1;min-height:0;"></div>
     </div>
 
     <!-- TAB 2: CONNECTIONS -->
     <div id="connections" class="tab-content">
-        <div class="card">
-            <div class="section-label">My Connections (<span id="connections-count">0</span>)</div>
-            <div id="connections-list" class="conn-grid"></div>
+        <div class="card" style="flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;">
+            <div class="section-label" style="flex-shrink:0;">My Connections (<span id="connections-count">0</span>)</div>
+            <div id="connections-list" class="conn-grid" style="flex:1;overflow-y:auto;min-height:0;"></div>
         </div>
     </div>
 
@@ -444,7 +476,7 @@
 
     <!-- TAB 4: DISCOVER GROUPS -->
     <div id="discover-groups" class="tab-content">
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px;overflow-y:auto;flex:1;min-height:0;padding-bottom:16px;">
             <div class="card">
                 <div class="section-label">Discover Groups</div>
                 <div style="display:flex;gap:8px;margin-bottom:12px;">
@@ -583,10 +615,10 @@
                 </div>
             </div>
         </div>
-        <div id="join-requests-section" style="margin-top:20px;display:none;">
+        <div id="join-requests-section" style="margin-top:12px;display:none;flex-shrink:0;">
             <div class="card"><div class="section-label">Pending Join Requests</div><div id="pending-join-requests-list" style="display:flex;flex-direction:column;gap:10px;"></div></div>
         </div>
-        <div id="my-sent-requests-section" style="margin-top:20px;display:none;">
+        <div id="my-sent-requests-section" style="margin-top:12px;display:none;flex-shrink:0;">
             <div class="card"><div class="section-label">My Sent Requests</div><div id="my-sent-requests-list" style="display:flex;flex-direction:column;gap:10px;"></div></div>
         </div>
     </div>
@@ -947,27 +979,75 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
 // ═══════════════════════════════════════════════════════════
 //  FIND BUDDIES
 // ═══════════════════════════════════════════════════════════
-async function loadBuddies(){
-    const search=document.getElementById('buddy-search')?.value||'';
+let _buddyFilter='suggested';
+
+function setBuddyFilter(filter, btn){
+    _buddyFilter=filter;
+    document.querySelectorAll('.buddy-filter-pill').forEach(b=>b.classList.remove('active'));
+    if(btn)btn.classList.add('active');
+    const descs={
+        suggested:'⭐ Showing suggested buddies based on your profile',
+        country:'🌍 Showing students from your country',
+        school:'🏫 Showing students from your school',
+        profession:'💼 Showing students with the same profession',
+        level:'🎓 Showing students at the same study level',
+        all:'👥 Showing all verified students'
+    };
+    document.getElementById('buddy-filter-desc').textContent=descs[filter]||'';
+    applyBuddyFilters();
+}
+
+function onBuddySearchInput(){
+    // If user starts typing, auto-switch to 'all' so search is not limited
+    if(document.getElementById('buddy-search').value.trim()){
+        if(_buddyFilter==='suggested'){
+            _buddyFilter='all';
+            document.querySelectorAll('.buddy-filter-pill').forEach(b=>b.classList.toggle('active',b.dataset.filter==='all'));
+            document.getElementById('buddy-filter-desc').textContent='🔍 Searching all students…';
+        }
+    }
+}
+
+async function applyBuddyFilters(){
+    const search=document.getElementById('buddy-search')?.value.trim()||'';
     const container=document.getElementById('buddies-list');
     container.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:48px;color:var(--muted);"><i class="fas fa-spinner fa-spin" style="font-size:1.5rem;"></i></div>';
     try{
-        const params=new URLSearchParams();if(search)params.append('search',search);
+        const params=new URLSearchParams();
+        if(search)params.append('search',search);
+        if(_buddyFilter&&_buddyFilter!=='suggested')params.append('filter',_buddyFilter);
+        if(_buddyFilter==='all'||search)params.append('show_all','true');
         const data=await fetch(`/api/find-study-buddies?${params}`).then(r=>r.json());
         container.innerHTML='';
-        if(!data.success||!data.buddies?.length){container.innerHTML=`<div style="grid-column:1/-1;" class="empty-state"><i class="fas fa-user-friends"></i><p>No buddies found.</p></div>`;return;}
+        if(!data.success||!data.buddies?.length){
+            container.innerHTML=`<div style="grid-column:1/-1;" class="empty-state"><i class="fas fa-user-friends"></i><p>No students found for this filter.</p><button onclick="setBuddyFilter('all',document.querySelector('[data-filter=all]'))" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:.85rem;margin-top:8px;">View everyone →</button></div>`;
+            return;
+        }
         data.buddies.forEach(buddy=>{
             const card=document.createElement('div');card.className='buddy-card';
-            card.innerHTML=`<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:14px;"><img src="${buddy.profile_pic||'/static/image/KNOWITNOW.png'}" alt="${buddy.name}" class="buddy-avatar"><div style="flex:1;min-width:0;"><div class="buddy-name">${escHtml(buddy.name)}</div><div class="buddy-username">@${escHtml(buddy.username)}</div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;"><span class="tag tag-blue">${escHtml(buddy.study_level)}</span><span class="tag tag-green">${escHtml(buddy.country)}</span></div></div></div><div style="font-size:.8rem;color:var(--muted);margin-bottom:8px;">${escHtml(buddy.school||'Independent Learner')}</div><div style="display:flex;justify-content:space-between;margin-bottom:10px;"><span style="font-size:.75rem;color:var(--muted);">Quizzes: <strong>${buddy.total_quizzes}</strong></span><span style="font-size:.75rem;color:var(--muted);">Avg: <strong>${buddy.average_score}%</strong></span></div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px;">${(buddy.tags||[]).slice(0,4).map(t=>`<span class="tag tag-muted">${escHtml(t)}</span>`).join('')}${(buddy.tags||[]).length>4?`<span class="tag tag-muted">+${buddy.tags.length-4}</span>`:''}</div><button onclick="connectUser(${buddy.id})" class="btn btn-full" style="border-radius:50px;padding:9px;background:${buddy.is_connected?'rgba(0,201,141,0.12)':'var(--accent)'};color:${buddy.is_connected?'var(--green)':'#fff'};border:1px solid ${buddy.is_connected?'rgba(0,201,141,0.3)':'transparent'};">${buddy.is_connected?'<i class="fas fa-check"></i> Connected':'<i class="fas fa-user-plus"></i> Connect'}</button>`;
+            // Build match badge
+            let matchBadge='';
+            if(_buddyFilter==='suggested'||_buddyFilter==='all'){
+                const badges=[];
+                if(buddy.match_country)badges.push(`<span class="tag tag-green" style="font-size:.65rem;">🌍 Country</span>`);
+                if(buddy.match_school)badges.push(`<span class="tag tag-blue" style="font-size:.65rem;">🏫 School</span>`);
+                if(buddy.match_profession)badges.push(`<span class="tag tag-muted" style="font-size:.65rem;">💼 Profession</span>`);
+                if(buddy.match_level)badges.push(`<span class="tag tag-spark" style="font-size:.65rem;">🎓 Level</span>`);
+                if(badges.length)matchBadge=`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">${badges.join('')}</div>`;
+            }
+            card.innerHTML=`<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px;"><img src="${buddy.profile_pic||'/static/image/KNOWITNOW.png'}" alt="${buddy.name}" class="buddy-avatar"><div style="flex:1;min-width:0;"><div class="buddy-name">${escHtml(buddy.name)}</div><div class="buddy-username">@${escHtml(buddy.username)}</div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px;"><span class="tag tag-blue">${escHtml(buddy.study_level)}</span><span class="tag tag-green">${escHtml(buddy.country)}</span></div></div></div>${matchBadge}<div style="font-size:.8rem;color:var(--muted);margin-bottom:6px;">${escHtml(buddy.school||'Independent Learner')}</div><div style="font-size:.78rem;color:var(--muted);margin-bottom:10px;">${escHtml(buddy.profession||'')}</div><div style="display:flex;justify-content:space-between;margin-bottom:10px;"><span style="font-size:.75rem;color:var(--muted);">Quizzes: <strong>${buddy.total_quizzes}</strong></span><span style="font-size:.75rem;color:var(--muted);">Avg: <strong>${buddy.average_score}%</strong></span></div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px;">${(buddy.tags||[]).slice(0,4).map(t=>`<span class="tag tag-muted">${escHtml(t)}</span>`).join('')}${(buddy.tags||[]).length>4?`<span class="tag tag-muted">+${buddy.tags.length-4}</span>`:''}</div><button onclick="connectUser(${buddy.id})" class="btn btn-full" style="border-radius:50px;padding:9px;background:${buddy.is_connected?'rgba(0,201,141,0.12)':'var(--accent)'};color:${buddy.is_connected?'var(--green)':'#fff'};border:1px solid ${buddy.is_connected?'rgba(0,201,141,0.3)':'transparent'};">${buddy.is_connected?'<i class="fas fa-check"></i> Connected':'<i class="fas fa-user-plus"></i> Connect'}</button>`;
             container.appendChild(card);
         });
-    }catch{container.innerHTML=`<div style="grid-column:1/-1;" class="empty-state"><i class="fas fa-exclamation-triangle" style="color:var(--accent);"></i><p>Error loading buddies.</p></div>`;}
-}
-async function connectUser(userId){
-    try{const data=await fetch('/api/connect-user',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:userId})}).then(r=>r.json());if(data.success){showToast('✅ Connected!','success');loadBuddies();}else showToast('❌ '+(data.error||'Failed'),'error');}
-    catch{showToast('❌ Connection error.','error');}
+    }catch{container.innerHTML=`<div style="grid-column:1/-1;" class="empty-state"><i class="fas fa-exclamation-triangle" style="color:var(--accent);"></i><p>Error loading students.</p></div>`;}
 }
 
+// Keep loadBuddies pointing to the filter system so tab switching still works
+function loadBuddies(){applyBuddyFilters();}
+
+async function connectUser(userId){
+    try{const data=await fetch('/api/connect-user',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:userId})}).then(r=>r.json());if(data.success){showToast('✅ Connected!','success');applyBuddyFilters();}else showToast('❌ '+(data.error||'Failed'),'error');}
+    catch{showToast('❌ Connection error.','error');}
+}
 // ═══════════════════════════════════════════════════════════
 //  CONNECTIONS
 // ═══════════════════════════════════════════════════════════

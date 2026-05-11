@@ -786,20 +786,32 @@ def find_study_buddies():
     if level_filter and level_filter != 'all':
         query = query.filter(User.study_level == level_filter)
 
-    is_search = bool(search_query)
+    show_all     = request.args.get('show_all', 'false').lower() == 'true'
+    filter_type  = request.args.get('filter', '')  # country | school | profession | level | all
+    is_search    = bool(search_query)
+
+    # apply filter-specific query constraints
+    if filter_type == 'country' and user.country:
+        query = query.filter(user.country == user.country)
+    elif filter_type == 'school' and user.school:
+        query = query.filter(user.school.ilike(user.school))
+    elif filter_type == 'profession' and user.profession:
+        query = query.filter(user.profession.ilike(user.profession))
+    elif filter_type == 'level' and user.study_level:
+        query = query.filter(user.study_level == user.study_level)
     if is_search:
         # Explicit search: return any matching user regardless of shared fields
         query = query.filter(
             (User.name.ilike(f'%{search_query}%')) | (User.username.ilike(f'%{search_query}%'))
         )
 
-    buddies      = query.limit(200).all()
+    buddies      = query.limit(500).all()
     buddies_data = []
     for buddy in buddies:
         shared = _shared_count(buddy)
 
-        # When NOT searching: only surface users with >= 2 shared profile fields
-        if not is_search and shared < 2:
+        # When NOT searching and not showing all: only surface users with >= 2 shared profile fields
+        if not is_search and not show_all and shared < 2:
             continue
 
         is_connected = Connection.query.filter(
@@ -819,7 +831,11 @@ def find_study_buddies():
             'profession': buddy.profession or '',
             'tags': [t.tag for t in buddy.tags], 'total_quizzes': buddy.get_total_quizzes(),
             'average_score': buddy.get_average_score(), 'is_connected': is_connected,
-            'shared_count': shared, 'priority': priority
+            'shared_count': shared, 'priority': priority,
+            'match_country':    bool(user.country    and buddy.country    and user.country == buddy.country),
+            'match_school':     bool(user.school     and buddy.school     and user.school.strip().lower() == buddy.school.strip().lower()),
+            'match_profession': bool(user.profession and buddy.profession and user.profession.strip().lower() == buddy.profession.strip().lower()),
+            'match_level':      bool(user.study_level and buddy.study_level and user.study_level == buddy.study_level),
         })
 
     buddies_data.sort(key=lambda x: (-x['priority'], x['name']))

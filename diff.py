@@ -51,6 +51,7 @@ def run():
             print(f"   Password : {FAKE_PASSWORD}")
             print(f"   School   : {user.school}")
             print(f"   Country  : {user.country}")
+            print(f"   Profession: {user.profession}")
             print("-" * 60)
         
         # Sample real users
@@ -62,6 +63,7 @@ def run():
             print(f"   Username : {user.username}")
             print(f"   Email    : {user.email}")
             print(f"   Password : [hidden]")
+            print(f"   Profession: {user.profession}")
             print("-" * 60)
 
 if __name__ == "__main__":
