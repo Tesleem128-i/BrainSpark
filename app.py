@@ -751,6 +751,18 @@ def find_study_buddies():
     school_filter  = request.args.get('school', '')
     level_filter   = request.args.get('level', '')
 
+    # Helper: count shared profile fields between current user and a buddy
+    # The 3 priority fields are profession, study_level, school
+    def _shared_count(buddy):
+        count = 0
+        if user.profession and buddy.profession and user.profession.strip().lower() == buddy.profession.strip().lower():
+            count += 1
+        if user.study_level and buddy.study_level and user.study_level == buddy.study_level:
+            count += 1
+        if user.school and buddy.school and user.school.strip().lower() == buddy.school.strip().lower():
+            count += 1
+        return count
+
     query = User.query.filter(User.id != user_id, User.is_verified == True)
     if country_filter and country_filter != 'all':
         query = query.filter(User.country == country_filter)
@@ -758,28 +770,41 @@ def find_study_buddies():
         query = query.filter(User.school == school_filter)
     if level_filter and level_filter != 'all':
         query = query.filter(User.study_level == level_filter)
-    if search_query:
-        query = query.filter((User.name.ilike(f'%{search_query}%')) | (User.username.ilike(f'%{search_query}%')))
 
-    buddies      = query.limit(100).all()
+    is_search = bool(search_query)
+    if is_search:
+        # Explicit search: return any matching user regardless of shared fields
+        query = query.filter(
+            (User.name.ilike(f'%{search_query}%')) | (User.username.ilike(f'%{search_query}%'))
+        )
+
+    buddies      = query.limit(200).all()
     buddies_data = []
     for buddy in buddies:
+        shared = _shared_count(buddy)
+
+        # When NOT searching: only surface users with >= 2 shared profile fields
+        if not is_search and shared < 2:
+            continue
+
         is_connected = Connection.query.filter(
             ((Connection.user_id == user_id) & (Connection.connected_user_id == buddy.id)) |
             ((Connection.user_id == buddy.id) & (Connection.connected_user_id == user_id))
         ).first() is not None
 
-        priority = 0
-        if buddy.country == user.country:         priority += 100
-        if buddy.school == user.school:           priority += 50
-        if buddy.study_level == user.study_level: priority += 25
+        # Priority: shared profile fields (weighted heavily) + country bonus
+        priority = shared * 50
+        if buddy.country == user.country:
+            priority += 10
 
         buddies_data.append({
             'id': buddy.id, 'name': buddy.name, 'username': buddy.username,
             'profile_pic': buddy.get_profile_pic_url(), 'school': buddy.school,
             'study_level': buddy.study_level, 'country': buddy.country,
+            'profession': buddy.profession or '',
             'tags': [t.tag for t in buddy.tags], 'total_quizzes': buddy.get_total_quizzes(),
-            'average_score': buddy.get_average_score(), 'is_connected': is_connected, 'priority': priority
+            'average_score': buddy.get_average_score(), 'is_connected': is_connected,
+            'shared_count': shared, 'priority': priority
         })
 
     buddies_data.sort(key=lambda x: (-x['priority'], x['name']))
@@ -1131,11 +1156,35 @@ def discover_groups():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     user_id        = session['user_id']
+    user           = User.query.get(user_id)
     user_group_ids = [m.group_id for m in ChatGroupMember.query.filter_by(user_id=user_id).all()]
-    groups_data    = []
+
+    # Helper: count shared profile fields between current user and a target user
+    def _shared_with_user(other):
+        if not other:
+            return 0
+        count = 0
+        if user.profession and other.profession and user.profession.strip().lower() == other.profession.strip().lower():
+            count += 1
+        if user.study_level and other.study_level and user.study_level == other.study_level:
+            count += 1
+        if user.school and other.school and user.school.strip().lower() == other.school.strip().lower():
+            count += 1
+        return count
+
+    groups_data = []
     for g in ChatGroup.query.all():
         if g.id in user_group_ids:
             continue
+
+        # Check shared profile fields with the group admin/creator
+        creator = User.query.get(g.created_by)
+        shared  = _shared_with_user(creator)
+
+        # Only surface groups where user shares >= 2 profile fields with the admin
+        if shared < 2:
+            continue
+
         pending = GroupJoinRequest.query.filter_by(group_id=g.id, user_id=user_id, status='pending').first()
         groups_data.append({
             'id': g.id, 'name': g.name, 'description': g.description,
@@ -1144,8 +1193,12 @@ def discover_groups():
             'member_count':  ChatGroupMember.query.filter_by(group_id=g.id).count(),
             'message_count': GroupMessage.query.filter_by(group_id=g.id, is_deleted=False).count(),
             'has_pending_request': pending is not None,
+            'shared_with_admin': shared,
             'created_at': g.created_at.isoformat()
         })
+
+    # Sort: most shared fields first
+    groups_data.sort(key=lambda x: -x['shared_with_admin'])
     return jsonify({'success': True, 'groups': groups_data})
 
 
