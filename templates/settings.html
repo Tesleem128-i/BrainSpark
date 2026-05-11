@@ -583,7 +583,9 @@ async function saveAvatar() {
         const data = await res.json();
         if (data.success) {
             toast('Profile picture updated!');
-            document.getElementById('nav-avatar').src = document.getElementById('avatar-preview-img').src;
+            const newUrl = data.url + '?t=' + Date.now();
+document.getElementById('nav-avatar').src = newUrl;
+document.getElementById('avatar-preview-img').src = newurl;
             document.getElementById('avatar-save-btn').style.display = 'none';
             document.getElementById('avatar-cancel-btn').style.display = 'none';
             avatarFile = null;
