@@ -1533,12 +1533,12 @@ function initExcalidraw(){
     <span id="ex-sync-label" style="font-size:.72rem;color:var(--muted);margin-left:auto;"></span>
   `;
   // hide toolbar for non-coordinators
-  if(!amcoord){
+  if(!amCoord){
     tb.style.display='none';
-    const vl=document.createelement('div');
-    vl.style.csstext='position:absolute;top:0;left:0;right:0;z-index:10;padding:6px 12px;background:rgba(59,107,255,.08);border-bottom:1px solid rgba(59,107,255,.2);font-size:.75rem;color:var(--blue2);font-style:italic;';
-    vl.textcontent='📺 viewing whiteboard (read-only) — syncs every 3s';
-    wrap.appendchild(vl);
+    const vl=document.createElement('div');
+    vl.style.cssText='position:absolute;top:0;left:0;right:0;z-index:10;padding:6px 12px;background:rgba(59,107,255,.08);border-bottom:1px solid rgba(59,107,255,.2);font-size:.75rem;color:var(--blue2);font-style:italic;';
+    vl.textContent='📺 viewing whiteboard (read-only) — syncs every 3s';
+    wrap.appendChild(vl);
   }
 
   // Canvas
@@ -1665,9 +1665,9 @@ function disposeJitsi(){if(_jitsiApi){try{_jitsiApi.dispose();}catch(e){}; _jits
 // ═══════════════════════════════════════════════════════════
 //  BUILT-IN WHITEBOARD ENGINE (REPLACES EXCALIDRAW)
 // ═══════════════════════════════════════════════════════════
-LET _EXCTX=NULL,_EXDRAWING=FALSE,_EXCOLOR='#000000',_EXSIZE=4,_EXTOOL='PEN';
-LET _EXHISTORY=[],_EXSYNCTIMER=NULL,_EXVIEWPOLLINTERVAL=NULL;
-LET _EXSTARTX=0,_EXSTARTY=0,_EXSNAPSHOT=NULL,_EXTEXTINPUT=NULL;
+let _exCtx=null,_exDrawing=false,_exColor='#000000',_exSize=4,_exTool='pen';
+let _exHistory=[],_exSyncTimer=null,_exViewPollInterval=null;
+let _exStartX=0,_exStartY=0,_exSnapshot=null,_exTextInput=null;
 
 function exSetColor(c,btn){
   _exColor=c;
