@@ -1047,7 +1047,7 @@ card.innerHTML=`<div style="display:flex;gap:12px;align-items:flex-start;margin-
 }
 
 // Keep loadBuddies pointing to the filter system so tab switching still works
-function loadBuddies(){applyBuddyFilters();}
+function loadBuddies(){document.getElementById('buddy-search').value='';_buddyFilter='suggested';document.querySelectorAll('.buddy-filter-pill').forEach(b=>b.classList.toggle('active',b.dataset.filter==='suggested'));document.getElementById('buddy-filter-desc').textContent='⭐ Showing suggested buddies based on your profile';applyBuddyFilters();}
 
 async function connectUser(userId){
     try{const data=await fetch('/api/connect-user',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:userId})}).then(r=>r.json());if(data.success){showToast(data.pending?'📨 Connection request sent!':'✅ Connected!','success');applyBuddyFilters();}else showToast('❌ '+(data.error||'Failed'),'error');}

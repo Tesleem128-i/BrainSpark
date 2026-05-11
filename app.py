@@ -831,7 +831,7 @@ def find_study_buddies():
             'profession': buddy.profession or '',
             'tags': [t.tag for t in buddy.tags], 'total_quizzes': buddy.get_total_quizzes(),
             'average_score': buddy.get_average_score(), 'is_connected': is_connected,
-            'has_pending_request': has_pending_request,
+            'has_pending_request': False,
             'shared_count': shared, 'priority': priority,
             'match_country':    bool(user.country    and buddy.country    and user.country == buddy.country),
             'match_school':     bool(user.school     and buddy.school     and user.school.strip().lower() == buddy.school.strip().lower()),
