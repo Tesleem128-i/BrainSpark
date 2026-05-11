@@ -717,6 +717,7 @@ def dashboard_stats():
 
         return jsonify({
             'success': True,
+            'user_id': user_id,
             'stats': {'total_quizzes': total_quizzes, 'average_score': average_score, 'connection_count': connection_count},
             'recent_activity':  recent_activity,
             'performance_data': daily_scores
@@ -1750,9 +1751,11 @@ def schedule_brainstorm():
         return jsonify({'error': 'Only group admins can schedule sessions'}), 403
     try:
         sched_dt = datetime.fromisoformat(scheduled_time)
+        teacher_id = data.get('teacher_id') or user_id  # default teacher is the scheduling admin
         sess_obj = BrainstormSession(
             group_id=group_id, title=title,
-            description=description, scheduled_time=sched_dt
+            description=description, scheduled_time=sched_dt,
+            teacher_id=teacher_id
         )
         db.session.add(sess_obj)
         db.session.flush()
@@ -1803,7 +1806,10 @@ def get_group_sessions(group_id):
     return jsonify({'success': True, 'sessions': [{
         'id': s.id, 'title': s.title, 'description': s.description,
         'scheduled_time': s.scheduled_time.isoformat(), 'status': s.status,
-        'note_count': len(s.notes), 'created_at': s.created_at.isoformat()
+        'note_count': len(s.notes), 'created_at': s.created_at.isoformat(),
+        'teacher_id': s.teacher_id,
+        'teacher_name': s.teacher.name if s.teacher else None,
+        'group_id': s.group_id
     } for s in sessions]})
 
 
@@ -2587,6 +2593,130 @@ def debug_db_status():
     except Exception as e:
         logger.error(f"YouTube search error: {e}", exc_info=True)
         return jsonify({'success': False, 'error': 'Failed to fetch videos'}), 500
+    
+@app.route('/api/join-brainstorm-session', methods=['POST'])
+def join_brainstorm_session():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    data = request.json or {}
+    session_id = data.get('session_id')
+    s = BrainstormSession.query.get(session_id)
+    if not s:
+        return jsonify({'error': 'Session not found'}), 404
+    # Any group member can join
+    if not ChatGroupMember.query.filter_by(group_id=s.group_id, user_id=session['user_id']).first():
+        return jsonify({'error': 'Not a group member'}), 403
+    return jsonify({'success': True, 'session': {
+        'id': s.id, 'title': s.title, 'shared_doc': s.shared_doc,
+        'whiteboard_data': s.whiteboard_data, 'status': s.status
+    }})
+
+
+@app.route('/api/leave-brainstorm-session', methods=['POST'])
+def leave_brainstorm_session():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    # Leaving is always allowed — just a client-side state reset
+    return jsonify({'success': True})
+
+@app.route('/api/leave-group', methods=['POST'])
+def leave_group():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    user_id = session['user_id']
+    data = request.json or {}
+    group_id = data.get('group_id')
+    group = ChatGroup.query.get(group_id)
+    if not group:
+        return jsonify({'error': 'Group not found'}), 404
+    if group.created_by == user_id:
+        return jsonify({'error': 'Group creator cannot leave. Delete the group instead.'}), 403
+    member = ChatGroupMember.query.filter_by(group_id=group_id, user_id=user_id).first()
+    if not member:
+        return jsonify({'error': 'Not a member'}), 404
+    try:
+        db.session.delete(member)
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/delete-group', methods=['POST'])
+def delete_group():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    user_id = session['user_id']
+    data = request.json or {}
+    group_id = data.get('group_id')
+    group = ChatGroup.query.get(group_id)
+    if not group:
+        return jsonify({'error': 'Group not found'}), 404
+    if group.created_by != user_id:
+        return jsonify({'error': 'Only the group creator can delete this group'}), 403
+    try:
+        db.session.delete(group)
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/rename-group', methods=['POST'])
+def rename_group():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    user_id = session['user_id']
+    data = request.json or {}
+    group_id = data.get('group_id')
+    new_name = data.get('name', '').strip()
+    new_desc = data.get('description', '').strip()
+    if not new_name or len(new_name) < 3:
+        return jsonify({'error': 'Group name must be at least 3 characters'}), 400
+    group = ChatGroup.query.get(group_id)
+    if not group:
+        return jsonify({'error': 'Group not found'}), 404
+    member = ChatGroupMember.query.filter_by(group_id=group_id, user_id=user_id, role='admin').first()
+    if not member:
+        return jsonify({'error': 'Only admins can rename the group'}), 403
+    try:
+        group.name = new_name
+        group.description = new_desc
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Group renamed!'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/api/set-session-teacher', methods=['POST'])
+def set_session_teacher():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    user_id = session['user_id']
+    data = request.json or {}
+    session_id = data.get('session_id')
+    teacher_user_id = data.get('teacher_id')
+    s = BrainstormSession.query.get(session_id)
+    if not s:
+        return jsonify({'error': 'Session not found'}), 404
+    # Only admins can assign teacher
+    member = ChatGroupMember.query.filter_by(group_id=s.group_id, user_id=user_id, role='admin').first()
+    if not member:
+        return jsonify({'error': 'Only admins can assign a teacher'}), 403
+    # Teacher must be a group member
+    if not ChatGroupMember.query.filter_by(group_id=s.group_id, user_id=teacher_user_id).first():
+        return jsonify({'error': 'Teacher must be a group member'}), 400
+    s.teacher_id = teacher_user_id
+    db.session.commit()
+    teacher = User.query.get(teacher_user_id)
+    # Notify the assigned teacher
+    _create_notification(teacher_user_id, 'brainstorm_scheduled',
+                         f'You are the teacher for "{s.title}"',
+                         'You can now broadcast voice during the session.',
+                         'brainstorm', session_id)
+    return jsonify({'success': True, 'teacher_name': teacher.name})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=app.debug)

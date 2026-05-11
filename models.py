@@ -254,7 +254,11 @@ class BrainstormSession(db.Model):
     whiteboard_data = db.Column(db.Text, nullable=True)
     # Shared document content
     shared_doc = db.Column(db.Text, nullable=True)
+    # Teacher (who can broadcast voice)
+    teacher_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    teacher = db.relationship('User', foreign_keys=[teacher_id], backref='taught_sessions')
 
     notes = db.relationship('BrainstormNote', backref='session', lazy=True, cascade='all, delete-orphan')
 

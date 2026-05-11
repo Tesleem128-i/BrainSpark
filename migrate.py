@@ -48,7 +48,7 @@ migrations = [
 
     # ── brainstorm_session ────────────────────────────────────────────────────
     'ALTER TABLE brainstorm_session ADD COLUMN IF NOT EXISTS whiteboard_data TEXT',
-    'ALTER TABLE brainstorm_session ADD COLUMN IF NOT EXISTS shared_doc TEXT',
+    'ALTER TABLE brainstorm_session ADD COLUMN IF NOT EXISTS teacher_id INTEGER REFERENCES "user"(id)',
 
     # ── brainstorm_note ───────────────────────────────────────────────────────
     'ALTER TABLE brainstorm_note ADD COLUMN IF NOT EXISTS color VARCHAR(20) DEFAULT \'#ff4f30\'',

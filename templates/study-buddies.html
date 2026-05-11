@@ -762,6 +762,28 @@
                     <div style="font-size:.72rem;color:var(--muted);margin-top:4px;text-align:right;" id="bs-doc-save-status">Whiteboard ready</div>
                 </div>
             </div>
+            <!-- Teacher Broadcast -->
+            <div id="bs-broadcast-controls" style="display:none;margin-top:16px;border-top:1px solid var(--border);padding-top:16px;">
+                <div style="font-size:.75rem;font-weight:700;color:#e03030;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;"><i class="fas fa-broadcast-tower"></i> Teacher Voice Broadcast</div>
+                <!-- Admin: assign teacher -->
+                <div id="bs-assign-teacher-btn" style="display:none;margin-bottom:10px;">
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <select id="bs-teacher-pick" class="inp" style="flex:1;max-width:220px;padding:7px 12px;font-size:.82rem;">
+                            <option value="">Select teacher…</option>
+                        </select>
+                        <button onclick="assignSessionTeacher()" class="btn btn-blue btn-sm" style="border-radius:50px;"><i class="fas fa-chalkboard-teacher"></i> Assign Teacher</button>
+                    </div>
+                    <div id="bs-current-teacher" style="font-size:.75rem;color:var(--muted);margin-top:5px;"></div>
+                </div>
+                <!-- Broadcast button (teacher only) -->
+                <div id="bs-broadcast-btn-wrap" style="display:flex;gap:8px;align-items:center;">
+                    <button id="bs-broadcast-btn" onclick="teacherBroadcastVoice()" class="btn btn-spark" style="border-radius:50px;"><i class="fas fa-microphone"></i> Broadcast Voice</button>
+                    <span style="font-size:.78rem;color:var(--muted);">Record a voice clip — members receive it instantly in group chat</span>
+                </div>
+            </div>
+
+            
+
             <!-- SparkAI in session -->
             <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px;">
                 <div style="font-size:.75rem;font-weight:700;color:var(--spark);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;"><i class="fas fa-robot"></i> SparkAI — In-Session Help</div>
@@ -876,6 +898,7 @@ let gcMediaRecorder = null, gcAudioChunks = [], gcRecTimer = null, gcRecSeconds 
 
 // Brainstorm state
 let bsCurrentSessionId = null, bsCurrentGroupId = null, bsDocSaveTimer = null;
+let bsCurrentTeacherId = null, bsCurrentUserId = null;
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  THEME
@@ -1381,18 +1404,17 @@ function renderGCMessage(container, msg, currentUserId) {
     if (isDeleted) {
         contentHtml = `<em style="opacity:.5;font-size:.82rem;">This message was deleted</em>`;
     } else if (msg.message_type==='image' && msg.image_url) {
-        // Fix 404: use correct path — the backend serves /uploads/<path>
-        const imgSrc = msg.image_url.startsWith('/') ? msg.image_url : '/uploads/group_chat/'+msg.image_url;
-        contentHtml = `<img src="${imgSrc}" class="wa-msg-img" onclick="openLightbox('${imgSrc}')" alt="Image">`;
+        const imgSrc = msg.image_url;
+        contentHtml = `<img src="${imgSrc}" class="wa-msg-img" onclick="openLightbox('${imgSrc}')" alt="Image" onerror="this.src='/static/image/KNOWITNOW.png'">`;
         if (msg.content && msg.content !== '📷 Image') contentHtml += `<div>${escHtml(msg.content)}</div>`;
     } else if (msg.message_type==='pdf' && msg.pdf_url) {
-        const pdfSrc = msg.pdf_url.startsWith('/') ? msg.pdf_url : '/uploads/group_chat/'+msg.pdf_url;
+        const pdfSrc = msg.pdf_url;
         contentHtml = `<a href="${pdfSrc}" target="_blank" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(249,115,22,0.12);border:1px solid rgba(249,115,22,.3);border-radius:12px;text-decoration:none;color:inherit;">
             <i class="fas fa-file-pdf" style="font-size:1.4rem;color:#f97316;flex-shrink:0;"></i>
             <div><div style="font-weight:600;font-size:.875rem;">${escHtml(msg.content||'Shared PDF')}</div><div style="font-size:.73rem;opacity:.65;">Click to open</div></div>
         </a>`;
     } else if (msg.message_type==='voice' && msg.voice_url) {
-        const voiceSrc = msg.voice_url.startsWith('/') ? msg.voice_url : '/uploads/voice_notes/'+msg.voice_url;
+        const voiceSrc = msg.voice_url;
         contentHtml = `<div style="display:flex;align-items:center;gap:8px;"><i class="fas fa-microphone" style="opacity:.7;"></i><audio controls src="${voiceSrc}" style="height:32px;max-width:200px;"></audio></div>`;
     } else if (msg.message_type==='poll' && msg.poll) {
         const poll=msg.poll; const total=poll.total_votes||0;
@@ -1645,6 +1667,43 @@ async function toggleVoiceRecording() {
         gcRecTimer = setInterval(()=>{gcRecSeconds++;const m=Math.floor(gcRecSeconds/60),s=gcRecSeconds%60;document.getElementById('gc-rec-time').textContent=`${m}:${s<10?'0':''}${s}`;},1000);
     } catch { showToast('Microphone access denied','error'); }
 }
+async function teacherBroadcastVoice() {
+    // Teacher records a clip; it gets posted to the group chat automatically
+    if (!bsCurrentGroupId) { showToast('No active session','warn'); return; }
+    const btn = document.getElementById('bs-broadcast-btn');
+    if (gcMediaRecorder && gcMediaRecorder.state === 'recording') {
+        // Stop and send
+        clearInterval(gcRecTimer);
+        gcMediaRecorder.stop();
+        gcMediaRecorder.onstop = async () => {
+            const blob = new Blob(gcAudioChunks, {type:'audio/webm'});
+            const fd = new FormData();
+            fd.append('group_id', bsCurrentGroupId);
+            fd.append('message_type', 'voice');
+            fd.append('content', '🎙️ Teacher broadcast');
+            fd.append('voice', blob, 'broadcast.webm');
+            try {
+                await fetch('/api/send-group-message', {method:'POST', body:fd});
+                showToast('📢 Voice broadcast sent to group!', 'success');
+            } catch {}
+            gcMediaRecorder.stream.getTracks().forEach(t=>t.stop());
+            gcMediaRecorder = null;
+        };
+        btn.innerHTML = '<i class="fas fa-microphone"></i> Broadcast Voice';
+        btn.style.background = 'var(--spark)';
+    } else {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+            gcAudioChunks = [];
+            gcMediaRecorder = new MediaRecorder(stream);
+            gcMediaRecorder.ondataavailable = e => gcAudioChunks.push(e.data);
+            gcMediaRecorder.start();
+            btn.innerHTML = '<i class="fas fa-stop"></i> Stop & Send';
+            btn.style.background = '#e03030';
+            showToast('🔴 Recording... click Stop & Send when done','info');
+        } catch { showToast('Mic access denied','error'); }
+    }
+}
 
 async function stopAndSendVoice() {
     if (!gcMediaRecorder) return;
@@ -1684,7 +1743,8 @@ function cancelVoiceRecording() {
 // ═══════════════════════════════════════════════════════════════════════════
 function toggleGCInfo() {
     const panel = document.getElementById('gc-info-panel');
-    panel.style.display = panel.style.display === 'none' || !panel.style.display ? '' : 'none';
+    const isHidden = panel.style.display === 'none' || panel.style.display === '';
+    panel.style.display = isHidden ? 'flex' : 'none';
 }
 
 function copyGroupLink() {
@@ -1913,7 +1973,7 @@ async function scheduleBSSession() {
     if(!groupId){showToast('Please select a group','warn');return;}
     const btn=event.target;const orig=btn.innerHTML;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';btn.disabled=true;
     try {
-        const data=await fetch('/api/schedule-brainstorm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_id:groupId,title,description:desc,scheduled_time:time})}).then(r=>r.json());
+        const data=await fetch('/api/schedule-brainstorm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_id:groupId,title,description:desc,scheduled_time:time,teacher_id:document.getElementById('bs-teacher-select')?.value||null})}).then(r=>r.json());
         if(data.success){showToast('📅 Session scheduled! Members notified.','success');['bs-title','bs-time','bs-desc'].forEach(id=>document.getElementById(id).value='');loadRecentSessions();}
         else showToast('❌ '+(data.error||'Failed'),'error');
     } catch { showToast('Error scheduling session','error'); }
@@ -1927,6 +1987,7 @@ async function startLiveSession() {
     const data=await fetch('/api/schedule-brainstorm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_id:groupId,title,description:document.getElementById('bs-desc').value.trim(),scheduled_time:new Date().toISOString()})}).then(r=>r.json());
     if(data.success){
         bsCurrentSessionId=data.session_id;bsCurrentGroupId=groupId;
+        bsCurrentTeacherId=data.teacher_id||null;
         // Mark as ongoing
         await fetch('/api/update-session-status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:data.session_id,status:'ongoing'})});
         showToast('🚀 Live session started! Members notified.','success');
@@ -1936,9 +1997,25 @@ async function startLiveSession() {
     } else showToast('❌ '+(data.error||'Failed'),'error');
 }
 
-function showLiveArea(title,groupId) {
+async function showLiveArea(title,groupId) {
     document.getElementById('bs-live-area').style.display='';
     document.getElementById('bs-live-title').textContent=title;
+    // Get current user id if not set
+    if (!bsCurrentUserId) {
+        try { const r=await fetch('/api/get-connections').then(x=>x.json()); } catch {}
+        // Fallback: check session via dashboard-stats
+        try {
+            const r=await fetch('/api/dashboard-stats').then(x=>x.json());
+            if(r.success) bsCurrentUserId=r.user_id;
+        } catch {}
+    }
+    const broadcastControls = document.getElementById('bs-broadcast-controls');
+    const isTeacher = bsCurrentTeacherId && bsCurrentUserId && (String(bsCurrentTeacherId)===String(bsCurrentUserId));
+    const canBroadcast = isTeacher || gcCurrentGroupIsAdmin;
+    if (broadcastControls) broadcastControls.style.display = canBroadcast ? '' : 'none';
+    // Show assign-teacher button only for admins
+    const assignTeacherBtn = document.getElementById('bs-assign-teacher-btn');
+    if (assignTeacherBtn) assignTeacherBtn.style.display = gcCurrentGroupIsAdmin ? '' : 'none';
     fetch('/api/get-groups').then(r=>r.json()).then(d=>{const g=d.groups?.find(x=>x.id==groupId);document.getElementById('bs-live-group').textContent=g?g.name:'';});
     document.getElementById('bs-notes-grid').innerHTML='';
     if(bsCurrentSessionId) loadSessionNotes(bsCurrentSessionId);
@@ -2054,8 +2131,15 @@ async function loadRecentSessions() {
 }
 
 function openSession(s) {
-    if(s.status==='ongoing'){bsCurrentSessionId=s.id;bsCurrentGroupId=s.group_id;showLiveArea(s.title,s.group_id);if(s.shared_doc)document.getElementById('bs-shared-doc').value=s.shared_doc;}
-    else{showToast(`Session: ${s.title} (${s.status})`, 'info');}
+    if(s.status==='ongoing'){
+        bsCurrentSessionId=s.id;
+        bsCurrentGroupId=s.group_id;
+        bsCurrentTeacherId=s.teacher_id||null;
+        showLiveArea(s.title,s.group_id);
+        if(s.shared_doc)document.getElementById('bs-shared-doc').value=s.shared_doc;
+    } else {
+        showToast(`Session: ${s.title} (${s.status})`, 'info');
+    }
 }
 
 async function askSparkAI(inputId, responseId, useContext=false) {
@@ -2092,10 +2176,11 @@ function logout(){ if(confirm('Logout?')) fetch('/logout',{method:'POST'}).then(
 // ═══════════════════════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
     applyTheme(localStorage.getItem('theme')||'dark');
-    // Keypress on GC input handled by handleGCKeydown
     loadBuddies();
     loadNotifications();
     setInterval(loadNotifications, 30000);
+    // Get current user ID for teacher check
+    fetch('/api/dashboard-stats').then(r=>r.json()).then(d=>{ if(d.success) bsCurrentUserId=d.user_id; }).catch(()=>{});
 
     // Check URL params for direct group join
     const params = new URLSearchParams(window.location.search);
@@ -2155,13 +2240,41 @@ function wbEnd(){
     wbSaveHistory();
 }
 
+let wbTextInput = null;
 function wbClickText(e){
     if(wbTool!=='text') return;
-    const pos=wbGetPos(e);
-    const txt=prompt('Enter text:'); if(!txt) return;
-    wbCtx.font=`${wbSize*4+12}px 'DM Sans',sans-serif`;
-    wbCtx.fillStyle=wbColor; wbCtx.fillText(txt,pos.x,pos.y);
-    wbSaveHistory();
+    const canvas = document.getElementById('bs-whiteboard');
+    const pos = wbGetPos(e);
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    // Remove any existing text input
+    if(wbTextInput){ wbTextInput.remove(); wbTextInput=null; }
+    // Create inline input over canvas
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.placeholder = 'Type here, press Enter';
+    inp.style.cssText = `position:fixed;left:${e.clientX}px;top:${e.clientY}px;z-index:9999;padding:4px 8px;border:2px dashed ${wbColor};border-radius:6px;background:rgba(255,255,255,0.95);color:#000;font-family:'DM Sans',sans-serif;font-size:${Math.max(12,wbSize*3)}px;min-width:120px;outline:none;`;
+    document.body.appendChild(inp);
+    wbTextInput = inp;
+    inp.focus();
+    inp.addEventListener('keydown', function(ev){
+        if(ev.key === 'Enter'){
+            const txt = inp.value.trim();
+            if(txt){
+                wbCtx.font = `${Math.max(14,wbSize*3)}px 'DM Sans',sans-serif`;
+                wbCtx.fillStyle = wbColor;
+                wbCtx.globalAlpha = 1;
+                wbCtx.globalCompositeOperation = 'source-over';
+                wbCtx.fillText(txt, pos.x, pos.y);
+                wbSaveHistory();
+            }
+            inp.remove(); wbTextInput = null;
+        }
+        if(ev.key === 'Escape'){ inp.remove(); wbTextInput = null; }
+    });
+    inp.addEventListener('blur', function(){
+        setTimeout(()=>{ if(wbTextInput===inp){ inp.remove(); wbTextInput=null; } }, 150);
+    });
 }
 
 function wbSaveHistory(){
@@ -2211,6 +2324,10 @@ let tvMediaRecorder=null, tvAudioChunks=[], tvRecTimer=null, tvRecSeconds=0, tvR
 function openTeacherVoiceModal(){
     const groupId=document.getElementById('bs-group').value;
     if(!groupId){showToast('Please select a group first','warn');return;}
+    // Only group creator can be teacher — validated server-side via admin role on schedule
+    // The schedule button already checks role==='admin' on backend
+    // Only group creator can be teacher — validated server-side via admin role on schedule
+    // The schedule button already checks role==='admin' on backend
     openModal('teacher-voice-modal');
     tvAudioBlob=null;
     document.getElementById('tv-playback').style.display='none';
@@ -2276,6 +2393,49 @@ async function startLiveSessionWithVoice(){
     startLiveSession();
     setTimeout(initWhiteboard, 400);
 }
+async function assignSessionTeacher() {
+    if (!bsCurrentSessionId) { showToast('No active session','warn'); return; }
+    const sel = document.getElementById('bs-teacher-pick');
+    const teacherId = sel?.value;
+    if (!teacherId) { showToast('Please select a member to assign as teacher','warn'); return; }
+    const data = await fetch('/api/set-session-teacher', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({session_id: bsCurrentSessionId, teacher_id: parseInt(teacherId)})
+    }).then(r=>r.json());
+    if (data.success) {
+        bsCurrentTeacherId = parseInt(teacherId);
+        showToast(`✅ ${data.teacher_name} is now the teacher!`, 'success');
+        document.getElementById('bs-current-teacher').textContent = `Current teacher: ${data.teacher_name}`;
+        // Show broadcast button to teacher if it's the current user
+        const isNowTeacher = String(bsCurrentTeacherId) === String(bsCurrentUserId);
+        document.getElementById('bs-broadcast-btn-wrap').style.display = isNowTeacher ? '' : 'none';
+    } else {
+        showToast('❌ '+(data.error||'Failed'), 'error');
+    }
+}
+// Populate teacher picker for admins
+    if (gcCurrentGroupIsAdmin && gcCurrentGroupId) {
+        const memberData = await fetch(`/api/get-group-members/${gcCurrentGroupId}`).then(r=>r.json());
+        const pick = document.getElementById('bs-teacher-pick');
+        if (pick && memberData.success) {
+            pick.innerHTML = '<option value="">Select teacher…</option>';
+            memberData.members.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.id;
+                opt.textContent = `${m.name} (@${m.username})${m.id==bsCurrentTeacherId?' ✓ current':''}`;
+                pick.appendChild(opt);
+            });
+        }
+        if (bsCurrentTeacherId) {
+            const t = memberData?.members?.find(m=>m.id==bsCurrentTeacherId);
+            const label = document.getElementById('bs-current-teacher');
+            if (label && t) label.textContent = `Current teacher: ${t.name}`;
+        }
+    }
+    // Only show broadcast button to current teacher
+    const isTeacherNow = bsCurrentTeacherId && bsCurrentUserId && (String(bsCurrentTeacherId)===String(bsCurrentUserId));
+    const bw = document.getElementById('bs-broadcast-btn-wrap');
+    if (bw) bw.style.display = isTeacherNow || gcCurrentGroupIsAdmin ? '' : 'none';
 </script>
 <!-- Teacher Voice Intro Modal -->
 <div id="teacher-voice-modal" class="modal-overlay" style="display:none;">
