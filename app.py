@@ -1362,9 +1362,9 @@ def _serialize_group_message(msg, current_user_id):
     reply_data = None
     if msg.reply_to_id and msg.reply_to and not msg.reply_to.is_deleted:
         reply_data = {
-            'id':          msg.reply_to.id,
-            'sender_name': msg.reply_to.sender.name,
-            'content':     msg.reply_to.content[:120],
+            'id':           msg.reply_to.id,
+            'sender_name':  msg.reply_to.sender.name,
+            'content':      msg.reply_to.content[:120],
             'message_type': msg.reply_to.message_type
         }
 
@@ -1383,26 +1383,41 @@ def _serialize_group_message(msg, current_user_id):
                 'options': opts, 'total_votes': sum(o['votes'] for o in opts)
             }
 
+    # Parse brainstorm session card data and refresh status from DB
+    session_data = None
+    if msg.message_type == 'brainstorm_session' and msg.content:
+        try:
+            session_data = json.loads(msg.content)
+            # Always refresh the live status from the database so the card stays current
+            if session_data.get('id'):
+                live_session = BrainstormSession.query.get(session_data['id'])
+                if live_session:
+                    session_data['status'] = live_session.status
+                    session_data['teacher_id'] = live_session.teacher_id
+        except Exception:
+            session_data = None
+
     return {
-        'id':           msg.id,
-        'sender_id':    msg.sender_id,
-        'sender_name':  msg.sender.name,
+        'id':             msg.id,
+        'sender_id':      msg.sender_id,
+        'sender_name':    msg.sender.name,
         'sender_username': msg.sender.username,
-        'sender_pic':   msg.sender.get_profile_pic_url(),
-        'content':      '' if msg.is_deleted else msg.content,
-        'message_type': msg.message_type,
-        'is_deleted':   msg.is_deleted,
-        'is_edited':    msg.is_edited,
-        'is_sent':      msg.sender_id == current_user_id,
-        'image_url':    f'/uploads/group_chat/{msg.image_path}' if msg.image_path else None,
-        'pdf_url':      f'/uploads/group_chat/{msg.pdf_path}'   if msg.pdf_path   else None,
-        'voice_url':    f'/uploads/voice_notes/{msg.voice_path}' if msg.voice_path else None,
-        'reply_to':     reply_data,
-        'mentions':     mentions,
-        'reactions':    reactions,
-        'poll':         poll_data,
-        'created_at':   msg.created_at.isoformat(),
-        'edited_at':    msg.edited_at.isoformat() if msg.edited_at else None,
+        'sender_pic':     msg.sender.get_profile_pic_url(),
+        'content':        '' if msg.is_deleted else msg.content,
+        'message_type':   msg.message_type,
+        'is_deleted':     msg.is_deleted,
+        'is_edited':      msg.is_edited,
+        'is_sent':        msg.sender_id == current_user_id,
+        'image_url':      f'/uploads/group_chat/{msg.image_path}' if msg.image_path else None,
+        'pdf_url':        f'/uploads/group_chat/{msg.pdf_path}'   if msg.pdf_path   else None,
+        'voice_url':      f'/uploads/voice_notes/{msg.voice_path}' if msg.voice_path else None,
+        'reply_to':       reply_data,
+        'mentions':       mentions,
+        'reactions':      reactions,
+        'poll':           poll_data,
+        'session_data':   session_data,
+        'created_at':     msg.created_at.isoformat(),
+        'edited_at':      msg.edited_at.isoformat() if msg.edited_at else None,
     }
 
 
@@ -1845,16 +1860,21 @@ def schedule_brainstorm():
                 f'{scheduler.name} scheduled a session in {group.name} for {sched_dt.strftime("%b %d %H:%M")}.',
                 'brainstorm', sess_obj.id
             )
-            # Also drop a group chat system message
+            # Drop a brainstorm session card message in chat
+            import json as _json
+            session_card_data = _json.dumps({
+                'id': sess_obj.id,
+                'title': title,
+                'description': description or 'Join us for a collaborative study session!',
+                'scheduled_time': sched_dt.isoformat(),
+                'status': 'scheduled',
+                'teacher_id': teacher_id,
+                'group_id': group_id
+            })
             sys_msg = GroupMessage(
                 group_id=group_id, sender_id=user_id,
-                content=(
-                    f"📅 **Brainstorm Session Scheduled!**\n\n"
-                    f"📌 **{title}**\n"
-                    f"🕐 **When:** {sched_dt.strftime('%A, %B %d %Y at %H:%M UTC')}\n"
-                    f"📝 {description or 'Join us for a collaborative study session!'}"
-                ),
-                message_type='text'
+                content=session_card_data,
+                message_type='brainstorm_session'
             )
             db.session.add(sys_msg)
             break  # Only one system message per group
