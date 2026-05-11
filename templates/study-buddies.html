@@ -1997,28 +1997,62 @@ async function startLiveSession() {
     } else showToast('❌ '+(data.error||'Failed'),'error');
 }
 
-async function showLiveArea(title,groupId) {
-    document.getElementById('bs-live-area').style.display='';
-    document.getElementById('bs-live-title').textContent=title;
-    // Get current user id if not set
+async function showLiveArea(title, groupId) {
+    document.getElementById('bs-live-area').style.display = '';
+    document.getElementById('bs-live-title').textContent = title;
+
+    // Ensure we have the current user ID
     if (!bsCurrentUserId) {
-        try { const r=await fetch('/api/get-connections').then(x=>x.json()); } catch {}
-        // Fallback: check session via dashboard-stats
         try {
-            const r=await fetch('/api/dashboard-stats').then(x=>x.json());
-            if(r.success) bsCurrentUserId=r.user_id;
+            const r = await fetch('/api/dashboard-stats').then(x => x.json());
+            if (r.success) bsCurrentUserId = r.user_id;
         } catch {}
     }
+
+    // Show/hide broadcast controls section
     const broadcastControls = document.getElementById('bs-broadcast-controls');
-    const isTeacher = bsCurrentTeacherId && bsCurrentUserId && (String(bsCurrentTeacherId)===String(bsCurrentUserId));
+    const isTeacher = bsCurrentTeacherId && bsCurrentUserId && (String(bsCurrentTeacherId) === String(bsCurrentUserId));
     const canBroadcast = isTeacher || gcCurrentGroupIsAdmin;
     if (broadcastControls) broadcastControls.style.display = canBroadcast ? '' : 'none';
-    // Show assign-teacher button only for admins
+
+    // Show assign-teacher UI only for admins
     const assignTeacherBtn = document.getElementById('bs-assign-teacher-btn');
     if (assignTeacherBtn) assignTeacherBtn.style.display = gcCurrentGroupIsAdmin ? '' : 'none';
-    fetch('/api/get-groups').then(r=>r.json()).then(d=>{const g=d.groups?.find(x=>x.id==groupId);document.getElementById('bs-live-group').textContent=g?g.name:'';});
-    document.getElementById('bs-notes-grid').innerHTML='';
-    if(bsCurrentSessionId) loadSessionNotes(bsCurrentSessionId);
+
+    // Show broadcast button only to teacher (or admin as fallback)
+    const bw = document.getElementById('bs-broadcast-btn-wrap');
+    if (bw) bw.style.display = (isTeacher || gcCurrentGroupIsAdmin) ? '' : 'none';
+
+    // Populate teacher picker for admins
+    if (gcCurrentGroupIsAdmin && gcCurrentGroupId) {
+        try {
+            const memberData = await fetch(`/api/get-group-members/${gcCurrentGroupId}`).then(r => r.json());
+            const pick = document.getElementById('bs-teacher-pick');
+            if (pick && memberData.success) {
+                pick.innerHTML = '<option value="">Select teacher…</option>';
+                memberData.members.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m.id;
+                    opt.textContent = `${m.name} (@${m.username})${m.id == bsCurrentTeacherId ? ' ✓ current' : ''}`;
+                    pick.appendChild(opt);
+                });
+            }
+            if (bsCurrentTeacherId && memberData.success) {
+                const t = memberData.members?.find(m => m.id == bsCurrentTeacherId);
+                const label = document.getElementById('bs-current-teacher');
+                if (label && t) label.textContent = `Current teacher: ${t.name}`;
+            }
+        } catch {}
+    }
+
+    // Set group name label
+    fetch('/api/get-groups').then(r => r.json()).then(d => {
+        const g = d.groups?.find(x => x.id == groupId);
+        document.getElementById('bs-live-group').textContent = g ? g.name : '';
+    });
+
+    document.getElementById('bs-notes-grid').innerHTML = '';
+    if (bsCurrentSessionId) loadSessionNotes(bsCurrentSessionId);
 }
 
 async function endLiveSession() {
@@ -2324,10 +2358,7 @@ let tvMediaRecorder=null, tvAudioChunks=[], tvRecTimer=null, tvRecSeconds=0, tvR
 function openTeacherVoiceModal(){
     const groupId=document.getElementById('bs-group').value;
     if(!groupId){showToast('Please select a group first','warn');return;}
-    // Only group creator can be teacher — validated server-side via admin role on schedule
-    // The schedule button already checks role==='admin' on backend
-    // Only group creator can be teacher — validated server-side via admin role on schedule
-    // The schedule button already checks role==='admin' on backend
+    // Only admins can start a session; teacher is assignable from the live session panel
     openModal('teacher-voice-modal');
     tvAudioBlob=null;
     document.getElementById('tv-playback').style.display='none';
@@ -2413,29 +2444,7 @@ async function assignSessionTeacher() {
         showToast('❌ '+(data.error||'Failed'), 'error');
     }
 }
-// Populate teacher picker for admins
-    if (gcCurrentGroupIsAdmin && gcCurrentGroupId) {
-        const memberData = await fetch(`/api/get-group-members/${gcCurrentGroupId}`).then(r=>r.json());
-        const pick = document.getElementById('bs-teacher-pick');
-        if (pick && memberData.success) {
-            pick.innerHTML = '<option value="">Select teacher…</option>';
-            memberData.members.forEach(m => {
-                const opt = document.createElement('option');
-                opt.value = m.id;
-                opt.textContent = `${m.name} (@${m.username})${m.id==bsCurrentTeacherId?' ✓ current':''}`;
-                pick.appendChild(opt);
-            });
-        }
-        if (bsCurrentTeacherId) {
-            const t = memberData?.members?.find(m=>m.id==bsCurrentTeacherId);
-            const label = document.getElementById('bs-current-teacher');
-            if (label && t) label.textContent = `Current teacher: ${t.name}`;
-        }
-    }
-    // Only show broadcast button to current teacher
-    const isTeacherNow = bsCurrentTeacherId && bsCurrentUserId && (String(bsCurrentTeacherId)===String(bsCurrentUserId));
-    const bw = document.getElementById('bs-broadcast-btn-wrap');
-    if (bw) bw.style.display = isTeacherNow || gcCurrentGroupIsAdmin ? '' : 'none';
+
 </script>
 <!-- Teacher Voice Intro Modal -->
 <div id="teacher-voice-modal" class="modal-overlay" style="display:none;">
