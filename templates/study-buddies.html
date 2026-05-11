@@ -605,10 +605,6 @@
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
             <!-- coordinator tools -->
             <button id="bs-voice-btn-overlay" onclick="toggleBSVoice()" class="btn btn-spark btn-sm" style="display:none;border-radius:50px;"><i class="fas fa-microphone"></i> Voice Note</button>
-<button onclick="switchBSView('video')" class="btn btn-green btn-sm" style="border-radius:50px;"><i class="fas fa-video"></i> Video</button>
-<button onclick="switchBSView('whiteboard')" class="btn btn-blue btn-sm" style="border-radius:50px;"><i class="fas fa-paint-brush"></i> Board</button>
-            <!-- member tools -->
-            <button id="bs-raise-hand-btn" onclick="toggleRaiseHand()" class="btn btn-blue btn-sm" style="display:none;border-radius:50px;"><i class="fas fa-hand-paper"></i> Raise Hand</button>
             <!-- admin: assign coordinator -->
             <div id="bs-coord-assign-wrap" style="display:none;align-items:center;gap:6px;">
                 <select id="bs-coord-pick" class="inp" style="width:150px;padding:5px 9px;font-size:.78rem;"><option value="">Assign coordinator…</option></select>
@@ -620,17 +616,7 @@
         </div>
     </div>
 
-    <!-- raised hands panel (coordinator only) -->
-    <div id="bs-hands-panel" style="display:none;" class="bs-hands-panel">
-        <div style="font-size:.72rem;font-weight:700;color:var(--blue2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;"><i class="fas fa-hand-paper"></i> Raised Hands (<span id="bs-hands-count">0</span>)</div>
-        <div id="bs-hands-list" style="display:flex;gap:8px;flex-wrap:wrap;max-height:120px;overflow-y:auto;"></div>
-    </div>
-
-    <!-- member: question input after acknowledgement -->
-    <div id="bs-question-wrap" style="display:none;padding:8px 16px;background:rgba(0,201,141,.07);border-bottom:1px solid rgba(0,201,141,.3);">
-        <div style="font-size:.8rem;font-weight:700;color:var(--green);margin-bottom:6px;">✅ Coordinator acknowledged you! Type your question:</div>
-        <div style="display:flex;gap:8px;"><input id="bs-question-text" class="inp" placeholder="Your question…" style="flex:1;" onkeydown="if(event.key==='Enter')submitMyQuestion()"><button onclick="submitMyQuestion()" class="btn btn-green btn-sm"><i class="fas fa-paper-plane"></i> Ask</button></div>
-    </div>
+    <!-- hands panel removed -->
 
     <div class="bs-overlay-body">
         <!-- WHITEBOARD -->
@@ -1157,7 +1143,12 @@ function renderGCMessage(container,msg,currentUserId){
     let replyHtml='';if(msg.reply_to)replyHtml=`<div class="gc-reply-preview ${isSent?'':'received'}"><div class="rp-name">${escHtml(msg.reply_to.sender_name||'')}</div><div class="rp-text">${escHtml(msg.reply_to.content||'')}</div></div>`;
     let contentHtml='';const isDeleted=msg.is_deleted;
     if(isDeleted){contentHtml=`<em style="opacity:.5;font-size:.82rem;">This message was deleted</em>`;}
-    else if(msg.message_type==='brainstorm_session'&&msg.session_data){
+    else if(msg.message_type==='brainstorm_session'){
+      if(!msg.session_data){
+        // try to parse content directly as json
+        try{msg.session_data=json.parse(msg.content||'{}');}catch{msg.session_data=null;}
+      }
+      if(msg.session_data){
         // Brainstorm session card
         const sd=msg.session_data;const isLive=sd.status==='ongoing';
         contentHtml=`<div class="bs-session-card ${isLive?'live':''}" onclick="handleSessionCardClick(${JSON.stringify(sd).replace(/"/g,'&quot;')})">
@@ -1174,6 +1165,9 @@ function renderGCMessage(container,msg,currentUserId){
                 <span style="color:${isLive?'var(--green)':'var(--blue2)'};font-weight:600;">${isLive?'Tap to join →':'Tap when it starts →'}</span>
             </div>
         </div>`;
+      } else {
+        contenthtml=`<div style="padding:10px;background:rgba(59,107,255,.08);border:1px solid rgba(59,107,255,.2);border-radius:12px;font-size:.8rem;color:var(--muted);">📅 brainstorm session card</div>`;
+      }
     }
     else if(msg.message_type==='image'&&msg.image_url){const imgSrc='/'+msg.image_url.replace(/^\/+/,'');contentHtml=`<div onclick="openLightbox('${imgSrc.replace(/'/g,'%27')}')"><img src="${imgSrc}" alt="Image" style="max-width:220px;max-height:200px;border-radius:10px;object-fit:cover;display:block;margin-bottom:4px;" onerror="this.outerHTML='<div style=padding:8px;background:rgba(255,79,48,.1);border-radius:8px;font-size:.8rem;color:var(--accent)>Image unavailable</div>'"></div>`;if(msg.content&&msg.content!=='📷 Image')contentHtml+=`<div style="margin-top:4px;">${escHtml(msg.content)}</div>`;}
     else if(msg.message_type==='pdf'&&msg.pdf_url){const pdfSrc='/'+msg.pdf_url.replace(/^\/+/,'');contentHtml=`<a href="${pdfSrc}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(249,115,22,0.12);border:1px solid rgba(249,115,22,.3);border-radius:12px;text-decoration:none;color:inherit;"><i class="fas fa-file-pdf" style="font-size:1.4rem;color:#f97316;flex-shrink:0;"></i><div><div style="font-weight:600;font-size:.875rem;">${escHtml(msg.content||'Shared PDF')}</div><div style="font-size:.73rem;opacity:.65;">Tap to open PDF</div></div></a>`;}
@@ -1488,18 +1482,23 @@ function switchBSView(view){
   _currentBSView=view;
   ['video','whiteboard','notes'].forEach(v=>{
     const el=document.getElementById(`bs-view-${v}`);
-    if(el)el.style.display=v===view?(v==='notes'?'flex':'flex'):'none';
+    if(el)el.style.display=v===view?'flex':'none';
     const tab=document.getElementById(`bs-tab-${v==='whiteboard'?'wb':v}`);
     if(tab){tab.style.background=v===view?'var(--accent)':'transparent';tab.style.color=v===view?'#fff':'var(--muted)';}
   });
-  if(view==='whiteboard')initExcalidraw();
+  if(view==='whiteboard'){
+    // Always reinit to pick up latest isCoord() status
+    const wrap=document.getElementById('bs-view-whiteboard');
+    if(wrap){wrap.dataset.init='';}
+    initExcalidraw();
+  }
 }
 
 function initExcalidraw(){
-  // Use built-in canvas whiteboard instead of Excalidraw (requires sign-in)
   const wrap=document.getElementById('bs-view-whiteboard');
   if(!wrap||wrap.dataset.init==='1')return;
   wrap.dataset.init='1';
+  const amCoord=isCoord();
   wrap.innerHTML='';
   wrap.style.position='relative';
   wrap.style.background='#fff';
@@ -1533,6 +1532,15 @@ function initExcalidraw(){
     <button onclick="exSave()" style="padding:4px 10px;border-radius:6px;border:none;background:var(--green);color:#fff;cursor:pointer;font-size:.78rem;">💾 Save</button>
     <span id="ex-sync-label" style="font-size:.72rem;color:var(--muted);margin-left:auto;"></span>
   `;
+  // hide toolbar for non-coordinators
+  if(!amcoord){
+    tb.style.display='none';
+    // add viewer label instead
+    const vl=document.createelement('div');
+    vl.style.csstext='position:absolute;top:0;left:0;right:0;z-index:10;padding:6px 12px;background:rgba(59,107,255,.08);border-bottom:1px solid rgba(59,107,255,.2);font-size:.75rem;color:var(--blue2);font-style:italic;';
+    vl.textcontent='📺 viewing whiteboard (read-only) — syncs every 3s';
+    wrap.appendchild(vl);
+  }
 
   // Canvas
   const canvas=document.createElement('canvas');
@@ -1560,15 +1568,20 @@ function initExcalidraw(){
   resizeCanvas();
   window.addEventListener('resize',resizeCanvas);
 
-  // Draw events
-  canvas.addEventListener('mousedown',_exStart);
-  canvas.addEventListener('mousemove',_exMove);
-  canvas.addEventListener('mouseup',_exEnd);
-  canvas.addEventListener('mouseleave',_exEnd);
-  canvas.addEventListener('touchstart',e=>{e.preventDefault();_exStart(e.touches[0]);},{passive:false});
-  canvas.addEventListener('touchmove',e=>{e.preventDefault();_exMove(e.touches[0]);},{passive:false});
-  canvas.addEventListener('touchend',e=>{e.preventDefault();_exEnd();},{passive:false});
-  canvas.addEventListener('click',_exClickText);
+  // Draw events — only for coordinator
+  if(amCoord){
+    canvas.style.cursor='crosshair';
+    canvas.addEventListener('mousedown',_exStart);
+    canvas.addEventListener('mousemove',_exMove);
+    canvas.addEventListener('mouseup',_exEnd);
+    canvas.addEventListener('mouseleave',_exEnd);
+    canvas.addEventListener('touchstart',e=>{e.preventDefault();_exStart(e.touches[0]);},{passive:false});
+    canvas.addEventListener('touchmove',e=>{e.preventDefault();_exMove(e.touches[0]);},{passive:false});
+    canvas.addEventListener('touchend',e=>{e.preventDefault();_exEnd();},{passive:false});
+    canvas.addEventListener('click',_exClickText);
+  } else {
+    canvas.style.cursor='default';
+  }
 
   _exHistory=[];_exSaveHistory();
 
@@ -1584,7 +1597,7 @@ function initExcalidraw(){
   }
 
   // Start sync polling for non-coordinators
-  if(!isCoord())_startExViewPolling();
+  if(!amCoord)_startExViewPolling();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1795,7 +1808,7 @@ FUNCTION EXADDIMAGE(E){
   E.TARGET.VALUE='';
 }
 ASYNC FUNCTION _EXAUTOSYNC(){
-  IF(!BSSESSIONID)RETURN;
+  IF(!BSSESSIONID||!ISCOORD())RETURN;
   CLEARTIMEOUT(_EXSYNCTIMER);
   _EXSYNCTIMER=SETTIMEOUT(ASYNC()=>{
     CONST C=DOCUMENT.GETELEMENTBYID('EX-CANVAS');IF(!C)RETURN;
@@ -1900,10 +1913,10 @@ async function showBSOverlay(title,desc){
     document.getElementById('wb-viewer-label').style.display=coord?'none':'';
     // Buttons
     document.getElementById('bs-voice-btn-overlay').style.display=coord?'':'none';
-    document.getElementById('bs-raise-hand-btn').style.display=!coord?'':'none';
+    // raise hand removed
     document.getElementById('bs-coord-assign-wrap').style.display=bsIsAdmin?'flex':'none';
     document.getElementById('bs-end-btn').style.display=bsIsAdmin?'':'none';
-    document.getElementById('bs-hands-panel').style.display=coord?'':'none';
+    // hands panel removed
     // Coord label
     const cl=document.getElementById('bs-coord-label');
     if(coord)cl.textContent='🎓 You are the coordinator';
