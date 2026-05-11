@@ -48,6 +48,7 @@ migrations = [
 
     # ── brainstorm_session ────────────────────────────────────────────────────
     'ALTER TABLE brainstorm_session ADD COLUMN IF NOT EXISTS whiteboard_data TEXT',
+    'ALTER TABLE brainstorm_session ADD COLUMN IF NOT EXISTS shared_doc TEXT',
     'ALTER TABLE brainstorm_session ADD COLUMN IF NOT EXISTS teacher_id INTEGER REFERENCES "user"(id)',
 
     # ── brainstorm_note ───────────────────────────────────────────────────────
@@ -64,7 +65,7 @@ migrations = [
     # ── group_join_request ────────────────────────────────────────────────────
     'ALTER TABLE group_join_request ADD COLUMN IF NOT EXISTS responded_at TIMESTAMP',
 
-    # ── new tables ────────────────────────────────────────────────────────────
+    # ── existing tables (safe IF NOT EXISTS) ──────────────────────────────────
     """
     CREATE TABLE IF NOT EXISTS generated_question (
         id SERIAL PRIMARY KEY,
@@ -115,6 +116,18 @@ migrations = [
         is_read BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )""",
+
+    # ── NEW: hand_raise table ─────────────────────────────────────────────────
+    """
+    CREATE TABLE IF NOT EXISTS hand_raise (
+        id SERIAL PRIMARY KEY,
+        session_id INTEGER NOT NULL REFERENCES brainstorm_session(id),
+        user_id INTEGER NOT NULL REFERENCES "user"(id),
+        status VARCHAR(20) DEFAULT 'raised',
+        question_text TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        answered_at TIMESTAMP
+    )""",
 ]
 
 with engine.connect() as conn:
@@ -122,7 +135,6 @@ with engine.connect() as conn:
         try:
             conn.execute(text(sql))
             conn.commit()
-            # Print just the first line so output is readable
             print(f"✅ {sql.strip().splitlines()[0][:80]}")
         except Exception as e:
             conn.rollback()

@@ -6,7 +6,7 @@ from werkzeug.utils import secure_filename
 from models import (db, User, Quiz, QuizResult, Connection, UserTag, Message,
                     ChatGroup, ChatGroupMember, GroupMessage, BrainstormSession,
                     BrainstormNote, GroupJoinRequest, Poll, PollOption, PollVote,
-                    GeneratedQuestion, TopicMastery, WrongAnswer, AppNotification)
+                    GeneratedQuestion, TopicMastery, WrongAnswer, AppNotification, HandRaise)
 import hashlib
 import os
 import requests as req
@@ -19,7 +19,7 @@ import json
 import tempfile
 from datetime import datetime, timedelta
 import logging
-from models import db, User, Quiz, QuizResult, Connection, UserTag, Message, ChatGroup, ChatGroupMember, GroupMessage, BrainstormSession, BrainstormNote, GroupJoinRequest, Poll, PollOption, PollVote, GeneratedQuestion, TopicMastery, WrongAnswer
+
 from pywebpush import webpush, WebPushException
 
 
@@ -2748,6 +2748,177 @@ def set_session_teacher():
                          'You can now broadcast voice during the session.',
                          'brainstorm', session_id)
     return jsonify({'success': True, 'teacher_name': teacher.name})
+
+# ═════════════════════════════════════════════════════════════════════════════
+#  WHITEBOARD SYNC
+# ═════════════════════════════════════════════════════════════════════════════
+
+@app.route('/api/save-whiteboard', methods=['POST'])
+def save_whiteboard():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    data = request.json or {}
+    session_id = data.get('session_id')
+    image_data = data.get('image_data', '')  # base64 PNG
+    if not session_id:
+        return jsonify({'error': 'session_id required'}), 400
+    s = BrainstormSession.query.get(session_id)
+    if not s:
+        return jsonify({'error': 'Session not found'}), 404
+    # Only teacher can save whiteboard
+    if s.teacher_id and s.teacher_id != session['user_id']:
+        return jsonify({'error': 'Only the teacher can draw on the whiteboard'}), 403
+    s.whiteboard_data = image_data
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@app.route('/api/get-whiteboard/<int:session_id>')
+def get_whiteboard(session_id):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    s = BrainstormSession.query.get(session_id)
+    if not s:
+        return jsonify({'error': 'Session not found'}), 404
+    if not ChatGroupMember.query.filter_by(group_id=s.group_id, user_id=session['user_id']).first():
+        return jsonify({'error': 'Not a member'}), 403
+    return jsonify({'success': True, 'image_data': s.whiteboard_data or '', 'teacher_id': s.teacher_id})
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+#  HAND RAISE SYSTEM
+# ═════════════════════════════════════════════════════════════════════════════
+
+@app.route('/api/raise-hand', methods=['POST'])
+def raise_hand():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    data = request.json or {}
+    session_id = data.get('session_id')
+    s = BrainstormSession.query.get(session_id)
+    if not s:
+        return jsonify({'error': 'Session not found'}), 404
+    if not ChatGroupMember.query.filter_by(group_id=s.group_id, user_id=session['user_id']).first():
+        return jsonify({'error': 'Not a member'}), 403
+    # Check if already raised
+    existing = HandRaise.query.filter_by(session_id=session_id, user_id=session['user_id'], status='raised').first()
+    if existing:
+        return jsonify({'success': True, 'already_raised': True, 'raise_id': existing.id})
+    raise_obj = HandRaise(session_id=session_id, user_id=session['user_id'])
+    db.session.add(raise_obj)
+    db.session.flush()
+    # Notify teacher
+    if s.teacher_id:
+        me = User.query.get(session['user_id'])
+        _create_notification(s.teacher_id, 'mention', f'✋ {me.name} raised their hand',
+                             'Click to acknowledge in the brainstorm session.', 'brainstorm', session_id)
+    db.session.commit()
+    return jsonify({'success': True, 'raise_id': raise_obj.id})
+
+
+@app.route('/api/lower-hand', methods=['POST'])
+def lower_hand():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    data = request.json or {}
+    session_id = data.get('session_id')
+    HandRaise.query.filter_by(session_id=session_id, user_id=session['user_id'], status='raised').update({'status': 'dismissed'})
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@app.route('/api/get-raised-hands/<int:session_id>')
+def get_raised_hands(session_id):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    s = BrainstormSession.query.get(session_id)
+    if not s:
+        return jsonify({'error': 'Session not found'}), 404
+    hands = HandRaise.query.filter_by(session_id=session_id).filter(
+        HandRaise.status.in_(['raised', 'acknowledged'])
+    ).order_by(HandRaise.created_at.asc()).all()
+    return jsonify({'success': True, 'hands': [{
+        'id': h.id, 'user_id': h.user_id, 'user_name': h.user.name,
+        'user_pic': h.user.get_profile_pic_url(),
+        'status': h.status, 'question_text': h.question_text,
+        'created_at': h.created_at.isoformat()
+    } for h in hands]})
+
+
+@app.route('/api/acknowledge-hand', methods=['POST'])
+def acknowledge_hand():
+    """Teacher acknowledges a raised hand — member now gets a text box."""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    data = request.json or {}
+    raise_id = data.get('raise_id')
+    h = HandRaise.query.get(raise_id)
+    if not h:
+        return jsonify({'error': 'Not found'}), 404
+    s = BrainstormSession.query.get(h.session_id)
+    if not s or s.teacher_id != session['user_id']:
+        return jsonify({'error': 'Only the teacher can acknowledge hands'}), 403
+    h.status = 'acknowledged'
+    db.session.flush()
+    # Notify the student
+    _create_notification(h.user_id, 'mention', '✅ Teacher acknowledged your hand!',
+                         'You can now type your question.', 'brainstorm', h.session_id)
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@app.route('/api/submit-question', methods=['POST'])
+def submit_question():
+    """Member submits their typed question after hand is acknowledged."""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    data = request.json or {}
+    raise_id = data.get('raise_id')
+    question_text = data.get('question', '').strip()
+    if not question_text:
+        return jsonify({'error': 'Question text required'}), 400
+    h = HandRaise.query.get(raise_id)
+    if not h or h.user_id != session['user_id']:
+        return jsonify({'error': 'Not found or not yours'}), 404
+    h.question_text = question_text
+    h.status = 'raised'  # back to raised so teacher sees the question
+    db.session.flush()
+    s = BrainstormSession.query.get(h.session_id)
+    if s and s.teacher_id:
+        me = User.query.get(session['user_id'])
+        _create_notification(s.teacher_id, 'mention',
+                             f'❓ {me.name} asks: {question_text[:60]}',
+                             question_text[:120], 'brainstorm', h.session_id)
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@app.route('/api/dismiss-hand', methods=['POST'])
+def dismiss_hand():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    data = request.json or {}
+    raise_id = data.get('raise_id')
+    h = HandRaise.query.get(raise_id)
+    if not h:
+        return jsonify({'error': 'Not found'}), 404
+    h.status = 'answered'
+    h.answered_at = datetime.utcnow()
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@app.route('/api/check-my-hand/<int:session_id>')
+def check_my_hand(session_id):
+    """Members poll this to check if their hand was acknowledged."""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    h = HandRaise.query.filter_by(
+        session_id=session_id, user_id=session['user_id']
+    ).filter(HandRaise.status.in_(['raised', 'acknowledged'])).order_by(HandRaise.created_at.desc()).first()
+    if not h:
+        return jsonify({'success': True, 'status': None, 'raise_id': None})
+    return jsonify({'success': True, 'status': h.status, 'raise_id': h.id, 'question_text': h.question_text})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=app.debug)

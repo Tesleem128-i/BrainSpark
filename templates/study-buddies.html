@@ -673,35 +673,138 @@
         </div>
     </div>
 
-    <!-- TAB 6: BRAINSTORM -->
-    <div id="brainstorm" class="tab-content">
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px;margin-bottom:24px;">
-            <!-- Schedule -->
-            <div class="card">
-                <div class="section-label">Schedule Brainstorm Session</div>
-                <div style="display:flex;flex-direction:column;gap:12px;">
-                    <input id="bs-title" placeholder="Session Title" class="inp">
-                    <input id="bs-time" type="datetime-local" class="inp">
-                    <textarea id="bs-desc" placeholder="What will you cover? Goals, topics, agenda…" rows="3" class="inp"></textarea>
-                    <select id="bs-group" class="inp"><option value="">Select a group…</option></select>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                        <button onclick="scheduleBSSession()" class="btn btn-green" style="border-radius:50px;padding:11px;justify-content:center;"><i class="fas fa-calendar-check"></i> Schedule</button>
-                        <button onclick="openTeacherVoiceModal()" class="btn btn-accent" style="border-radius:50px;padding:11px;justify-content:center;"><i class="fas fa-bolt"></i> Start Live Now</button>
-                    </div>
-                </div>
-            </div>
-            <!-- AI Helper -->
-            <div class="card">
-                <div class="section-label"><i class="fas fa-robot" style="color:var(--spark);"></i> SparkAI Quick Brainstorm</div>
-                <div style="display:flex;flex-direction:column;gap:12px;">
-                    <textarea id="bs-ai-input" placeholder="Ask SparkAI for ideas, explanations, mind maps…" class="inp" rows="4"></textarea>
-                    <button onclick="askSparkAI('bs-ai-input','bs-ai-response')" class="btn btn-spark btn-full spark-glow" style="border-radius:50px;padding:11px;">
-                        <i class="fas fa-robot"></i> Ask SparkAI
-                    </button>
-                    <div id="bs-ai-response" style="display:none;background:linear-gradient(135deg,rgba(168,85,247,.08),rgba(59,107,255,.05));border:1px solid rgba(168,85,247,.2);border-radius:12px;padding:14px;font-size:.875rem;line-height:1.7;color:var(--ink);"></div>
-                </div>
-            </div>
+    
+        <!-- TAB 6: BRAINSTORM -->
+<div id="brainstorm" class="tab-content">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px;margin-bottom:24px;">
+    <!-- Schedule -->
+    <div class="card">
+      <div class="section-label">Schedule Brainstorm Session</div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <input id="bs-title" placeholder="Session Title" class="inp">
+        <input id="bs-time" type="datetime-local" class="inp">
+        <textarea id="bs-desc" placeholder="What will you cover?" rows="3" class="inp"></textarea>
+        <select id="bs-group" class="inp"><option value="">Select a group…</option></select>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <button onclick="scheduleBSSession()" class="btn btn-green" style="border-radius:50px;padding:11px;justify-content:center;"><i class="fas fa-calendar-check"></i> Schedule</button>
+          <button onclick="openTeacherVoiceModal()" class="btn btn-accent" style="border-radius:50px;padding:11px;justify-content:center;"><i class="fas fa-bolt"></i> Start Live Now</button>
         </div>
+      </div>
+    </div>
+    <!-- SparkAI -->
+    <div class="card">
+      <div class="section-label"><i class="fas fa-robot" style="color:var(--spark);"></i> SparkAI Quick Brainstorm</div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <textarea id="bs-ai-input" placeholder="Ask SparkAI for ideas…" class="inp" rows="4"></textarea>
+        <button onclick="askSparkAI('bs-ai-input','bs-ai-response')" class="btn btn-spark btn-full spark-glow" style="border-radius:50px;padding:11px;"><i class="fas fa-robot"></i> Ask SparkAI</button>
+        <div id="bs-ai-response" style="display:none;background:linear-gradient(135deg,rgba(168,85,247,.08),rgba(59,107,255,.05));border:1px solid rgba(168,85,247,.2);border-radius:12px;padding:14px;font-size:.875rem;line-height:1.7;color:var(--ink);"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Session Area -->
+  <div id="bs-live-area" style="display:none;" class="card" style="margin-bottom:24px;">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+      <div>
+        <span class="live-badge"><span style="width:7px;height:7px;background:#fff;border-radius:50%;display:inline-block;margin-right:4px;"></span> LIVE</span>
+        <div id="bs-live-title" style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;margin-top:6px;color:var(--ink);"></div>
+        <div id="bs-live-group" style="font-size:.78rem;color:var(--muted);"></div>
+        <div id="bs-teacher-label" style="font-size:.78rem;color:var(--spark);margin-top:2px;font-weight:600;"></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <!-- Teacher: broadcast voice -->
+        <button id="bs-voice-broadcast-btn" onclick="toggleLiveVoice()" class="btn btn-spark btn-sm" style="display:none;border-radius:50px;"><i class="fas fa-microphone"></i> Go Live</button>
+        <!-- Member: raise hand -->
+        <button id="bs-raise-hand-btn" onclick="toggleRaiseHand()" class="btn btn-blue btn-sm" style="display:none;border-radius:50px;"><i class="fas fa-hand-paper"></i> Raise Hand</button>
+        <!-- Teacher: assign teacher -->
+        <div id="bs-assign-teacher-wrap" style="display:none;display:flex;gap:6px;align-items:center;">
+          <select id="bs-teacher-pick" class="inp" style="width:160px;padding:6px 10px;font-size:.8rem;"><option value="">Assign teacher…</option></select>
+          <button onclick="assignSessionTeacher()" class="btn btn-blue btn-sm" style="border-radius:50px;"><i class="fas fa-chalkboard-teacher"></i> Assign</button>
+        </div>
+        <button id="bs-end-btn" onclick="endLiveSession()" class="btn btn-red btn-sm" style="display:none;"><i class="fas fa-stop"></i> End</button>
+        <button id="bs-leave-btn" onclick="leaveLiveSession()" class="btn btn-ghost btn-sm"><i class="fas fa-door-open"></i> Leave</button>
+        <button onclick="saveWBImage()" class="btn btn-ghost btn-sm"><i class="fas fa-download"></i> Save Board</button>
+      </div>
+    </div>
+
+    <!-- Live voice status bar -->
+    <div id="bs-voice-status" style="display:none;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.3);border-radius:10px;padding:10px 16px;margin-bottom:12px;display:flex;align-items:center;gap:10px;">
+      <div style="width:10px;height:10px;border-radius:50%;background:var(--spark);animation:recPulse 1s ease-in-out infinite;flex-shrink:0;"></div>
+      <span id="bs-voice-status-text" style="font-size:.875rem;font-weight:600;color:var(--spark);">Teacher is live…</span>
+      <audio id="bs-live-audio" autoplay style="display:none;"></audio>
+    </div>
+
+    <!-- Raised hands panel (teacher only) -->
+    <div id="bs-hands-panel" style="display:none;background:rgba(59,107,255,.06);border:1px solid rgba(59,107,255,.25);border-radius:12px;padding:12px 16px;margin-bottom:14px;">
+      <div style="font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--blue2);margin-bottom:8px;"><i class="fas fa-hand-paper"></i> Raised Hands (<span id="bs-hands-count">0</span>)</div>
+      <div id="bs-hands-list" style="display:flex;flex-direction:column;gap:8px;max-height:200px;overflow-y:auto;"></div>
+    </div>
+
+    <!-- Member: question input (shown after teacher acknowledges) -->
+    <div id="bs-question-input-wrap" style="display:none;background:rgba(0,201,141,.07);border:1px solid rgba(0,201,141,.3);border-radius:12px;padding:14px;margin-bottom:14px;">
+      <div style="font-size:.8rem;font-weight:700;color:var(--green);margin-bottom:8px;">✅ Teacher acknowledged you! Type your question:</div>
+      <div style="display:flex;gap:8px;">
+        <input id="bs-question-text" placeholder="Your question…" class="inp" style="flex:1;" onkeydown="if(event.key==='Enter')submitMyQuestion()">
+        <button onclick="submitMyQuestion()" class="btn btn-green btn-sm" style="border-radius:50px;flex-shrink:0;"><i class="fas fa-paper-plane"></i> Ask</button>
+      </div>
+    </div>
+
+    <!-- WHITEBOARD (full width) -->
+    <div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+        <div style="font-size:.75rem;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;">Whiteboard</div>
+        <!-- Tools: teacher only -->
+        <div id="wb-teacher-tools" style="display:none;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+          <div id="wb-colors" style="display:flex;gap:4px;">
+            <button onclick="setWBColor('#ff4f30')" style="width:22px;height:22px;border-radius:50%;background:#ff4f30;border:2px solid transparent;cursor:pointer;"></button>
+            <button onclick="setWBColor('#3b6bff')" style="width:22px;height:22px;border-radius:50%;background:#3b6bff;border:2px solid transparent;cursor:pointer;"></button>
+            <button onclick="setWBColor('#00c98d')" style="width:22px;height:22px;border-radius:50%;background:#00c98d;border:2px solid transparent;cursor:pointer;"></button>
+            <button onclick="setWBColor('#f5c842')" style="width:22px;height:22px;border-radius:50%;background:#f5c842;border:2px solid transparent;cursor:pointer;"></button>
+            <button onclick="setWBColor('#a855f7')" style="width:22px;height:22px;border-radius:50%;background:#a855f7;border:2px solid transparent;cursor:pointer;"></button>
+            <button onclick="setWBColor('#0a0a14')" style="width:22px;height:22px;border-radius:50%;background:#0a0a14;border:2px solid transparent;cursor:pointer;"></button>
+          </div>
+          <input type="range" id="wb-size" min="2" max="30" value="4" style="width:70px;" title="Pen size">
+          <select id="wb-tool" class="inp" style="width:90px;padding:4px 8px;font-size:.78rem;" onchange="setWBTool(this.value)">
+            <option value="pen">✏️ Pen</option>
+            <option value="marker">🖊️ Marker</option>
+            <option value="eraser">⬜ Eraser</option>
+            <option value="text">🔤 Text</option>
+          </select>
+          <button onclick="undoWB()" class="btn btn-ghost btn-sm" style="padding:4px 8px;"><i class="fas fa-undo"></i></button>
+          <button onclick="clearWB()" class="btn btn-red btn-sm" style="padding:4px 8px;"><i class="fas fa-trash"></i></button>
+          <button onclick="document.getElementById('wb-img-upload').click()" class="btn btn-ghost btn-sm" style="padding:4px 8px;" title="Add image"><i class="fas fa-image"></i></button>
+          <input type="file" id="wb-img-upload" accept="image/*" style="display:none;" onchange="addImageToWhiteboard(event)">
+        </div>
+        <div id="wb-viewer-label" style="display:none;font-size:.78rem;color:var(--muted);font-style:italic;">Viewing teacher's whiteboard (read-only)</div>
+      </div>
+      <canvas id="bs-whiteboard" width="1200" height="600" style="border:1px solid var(--border);border-radius:12px;background:#fff;display:block;width:100%;cursor:default;touch-action:none;"></canvas>
+      <div style="font-size:.72rem;color:var(--muted);margin-top:4px;display:flex;justify-content:space-between;" >
+        <span id="bs-doc-save-status">Whiteboard ready</span>
+        <span id="bs-wb-sync-status" style="color:var(--green);"></span>
+      </div>
+    </div>
+
+    <!-- SparkAI in session -->
+    <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px;">
+      <div style="font-size:.75rem;font-weight:700;color:var(--spark);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;"><i class="fas fa-robot"></i> SparkAI — In-Session Help</div>
+      <div style="display:flex;gap:8px;">
+        <input id="bs-session-ai-q" placeholder="Ask SparkAI anything…" class="inp" style="flex:1;" onkeypress="if(event.key==='Enter')askSparkAI('bs-session-ai-q','bs-session-ai-resp',true)">
+        <button onclick="askSparkAI('bs-session-ai-q','bs-session-ai-resp',true)" class="btn btn-spark" style="flex-shrink:0;border-radius:50px;"><i class="fas fa-robot"></i> Ask</button>
+      </div>
+      <div id="bs-session-ai-resp" style="display:none;margin-top:10px;background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);border-radius:12px;padding:12px;font-size:.875rem;line-height:1.7;color:var(--ink);"></div>
+    </div>
+  </div>
+
+  <!-- Recent Sessions -->
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div class="section-label" style="margin:0;">Recent Sessions</div>
+      <button onclick="loadRecentSessions()" class="btn btn-ghost btn-sm"><i class="fas fa-sync-alt"></i> Refresh</button>
+    </div>
+    <div id="recent-sessions" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;"></div>
+  </div>
+</div>
 
         <!-- Live / Active Session Area -->
         <div id="bs-live-area" style="display:none;" class="card" style="margin-bottom:24px;">
@@ -2640,6 +2743,615 @@ async function sharePDFFromWhiteboard(e) {
         else showToast('❌ ' + (data.error || 'Share failed'), 'error');
     } catch { showToast('Share failed', 'error'); }
     e.target.value = '';
+}
+// ═══════════════════════════════════════════════════════════════════════════
+//  BRAINSTORM — STATE
+// ═══════════════════════════════════════════════════════════════════════════
+let bsCurrentSessionId = null, bsCurrentGroupId = null;
+let bsCurrentTeacherId = null, bsCurrentUserId = null;
+let bsIsTeacher = false;
+let bsMyRaiseId = null, bsMyRaiseStatus = null;
+let bsHandPollTimer = null, bsWBSyncTimer = null, bsWBPollTimer = null;
+let bsVoiceRecording = false, bsVoiceMediaRecorder = null, bsVoiceChunks = [];
+let bsVoiceChunkIndex = 0; // for member audio playback sequencing
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  WHITEBOARD
+// ═══════════════════════════════════════════════════════════════════════════
+let wbCtx = null, wbDrawing = false, wbColor = '#ff4f30', wbSize = 4;
+let wbTool = 'pen', wbHistory = [], wbTextInput = null;
+let wbLastSaved = ''; // track changes before pushing to server
+
+function initWhiteboard() {
+    const canvas = document.getElementById('bs-whiteboard');
+    if (!canvas) return;
+    // Resize canvas to actual display width for crisp drawing
+    const rect = canvas.getBoundingClientRect();
+    canvas.width  = rect.width  || 1200;
+    canvas.height = rect.height || 600;
+    wbCtx = canvas.getContext('2d');
+    wbCtx.lineCap = 'round'; wbCtx.lineJoin = 'round';
+    canvas.addEventListener('mousedown',  wbStart);
+    canvas.addEventListener('mousemove',  wbMove);
+    canvas.addEventListener('mouseup',    wbEnd);
+    canvas.addEventListener('mouseleave', wbEnd);
+    canvas.addEventListener('touchstart', e => { e.preventDefault(); wbStart(e.touches[0]); }, {passive:false});
+    canvas.addEventListener('touchmove',  e => { e.preventDefault(); wbMove(e.touches[0]); }, {passive:false});
+    canvas.addEventListener('touchend',   e => { e.preventDefault(); wbEnd(); }, {passive:false});
+    canvas.addEventListener('click', wbClickText);
+    wbCtx.fillStyle = '#ffffff';
+    wbCtx.fillRect(0, 0, canvas.width, canvas.height);
+    wbSaveHistory();
+    // Show/hide teacher tools
+    setWBTeacherMode(bsIsTeacher);
+    // Start sync
+    if (bsIsTeacher) startWBSyncPush(); else startWBSyncPull();
+}
+
+function setWBTeacherMode(isTeacher) {
+    const tools  = document.getElementById('wb-teacher-tools');
+    const label  = document.getElementById('wb-viewer-label');
+    const canvas = document.getElementById('bs-whiteboard');
+    if (tools) tools.style.display = isTeacher ? 'flex' : 'none';
+    if (label) label.style.display = isTeacher ? 'none' : '';
+    if (canvas) canvas.style.cursor = isTeacher ? 'crosshair' : 'default';
+    // Disable pointer events for viewers
+    if (canvas) canvas.style.pointerEvents = isTeacher ? 'auto' : 'none';
+}
+
+function wbGetPos(e) {
+    const canvas = document.getElementById('bs-whiteboard');
+    const r = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / r.width, scaleY = canvas.height / r.height;
+    return { x: (e.clientX - r.left) * scaleX, y: (e.clientY - r.top) * scaleY };
+}
+
+function wbStart(e) { if (!bsIsTeacher || wbTool === 'text') return; wbDrawing = true; const p = wbGetPos(e); wbCtx.beginPath(); wbCtx.moveTo(p.x, p.y); }
+function wbMove(e) {
+    if (!bsIsTeacher || !wbDrawing) return;
+    const p = wbGetPos(e);
+    wbCtx.globalCompositeOperation = wbTool === 'eraser' ? 'destination-out' : 'source-over';
+    wbCtx.strokeStyle = wbColor;
+    wbCtx.lineWidth   = wbTool === 'marker' ? wbSize * 2.5 : wbTool === 'eraser' ? wbSize * 3 : wbSize;
+    wbCtx.globalAlpha = wbTool === 'marker' ? 0.4 : 1;
+    wbCtx.lineTo(p.x, p.y); wbCtx.stroke(); wbCtx.beginPath(); wbCtx.moveTo(p.x, p.y);
+}
+function wbEnd() {
+    if (!bsIsTeacher || !wbDrawing) return;
+    wbDrawing = false; wbCtx.globalAlpha = 1; wbCtx.globalCompositeOperation = 'source-over';
+    wbSaveHistory();
+}
+
+function wbClickText(e) {
+    if (!bsIsTeacher || wbTool !== 'text') return;
+    const canvas = document.getElementById('bs-whiteboard');
+    const pos = wbGetPos(e);
+    if (wbTextInput) { wbTextInput.remove(); wbTextInput = null; }
+    const inp = document.createElement('input');
+    inp.type = 'text'; inp.placeholder = 'Type, press Enter';
+    inp.style.cssText = `position:fixed;left:${e.clientX}px;top:${e.clientY}px;z-index:9999;padding:4px 8px;border:2px dashed ${wbColor};border-radius:6px;background:rgba(255,255,255,.95);color:#000;font-family:'DM Sans',sans-serif;font-size:${Math.max(12, wbSize*3)}px;min-width:120px;outline:none;`;
+    document.body.appendChild(inp); wbTextInput = inp; inp.focus();
+    inp.addEventListener('keydown', ev => {
+        if (ev.key === 'Enter') {
+            const txt = inp.value.trim();
+            if (txt) { wbCtx.font = `${Math.max(14,wbSize*3)}px 'DM Sans',sans-serif`; wbCtx.fillStyle = wbColor; wbCtx.globalAlpha = 1; wbCtx.globalCompositeOperation = 'source-over'; wbCtx.fillText(txt, pos.x, pos.y); wbSaveHistory(); }
+            inp.remove(); wbTextInput = null;
+        }
+        if (ev.key === 'Escape') { inp.remove(); wbTextInput = null; }
+    });
+    inp.addEventListener('blur', () => setTimeout(() => { if (wbTextInput === inp) { inp.remove(); wbTextInput = null; } }, 150));
+}
+
+function wbSaveHistory() {
+    const canvas = document.getElementById('bs-whiteboard');
+    if (!canvas || !wbCtx) return;
+    wbHistory.push(wbCtx.getImageData(0, 0, canvas.width, canvas.height));
+    if (wbHistory.length > 30) wbHistory.shift();
+}
+
+function undoWB() { if (wbHistory.length < 2) return; wbHistory.pop(); const canvas = document.getElementById('bs-whiteboard'); wbCtx.putImageData(wbHistory[wbHistory.length-1], 0, 0); }
+function clearWB() {
+    if (!bsIsTeacher) return;
+    if (!confirm('Clear whiteboard for everyone?')) return;
+    const canvas = document.getElementById('bs-whiteboard');
+    wbCtx.clearRect(0, 0, canvas.width, canvas.height);
+    wbCtx.fillStyle = '#fff'; wbCtx.fillRect(0, 0, canvas.width, canvas.height);
+    wbSaveHistory();
+    pushWBToServer();
+}
+function setWBColor(c) { wbColor = c; document.querySelectorAll('#wb-colors button').forEach(b => b.style.borderColor='transparent'); event.target.style.borderColor='var(--ink)'; if (wbTool==='eraser') setWBTool('pen'); }
+function setWBTool(t) { wbTool = t; const canvas = document.getElementById('bs-whiteboard'); if (canvas) canvas.style.cursor = t==='eraser'?'cell':t==='text'?'text':'crosshair'; }
+function saveWBImage() { const canvas = document.getElementById('bs-whiteboard'); if(!canvas) return; const a = document.createElement('a'); a.href = canvas.toDataURL('image/png'); a.download = 'whiteboard.png'; a.click(); }
+
+function addImageToWhiteboard(e) {
+    if (!bsIsTeacher) return;
+    const file = e.target.files[0]; if (!file) return;
+    const canvas = document.getElementById('bs-whiteboard');
+    const img = new Image();
+    img.onload = () => {
+        const maxW = canvas.width*.8, maxH = canvas.height*.6;
+        let w=img.naturalWidth, h=img.naturalHeight;
+        if(w>maxW){h=h*(maxW/w);w=maxW;} if(h>maxH){w=w*(maxH/h);h=maxH;}
+        wbCtx.globalAlpha=1; wbCtx.globalCompositeOperation='source-over';
+        wbCtx.drawImage(img, (canvas.width-w)/2, (canvas.height-h)/4, w, h);
+        wbSaveHistory(); pushWBToServer();
+        showToast('Image added to whiteboard','success');
+    };
+    img.src = URL.createObjectURL(file); e.target.value='';
+}
+
+// ── Whiteboard Sync ──────────────────────────────────────────────────────────
+async function pushWBToServer() {
+    if (!bsCurrentSessionId || !bsIsTeacher) return;
+    const canvas = document.getElementById('bs-whiteboard');
+    if (!canvas) return;
+    const imageData = canvas.toDataURL('image/jpeg', 0.7); // compressed JPEG
+    if (imageData === wbLastSaved) return; // no change
+    wbLastSaved = imageData;
+    document.getElementById('bs-wb-sync-status').textContent = 'Syncing…';
+    try {
+        await fetch('/api/save-whiteboard', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:bsCurrentSessionId,image_data:imageData})});
+        document.getElementById('bs-wb-sync-status').textContent = '✅ Live';
+    } catch { document.getElementById('bs-wb-sync-status').textContent = '⚠️ Sync error'; }
+}
+
+function startWBSyncPush() {
+    // Teacher: push whiteboard every 2 seconds
+    clearInterval(bsWBSyncTimer);
+    bsWBSyncTimer = setInterval(pushWBToServer, 2000);
+}
+
+function startWBSyncPull() {
+    // Members: pull whiteboard every 2 seconds and redraw
+    clearInterval(bsWBPollTimer);
+    bsWBPollTimer = setInterval(async () => {
+        if (!bsCurrentSessionId) return;
+        try {
+            const data = await fetch(`/api/get-whiteboard/${bsCurrentSessionId}`).then(r=>r.json());
+            if (!data.success || !data.image_data) return;
+            if (data.image_data === wbLastSaved) return; // no change
+            wbLastSaved = data.image_data;
+            const canvas = document.getElementById('bs-whiteboard');
+            if (!canvas || !wbCtx) return;
+            const img = new Image();
+            img.onload = () => { wbCtx.clearRect(0,0,canvas.width,canvas.height); wbCtx.drawImage(img, 0, 0, canvas.width, canvas.height); };
+            img.src = data.image_data;
+            document.getElementById('bs-wb-sync-status').textContent = '🔄 Synced';
+        } catch {}
+    }, 2000);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  LIVE VOICE (chunked streaming)
+// ═══════════════════════════════════════════════════════════════════════════
+let bsVoiceChunkTimer = null;
+
+async function toggleLiveVoice() {
+    if (bsVoiceRecording) {
+        stopLiveVoice();
+    } else {
+        startLiveVoice();
+    }
+}
+
+async function startLiveVoice() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+        bsVoiceRecording = true;
+        const btn = document.getElementById('bs-voice-broadcast-btn');
+        if (btn) { btn.innerHTML = '<i class="fas fa-stop"></i> Stop Live'; btn.style.background='#e03030'; }
+        showToast('🎙️ You are now live! Members can hear you.','success');
+        // Record in 4-second chunks and auto-send each
+        function recordChunk() {
+            if (!bsVoiceRecording) return;
+            bsVoiceChunks = [];
+            bsVoiceMediaRecorder = new MediaRecorder(stream);
+            bsVoiceMediaRecorder.ondataavailable = e => bsVoiceChunks.push(e.data);
+            bsVoiceMediaRecorder.onstop = async () => {
+                if (bsVoiceChunks.length && bsCurrentGroupId) {
+                    const blob = new Blob(bsVoiceChunks, {type:'audio/webm'});
+                    const fd = new FormData();
+                    fd.append('group_id', bsCurrentGroupId);
+                    fd.append('message_type', 'voice');
+                    fd.append('content', '🎙️ Teacher live voice');
+                    fd.append('voice', blob, `live_${Date.now()}.webm`);
+                    try { await fetch('/api/send-group-message', {method:'POST',body:fd}); } catch {}
+                }
+                if (bsVoiceRecording) recordChunk(); // record next chunk
+            };
+            bsVoiceMediaRecorder.start();
+            setTimeout(() => { if (bsVoiceMediaRecorder && bsVoiceMediaRecorder.state==='recording') bsVoiceMediaRecorder.stop(); }, 4000);
+        }
+        recordChunk();
+        // Show live status bar
+        document.getElementById('bs-voice-status').style.display = 'flex';
+        document.getElementById('bs-voice-status-text').textContent = '🎙️ You are broadcasting live…';
+    } catch { showToast('Microphone access denied','error'); }
+}
+
+function stopLiveVoice() {
+    bsVoiceRecording = false;
+    if (bsVoiceMediaRecorder && bsVoiceMediaRecorder.state==='recording') bsVoiceMediaRecorder.stop();
+    bsVoiceMediaRecorder = null;
+    const btn = document.getElementById('bs-voice-broadcast-btn');
+    if (btn) { btn.innerHTML = '<i class="fas fa-microphone"></i> Go Live'; btn.style.background='var(--spark)'; }
+    document.getElementById('bs-voice-status').style.display = 'none';
+    showToast('Live voice ended','info');
+}
+
+// Members: auto-play new voice chunks from teacher in sequence
+let bsLastVoiceMsgId = null;
+function startMemberVoicePolling() {
+    setInterval(async () => {
+        if (!bsCurrentGroupId || bsIsTeacher) return;
+        try {
+            const data = await fetch(`/api/get-group-messages/${bsCurrentGroupId}`).then(r=>r.json());
+            if (!data.messages) return;
+            const voiceMsgs = data.messages.filter(m => m.message_type==='voice' && m.voice_url);
+            if (!voiceMsgs.length) return;
+            const latest = voiceMsgs[voiceMsgs.length-1];
+            if (latest.id === bsLastVoiceMsgId) return;
+            bsLastVoiceMsgId = latest.id;
+            // Auto-play if recent (within last 30 seconds)
+            const age = (Date.now() - new Date(latest.created_at).getTime()) / 1000;
+            if (age < 30) {
+                const audio = document.getElementById('bs-live-audio');
+                if (audio) { audio.src = latest.voice_url; audio.play().catch(()=>{}); }
+                document.getElementById('bs-voice-status').style.display = 'flex';
+                document.getElementById('bs-voice-status-text').textContent = '🔊 Teacher is speaking…';
+                setTimeout(() => {
+                    const vs = document.getElementById('bs-voice-status');
+                    if (vs) vs.style.display='none';
+                }, 10000);
+            }
+        } catch {}
+    }, 4000);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  HAND RAISE
+// ═══════════════════════════════════════════════════════════════════════════
+async function toggleRaiseHand() {
+    if (!bsCurrentSessionId) return;
+    if (bsMyRaiseStatus === 'raised' || bsMyRaiseStatus === 'acknowledged') {
+        await fetch('/api/lower-hand', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:bsCurrentSessionId})});
+        bsMyRaiseId = null; bsMyRaiseStatus = null;
+        document.getElementById('bs-raise-hand-btn').innerHTML = '<i class="fas fa-hand-paper"></i> Raise Hand';
+        document.getElementById('bs-raise-hand-btn').style.background = 'var(--blue)';
+        document.getElementById('bs-question-input-wrap').style.display = 'none';
+        showToast('Hand lowered','info');
+    } else {
+        const data = await fetch('/api/raise-hand', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:bsCurrentSessionId})}).then(r=>r.json());
+        if (data.success) {
+            bsMyRaiseId = data.raise_id; bsMyRaiseStatus = 'raised';
+            document.getElementById('bs-raise-hand-btn').innerHTML = '<i class="fas fa-hand-paper"></i> Lower Hand ✋';
+            document.getElementById('bs-raise-hand-btn').style.background = '#e03030';
+            showToast('✋ Hand raised! Waiting for teacher…','info');
+        }
+    }
+}
+
+async function submitMyQuestion() {
+    if (!bsMyRaiseId) return;
+    const q = document.getElementById('bs-question-text').value.trim();
+    if (!q) return;
+    const data = await fetch('/api/submit-question', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({raise_id:bsMyRaiseId,question:q})}).then(r=>r.json());
+    if (data.success) {
+        showToast('✅ Question sent to teacher!','success');
+        document.getElementById('bs-question-text').value='';
+        document.getElementById('bs-question-input-wrap').style.display='none';
+        document.getElementById('bs-raise-hand-btn').innerHTML='<i class="fas fa-hand-paper"></i> Raise Hand';
+        document.getElementById('bs-raise-hand-btn').style.background='var(--blue)';
+        bsMyRaiseStatus = null; bsMyRaiseId = null;
+    }
+}
+
+// Poll for my hand status (members only)
+function startMyHandPolling() {
+    setInterval(async () => {
+        if (!bsCurrentSessionId || bsIsTeacher || !bsMyRaiseId) return;
+        try {
+            const data = await fetch(`/api/check-my-hand/${bsCurrentSessionId}`).then(r=>r.json());
+            if (data.status === 'acknowledged' && bsMyRaiseStatus !== 'acknowledged') {
+                bsMyRaiseStatus = 'acknowledged';
+                document.getElementById('bs-question-input-wrap').style.display = '';
+                showToast('✅ Teacher acknowledged you! Type your question.','success');
+            }
+        } catch {}
+    }, 4000);
+}
+
+// Poll raised hands (teacher only)
+async function loadRaisedHands() {
+    if (!bsCurrentSessionId || !bsIsTeacher) return;
+    try {
+        const data = await fetch(`/api/get-raised-hands/${bsCurrentSessionId}`).then(r=>r.json());
+        if (!data.success) return;
+        const hands = data.hands || [];
+        const panel = document.getElementById('bs-hands-panel');
+        const list  = document.getElementById('bs-hands-list');
+        const count = document.getElementById('bs-hands-count');
+        if (!hands.length) { if(panel) panel.style.display='none'; return; }
+        if (panel) panel.style.display='';
+        if (count) count.textContent = hands.length;
+        if (!list) return;
+        list.innerHTML = '';
+        hands.forEach(h => {
+            const item = document.createElement('div');
+            item.style.cssText='display:flex;align-items:center;gap:10px;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:10px;';
+            item.innerHTML=`
+                <img src="${h.user_pic}" style="width:32px;height:32px;border-radius:8px;object-fit:cover;">
+                <div style="flex:1;min-width:0;">
+                    <div style="font-weight:700;font-size:.85rem;color:var(--ink);">${escHtml(h.user_name)}</div>
+                    ${h.question_text?`<div style="font-size:.78rem;color:var(--muted);margin-top:2px;">❓ ${escHtml(h.question_text)}</div>`:'<div style="font-size:.75rem;color:var(--muted);">✋ Raised hand</div>'}
+                </div>
+                <div style="display:flex;gap:5px;flex-shrink:0;">
+                    ${h.status==='raised'&&!h.question_text?`<button onclick="acknowledgeHand(${h.id})" class="btn btn-green btn-sm" style="border-radius:50px;"><i class="fas fa-check"></i> Allow</button>`:''}
+                    ${h.question_text?`<button onclick="dismissHand(${h.id})" class="btn btn-ghost btn-sm" style="border-radius:50px;"><i class="fas fa-check-double"></i> Answered</button>`:''}
+                    <button onclick="dismissHand(${h.id})" class="btn btn-red btn-sm" style="border-radius:50px;padding:5px 8px;"><i class="fas fa-times"></i></button>
+                </div>`;
+            list.appendChild(item);
+        });
+    } catch {}
+}
+
+async function acknowledgeHand(raiseId) {
+    const data = await fetch('/api/acknowledge-hand',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({raise_id:raiseId})}).then(r=>r.json());
+    if (data.success) { showToast('Student notified to type question','success'); loadRaisedHands(); }
+    else showToast('❌ '+(data.error||'Failed'),'error');
+}
+
+async function dismissHand(raiseId) {
+    await fetch('/api/dismiss-hand',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({raise_id:raiseId})});
+    loadRaisedHands();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  showLiveArea — REWRITTEN
+// ═══════════════════════════════════════════════════════════════════════════
+async function showLiveArea(title, groupId) {
+    document.getElementById('bs-live-area').style.display = '';
+    document.getElementById('bs-live-title').textContent = title;
+
+    // Get current user ID
+    try {
+        const r = await fetch('/api/dashboard-stats').then(x=>x.json());
+        if (r.success) bsCurrentUserId = r.user_id;
+    } catch {}
+
+    // Sync group admin status
+    if (groupId) {
+        try {
+            const gd = await fetch('/api/get-groups').then(r=>r.json());
+            const g = gd.groups?.find(x => String(x.id) === String(groupId));
+            if (g) gcCurrentGroupIsAdmin = g.your_role === 'admin';
+        } catch {}
+    }
+
+    // Get session details to know teacher
+    if (bsCurrentSessionId) {
+        try {
+            const sd = await fetch(`/api/get-session-details/${bsCurrentSessionId}`).then(r=>r.json());
+            if (sd.success) bsCurrentTeacherId = sd.session.teacher_id;
+        } catch {}
+    }
+
+    // Default: teacher = session creator = group admin who started
+    if (!bsCurrentTeacherId && gcCurrentGroupIsAdmin) {
+        bsCurrentTeacherId = bsCurrentUserId;
+    }
+
+    bsIsTeacher = bsCurrentTeacherId && bsCurrentUserId && (String(bsCurrentTeacherId) === String(bsCurrentUserId));
+
+    // Teacher label
+    const teacherLabel = document.getElementById('bs-teacher-label');
+    if (bsIsTeacher) {
+        if (teacherLabel) teacherLabel.textContent = '🎓 You are the teacher';
+    } else if (bsCurrentTeacherId) {
+        try {
+            const members = await fetch(`/api/get-group-members/${groupId}`).then(r=>r.json());
+            const t = members.members?.find(m => m.id == bsCurrentTeacherId);
+            if (teacherLabel && t) teacherLabel.textContent = `🎓 Teacher: ${t.name}`;
+        } catch {}
+    }
+
+    // Show/hide controls
+    const voiceBtn = document.getElementById('bs-voice-broadcast-btn');
+    const handBtn  = document.getElementById('bs-raise-hand-btn');
+    const assignWrap = document.getElementById('bs-assign-teacher-wrap');
+    const endBtn   = document.getElementById('bs-end-btn');
+    const leaveBtn = document.getElementById('bs-leave-btn');
+    const handsPanel = document.getElementById('bs-hands-panel');
+
+    if (voiceBtn)   voiceBtn.style.display   = bsIsTeacher ? '' : 'none';
+    if (handBtn)    handBtn.style.display     = bsIsTeacher ? 'none' : '';
+    if (assignWrap) assignWrap.style.display  = gcCurrentGroupIsAdmin ? 'flex' : 'none';
+    if (endBtn)     endBtn.style.display      = gcCurrentGroupIsAdmin ? '' : 'none';
+    if (leaveBtn)   leaveBtn.style.display    = gcCurrentGroupIsAdmin ? 'none' : '';
+    if (handsPanel) handsPanel.style.display  = bsIsTeacher ? 'none' : 'none'; // shown by polling
+
+    // Populate assign teacher picker for admins
+    if (gcCurrentGroupIsAdmin && groupId) {
+        try {
+            const md = await fetch(`/api/get-group-members/${groupId}`).then(r=>r.json());
+            const pick = document.getElementById('bs-teacher-pick');
+            if (pick && md.success) {
+                pick.innerHTML = '<option value="">Assign teacher…</option>';
+                md.members.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m.id;
+                    opt.textContent = `${m.name}${m.id == bsCurrentTeacherId ? ' ✓ current' : ''}`;
+                    pick.appendChild(opt);
+                });
+            }
+        } catch {}
+    }
+
+    // Group name
+    fetch('/api/get-groups').then(r=>r.json()).then(d=>{
+        const g = d.groups?.find(x => x.id == groupId);
+        const el = document.getElementById('bs-live-group');
+        if (el && g) el.textContent = g.name;
+    });
+
+    // Start polling
+    if (bsIsTeacher) {
+        clearInterval(bsHandPollTimer);
+        bsHandPollTimer = setInterval(loadRaisedHands, 4000);
+    } else {
+        startMyHandPolling();
+        startMemberVoicePolling();
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SESSION LIFECYCLE
+// ═══════════════════════════════════════════════════════════════════════════
+async function endLiveSession() {
+    if (!bsCurrentSessionId) return;
+    if (!confirm('End this live session for everyone?')) return;
+    stopLiveVoice();
+    clearInterval(bsHandPollTimer); clearInterval(bsWBSyncTimer); clearInterval(bsWBPollTimer);
+    await fetch('/api/update-session-status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:bsCurrentSessionId,status:'completed'})});
+    showToast('Session ended','info');
+    document.getElementById('bs-live-area').style.display='none';
+    bsCurrentSessionId = null; bsCurrentGroupId = null; bsIsTeacher = false;
+    loadRecentSessions();
+}
+
+async function leaveLiveSession() {
+    if (!bsCurrentSessionId) return;
+    if (!confirm('Leave this brainstorm session?')) return;
+    stopLiveVoice();
+    clearInterval(bsHandPollTimer); clearInterval(bsWBSyncTimer); clearInterval(bsWBPollTimer);
+    await fetch('/api/leave-brainstorm-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:bsCurrentSessionId})}).catch(()=>{});
+    showToast('You left the session','info');
+    document.getElementById('bs-live-area').style.display='none';
+    bsCurrentSessionId = null; bsCurrentGroupId = null; bsIsTeacher = false;
+    loadRecentSessions();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  TEACHER VOICE INTRO MODAL (unchanged logic, kept for modal)
+// ═══════════════════════════════════════════════════════════════════════════
+let tvMediaRecorder=null, tvAudioChunks=[], tvRecTimer=null, tvRecSeconds=0, tvRecording=false, tvAudioBlob=null;
+
+function openTeacherVoiceModal(){
+    const groupId = document.getElementById('bs-group').value;
+    if (!groupId) { showToast('Please select a group first','warn'); return; }
+    openModal('teacher-voice-modal');
+    tvAudioBlob = null;
+    document.getElementById('tv-playback').style.display = 'none';
+    document.getElementById('tv-start-btn').style.display = 'none';
+    document.getElementById('tv-rec-dot').style.background = 'var(--muted)';
+    document.getElementById('tv-rec-time').textContent = '0:00';
+    document.getElementById('tv-waveform').innerHTML = '';
+    document.getElementById('tv-record-btn').innerHTML = '<i class="fas fa-microphone"></i> Record';
+}
+
+async function toggleTeacherVoiceRec(){
+    if(tvRecording){stopTeacherVoice();return;}
+    try{
+        const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+        tvAudioChunks=[];tvRecSeconds=0;tvRecording=true;
+        tvMediaRecorder=new MediaRecorder(stream);
+        tvMediaRecorder.ondataavailable=e=>tvAudioChunks.push(e.data);
+        tvMediaRecorder.onstop=()=>{
+            tvAudioBlob=new Blob(tvAudioChunks,{type:'audio/webm'});
+            const url=URL.createObjectURL(tvAudioBlob);
+            const pb=document.getElementById('tv-playback');pb.src=url;pb.style.display='';
+            document.getElementById('tv-start-btn').style.display='flex';
+        };
+        tvMediaRecorder.start();
+        document.getElementById('tv-rec-dot').style.cssText='width:12px;height:12px;border-radius:50%;background:#e03030;flex-shrink:0;animation:recPulse 1s ease-in-out infinite;';
+        document.getElementById('tv-record-btn').innerHTML='<i class="fas fa-stop"></i> Stop';
+        const wf=document.getElementById('tv-waveform');wf.innerHTML='';
+        for(let i=0;i<16;i++){const b=document.createElement('div');b.style.cssText=`width:3px;border-radius:2px;background:var(--accent);animation:waveAnim ${0.3+Math.random()*0.4}s ease-in-out infinite alternate;animation-delay:${i*0.05}s;`;wf.appendChild(b);}
+        tvRecTimer=setInterval(()=>{tvRecSeconds++;const m=Math.floor(tvRecSeconds/60),s=tvRecSeconds%60;document.getElementById('tv-rec-time').textContent=`${m}:${s<10?'0':''}${s}`;},1000);
+    }catch{showToast('Microphone access denied','error');}
+}
+
+function stopTeacherVoice(){
+    if(!tvMediaRecorder)return;
+    clearInterval(tvRecTimer);tvRecording=false;
+    tvMediaRecorder.stop();tvMediaRecorder.stream.getTracks().forEach(t=>t.stop());tvMediaRecorder=null;
+    document.getElementById('tv-rec-dot').style.cssText='width:12px;height:12px;border-radius:50%;background:var(--green);flex-shrink:0;';
+    document.getElementById('tv-waveform').innerHTML='';
+    document.getElementById('tv-record-btn').innerHTML='<i class="fas fa-microphone"></i> Re-record';
+}
+
+function skipTeacherVoice(){closeModal('teacher-voice-modal');startLiveSession();}
+
+async function startLiveSessionWithVoice(){
+    closeModal('teacher-voice-modal');
+    if(tvAudioBlob){
+        const groupId=document.getElementById('bs-group').value;
+        if(groupId){const fd=new FormData();fd.append('group_id',groupId);fd.append('message_type','voice');fd.append('content','🎙️ Teacher intro');fd.append('voice',tvAudioBlob,'teacher_intro.webm');try{await fetch('/api/send-group-message',{method:'POST',body:fd});}catch{}}
+    }
+    startLiveSession();
+    setTimeout(initWhiteboard,400);
+}
+
+async function startLiveSession(){
+    const title=document.getElementById('bs-title').value.trim()||'Live Session';
+    const groupId=document.getElementById('bs-group').value;
+    if(!groupId){showToast('Please select a group first','warn');return;}
+    const data=await fetch('/api/schedule-brainstorm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_id:groupId,title,description:document.getElementById('bs-desc').value.trim(),scheduled_time:new Date().toISOString()})}).then(r=>r.json());
+    if(data.success){
+        bsCurrentSessionId=data.session_id;bsCurrentGroupId=groupId;
+        await fetch('/api/update-session-status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:data.session_id,status:'ongoing'})});
+        showToast('🚀 Live session started!','success');
+        await showLiveArea(title,groupId);
+        setTimeout(initWhiteboard,400);
+        loadRecentSessions();
+    }else showToast('❌ '+(data.error||'Failed'),'error');
+}
+
+async function assignSessionTeacher(){
+    if(!bsCurrentSessionId){showToast('No active session','warn');return;}
+    const sel=document.getElementById('bs-teacher-pick');
+    const teacherId=sel?.value;
+    if(!teacherId){showToast('Please select a member','warn');return;}
+    const data=await fetch('/api/set-session-teacher',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:bsCurrentSessionId,teacher_id:parseInt(teacherId)})}).then(r=>r.json());
+    if(data.success){
+        bsCurrentTeacherId=parseInt(teacherId);
+        bsIsTeacher=(String(bsCurrentTeacherId)===String(bsCurrentUserId));
+        showToast(`✅ ${data.teacher_name} is now the teacher!`,'success');
+        setWBTeacherMode(bsIsTeacher);
+        document.getElementById('bs-teacher-label').textContent=bsIsTeacher?'🎓 You are the teacher':`🎓 Teacher: ${data.teacher_name}`;
+        document.getElementById('bs-voice-broadcast-btn').style.display=bsIsTeacher?'':'none';
+        document.getElementById('bs-raise-hand-btn').style.display=bsIsTeacher?'none':'';
+    }else showToast('❌ '+(data.error||'Failed'),'error');
+}
+
+async function joinBrainstormFromNotif(sessionId, btn){
+    if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Joining…';}
+    try{
+        const data=await fetch('/api/join-brainstorm-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sessionId})}).then(r=>r.json());
+        if(data.success&&data.session){
+            document.getElementById('notification-panel').style.display='none';notifOpen=false;
+            bsCurrentSessionId=data.session.id;bsCurrentGroupId=data.session.group_id;bsCurrentTeacherId=data.session.teacher_id||null;
+            document.querySelector('[data-tab="brainstorm"]').click();
+            setTimeout(async()=>{await showLiveArea(data.session.title,data.session.group_id);setTimeout(initWhiteboard,400);showToast('🧠 Joined session!','success');},500);
+        }else{showToast('❌ '+(data.error||'Could not join'),'error');if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-brain"></i> Join Session';}}
+    }catch{showToast('Connection error','error');if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-brain"></i> Join Session';}}
+}
+
+async function openSession(s){
+    bsCurrentSessionId=s.id;bsCurrentGroupId=s.group_id;bsCurrentTeacherId=s.teacher_id||null;gcCurrentGroupIsAdmin=s.is_admin||false;
+    try{
+        const joined=await fetch('/api/join-brainstorm-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:s.id})}).then(r=>r.json());
+        if(!joined.success){showToast('❌ '+(joined.error||'Cannot join session'),'error');return;}
+    }catch{showToast('Connection error','error');return;}
+    await showLiveArea(s.title,s.group_id);
+    if(s.status==='scheduled'&&s.is_admin){
+        if(confirm(`Start "${s.title}" now?`)){
+            await fetch('/api/update-session-status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:s.id,status:'ongoing'})});
+            showToast('🚀 Session started!','success');loadRecentSessions();
+        }
+    }else if(s.status==='scheduled'){showToast(`📖 Viewing scheduled session: ${s.title}`,'info');}
+    else if(s.status==='completed'){showToast(`📋 Viewing past session: ${s.title}`,'info');}
+    setTimeout(initWhiteboard,400);
 }
 
 </script>
