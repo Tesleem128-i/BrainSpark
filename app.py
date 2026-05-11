@@ -308,13 +308,28 @@ def signup():
         if profile_file and profile_file.filename and allowed_file(profile_file.filename):
             try:
                 ext      = profile_file.filename.rsplit('.', 1)[1].lower()
-                filename = f"{user.id}.{ext}"
                 save_dir = app.config['PROFILE_UPLOAD_FOLDER']
                 os.makedirs(save_dir, exist_ok=True)
-                profile_file.save(os.path.join(save_dir, filename))
-                user.profile_pic = filename
+                final_name = f"{user.id}.{ext}"
+                final_path = os.path.join(save_dir, final_name)
+                temp_path  = os.path.join(save_dir, f"tmp_{user.id}.{ext}")
+                profile_file.save(temp_path)
+                # Remove any old pic for this user with a different extension
+                for existing_file in os.listdir(save_dir):
+                    if existing_file.startswith(f"{user.id}.") and existing_file != final_name:
+                        try:
+                            os.remove(os.path.join(save_dir, existing_file))
+                        except Exception:
+                            pass
+                os.replace(temp_path, final_path)
+                user.profile_pic = final_name
             except Exception as pic_err:
                 logger.warning(f"Profile pic save failed (non-fatal): {pic_err}")
+                try:
+                    if os.path.exists(temp_path):
+                        os.remove(temp_path)
+                except Exception:
+                    pass
 
         db.session.commit()
         return jsonify({'success': True, 'email': email, 'user_id': user.id})
@@ -1020,6 +1035,7 @@ def ask_ai():
         )
 
         content_parts = []
+        saved_image_url = None
         full_text_prompt = f"{system_prompt}\n\n{context}"
         if question:
             full_text_prompt += f"Student's question: {question}"
@@ -1061,6 +1077,7 @@ def ask_ai():
                         logger.warning(f"Image save failed (non-fatal): {save_err}")
                 except Exception as img_err:
                     logger.warning(f"Image processing error: {img_err}")
+                    saved_image_url = None
 
         if has_image:
             response = vision_model.generate_content(content_parts)
@@ -1078,7 +1095,7 @@ def ask_ai():
         conversation_history.append({
             'question': question or '[file attachment]',
             'answer': explanation[:500],
-            'image_url': saved_image_url if 'saved_image_url' in dir() else None,
+            'image_url': saved_image_url,
             'has_pdf': has_pdf,
             'timestamp': datetime.utcnow().isoformat()
         })
@@ -1091,7 +1108,7 @@ def ask_ai():
             'youtube_query':      youtube_query,
             'has_pdf':            has_pdf,
             'has_image':          has_image,
-            'saved_image_url':    saved_image_url if 'saved_image_url' in dir() else None,
+            'saved_image_url':    saved_image_url,
             'conversation_count': len(conversation_history)
         })
 
@@ -2495,27 +2512,48 @@ def update_profile_pic():
     file_bytes = file.read()
     if len(file_bytes) > 5 * 1024 * 1024:
         return jsonify({'success': False, 'error': 'File too large. Max 5MB.'})
+
+    temp_path = None
     try:
         user_id  = session['user_id']
         user     = User.query.get(user_id)
         ext      = file.filename.rsplit('.', 1)[1].lower()
-        filename = f"{user_id}.{ext}"
         save_dir = app.config['PROFILE_UPLOAD_FOLDER']
         os.makedirs(save_dir, exist_ok=True)
-        if user.profile_pic and user.profile_pic != filename:
-            old_path = os.path.join(save_dir, user.profile_pic)
-            if os.path.exists(old_path):
-                try: os.remove(old_path)
-                except Exception: pass
-        filepath = os.path.join(save_dir, filename)
-        with open(filepath, 'wb') as f_out:
+
+        final_name = f"{user_id}.{ext}"
+        final_path = os.path.join(save_dir, final_name)
+        temp_path  = os.path.join(save_dir, f"tmp_{user_id}.{ext}")
+
+        # Write to temp file first — never touch the live file until save succeeds
+        with open(temp_path, 'wb') as f_out:
             f_out.write(file_bytes)
-        user.profile_pic = filename
+
+        # Delete any old pic with a DIFFERENT extension (e.g. old was .jpeg, new is .png)
+        for existing_file in os.listdir(save_dir):
+            if existing_file.startswith(f"{user_id}.") and existing_file != final_name:
+                try:
+                    os.remove(os.path.join(save_dir, existing_file))
+                except Exception:
+                    pass
+
+        # Atomic rename — temp becomes the real file
+        os.replace(temp_path, final_path)
+
+        user.profile_pic = final_name
         db.session.commit()
-        return jsonify({'success': True, 'url': user.get_profile_pic_url()})
+        return jsonify({'success': True, 'url': f'/uploads/profiles/{final_name}'})
+
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': 'Upload failed.'})
+        if temp_path:
+            try:
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+            except Exception:
+                pass
+        logger.error(f"Profile pic upload failed: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Upload failed. Please try again.'})
 
 
 @app.route('/api/delete-account', methods=['POST'])
@@ -2542,6 +2580,8 @@ def delete_account():
         UserTag.query.filter_by(user_id=user_id).delete(synchronize_session=False)
         GeneratedQuestion.query.filter_by(user_id=user_id).delete(synchronize_session=False)
         AppNotification.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+        WrongAnswer.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+        TopicMastery.query.filter_by(user_id=user_id).delete(synchronize_session=False)
         db.session.delete(user)
         db.session.commit()
         session.clear()
@@ -2694,8 +2734,8 @@ def debug_db_status():
             'user_quiz_results_count':  len(quiz_results),
         })
     except Exception as e:
-        logger.error(f"YouTube search error: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': 'Failed to fetch videos'}), 500
+        logger.error(f"DB status error: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
     
 @app.route('/api/join-brainstorm-session', methods=['POST'])
 def join_brainstorm_session():

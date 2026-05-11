@@ -3,7 +3,7 @@ import os
 from PIL import Image
 
 conn = psycopg2.connect(
-    "postgresql://brainspark_db_user:R2GxoDz1o1rIHqPKNEr8UopoaFWyYyGz@dpg-d7mk61gsfn5c73djkee0-a.oregon-postgres.render.com/brainspark_db",
+    "postgresql://brainspark_q2ou_user:TbcoKR912hxBE9ZOHf1VxSQLXxZhQPhn@dpg-d7vmdol0lvsc73817su0-a.oregon-postgres.render.com/brainspark_q2ou",
     sslmode="require"
 )
 

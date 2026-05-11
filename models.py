@@ -39,9 +39,11 @@ class User(UserMixin, db.Model):
         return check_password_hash(self.password_hash, password)
 
     def get_profile_pic_url(self):
-        if self.profile_pic != 'default.jpg':
-            return f'/uploads/profiles/{self.profile_pic}'
-        return '/static/image/KNOWITNOW.png'
+        if self.profile_pic:
+            path = os.path.join('uploads', 'profiles', self.profile_pic)
+            if os.path.exists(path):
+                return f'/uploads/profiles/{self.profile_pic}'
+        return None
 
     def get_average_score(self):
         avg = db.session.query(func.avg(QuizResult.score)).filter_by(user_id=self.id).scalar()
