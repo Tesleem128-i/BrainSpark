@@ -1496,12 +1496,95 @@ function switchBSView(view){
 }
 
 function initExcalidraw(){
-  const iframe=document.getElementById('excalidraw-iframe');
-  if(!iframe||iframe.src)return;
-  // Use a room name based on session ID so everyone shares the same board
-  const roomName=`brainspark-session-${bsSessionId||'default'}`;
-  iframe.src=`https://excalidraw.com/#room=${roomName},${btoa(roomName).slice(0,22)}`;
-  document.getElementById('wb-viewer-label-ex').style.display='';
+  // Use built-in canvas whiteboard instead of Excalidraw (requires sign-in)
+  const wrap=document.getElementById('bs-view-whiteboard');
+  if(!wrap||wrap.dataset.init==='1')return;
+  wrap.dataset.init='1';
+  wrap.innerHTML='';
+  wrap.style.position='relative';
+  wrap.style.background='#fff';
+
+  // Toolbar
+  const tb=document.createElement('div');
+  tb.style.cssText='position:absolute;top:0;left:0;right:0;z-index:10;padding:6px 12px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;';
+  tb.innerHTML=`
+    <div style="display:flex;gap:4px;" id="ex-colors">
+      <button onclick="exSetColor('#000000',this)" style="width:22px;height:22px;border-radius:50%;background:#000;border:3px solid #000;cursor:pointer;"></button>
+      <button onclick="exSetColor('#ff4f30',this)" style="width:22px;height:22px;border-radius:50%;background:#ff4f30;border:2px solid transparent;cursor:pointer;"></button>
+      <button onclick="exSetColor('#3b6bff',this)" style="width:22px;height:22px;border-radius:50%;background:#3b6bff;border:2px solid transparent;cursor:pointer;"></button>
+      <button onclick="exSetColor('#00c98d',this)" style="width:22px;height:22px;border-radius:50%;background:#00c98d;border:2px solid transparent;cursor:pointer;"></button>
+      <button onclick="exSetColor('#f5c842',this)" style="width:22px;height:22px;border-radius:50%;background:#f5c842;border:2px solid transparent;cursor:pointer;"></button>
+      <button onclick="exSetColor('#a855f7',this)" style="width:22px;height:22px;border-radius:50%;background:#a855f7;border:2px solid transparent;cursor:pointer;"></button>
+    </div>
+    <input type="range" id="ex-size" min="2" max="30" value="4" style="width:70px;" title="Pen size">
+    <select id="ex-tool" onchange="exSetTool(this.value)" style="padding:4px 8px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--ink);font-size:.78rem;cursor:pointer;">
+      <option value="pen">✏️ Pen</option>
+      <option value="marker">🖊️ Marker</option>
+      <option value="line">📏 Line</option>
+      <option value="rect">⬜ Rectangle</option>
+      <option value="circle">⭕ Circle</option>
+      <option value="text">🔤 Text</option>
+      <option value="eraser">⬜ Eraser</option>
+    </select>
+    <button onclick="exUndo()" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--ink);cursor:pointer;font-size:.78rem;">↩ Undo</button>
+    <button onclick="exClear()" style="padding:4px 10px;border-radius:6px;border:none;background:#e03030;color:#fff;cursor:pointer;font-size:.78rem;">🗑 Clear</button>
+    <button onclick="document.getElementById('ex-img-upload').click()" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--ink);cursor:pointer;font-size:.78rem;">🖼 Image</button>
+    <input type="file" id="ex-img-upload" accept="image/*" style="display:none;" onchange="exAddImage(event)">
+    <button onclick="exSave()" style="padding:4px 10px;border-radius:6px;border:none;background:var(--green);color:#fff;cursor:pointer;font-size:.78rem;">💾 Save</button>
+    <span id="ex-sync-label" style="font-size:.72rem;color:var(--muted);margin-left:auto;"></span>
+  `;
+
+  // Canvas
+  const canvas=document.createElement('canvas');
+  canvas.id='ex-canvas';
+  canvas.style.cssText='position:absolute;top:44px;left:0;right:0;bottom:0;width:100%;cursor:crosshair;touch-action:none;';
+  wrap.appendChild(tb);
+  wrap.appendChild(canvas);
+
+  // Size canvas
+  function resizeCanvas(){
+    const rect=wrap.getBoundingClientRect();
+    const img=_exCtx?_exCtx.getImageData(0,0,canvas.width,canvas.height):null;
+    canvas.width=rect.width||1200;
+    canvas.height=Math.max(rect.height-44,400);
+    if(_exCtx){
+      _exCtx.lineCap='round';_exCtx.lineJoin='round';
+      _exCtx.fillStyle='#fff';_exCtx.fillRect(0,0,canvas.width,canvas.height);
+      if(img)_exCtx.putImageData(img,0,0);
+    }
+  }
+
+  _exCtx=canvas.getContext('2d');
+  _exCtx.lineCap='round';_exCtx.lineJoin='round';
+  _exCtx.fillStyle='#fff';_exCtx.fillRect(0,0,canvas.width||1200,canvas.height||600);
+  resizeCanvas();
+  window.addEventListener('resize',resizeCanvas);
+
+  // Draw events
+  canvas.addEventListener('mousedown',_exStart);
+  canvas.addEventListener('mousemove',_exMove);
+  canvas.addEventListener('mouseup',_exEnd);
+  canvas.addEventListener('mouseleave',_exEnd);
+  canvas.addEventListener('touchstart',e=>{e.preventDefault();_exStart(e.touches[0]);},{passive:false});
+  canvas.addEventListener('touchmove',e=>{e.preventDefault();_exMove(e.touches[0]);},{passive:false});
+  canvas.addEventListener('touchend',e=>{e.preventDefault();_exEnd();},{passive:false});
+  canvas.addEventListener('click',_exClickText);
+
+  _exHistory=[];_exSaveHistory();
+
+  // Load existing board from server
+  if(bsSessionId){
+    fetch(`/api/get-whiteboard/${bsSessionId}`).then(r=>r.json()).then(data=>{
+      if(data.success&&data.image_data){
+        const img=new Image();
+        img.onload=()=>{if(_exCtx)_exCtx.drawImage(img,0,0,canvas.width,canvas.height);};
+        img.src=data.image_data;
+      }
+    }).catch(()=>{});
+  }
+
+  // Start sync polling for non-coordinators
+  if(!isCoord())_startExViewPolling();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1568,8 +1651,176 @@ function _createJitsiRoom(container,roomName,displayName,sessionTitle){
 function disposeJitsi(){if(_jitsiApi){try{_jitsiApi.dispose();}catch(e){}; _jitsiApi=null;}}
 
 // ═══════════════════════════════════════════════════════════
-//  AI SESSION NOTES
+//  BUILT-IN WHITEBOARD ENGINE (REPLACES EXCALIDRAW)
 // ═══════════════════════════════════════════════════════════
+LET _EXCTX=NULL,_EXDRAWING=FALSE,_EXCOLOR='#000000',_EXSIZE=4,_EXTOOL='PEN';
+LET _EXHISTORY=[],_EXSYNCTIMER=NULL,_EXVIEWPOLLINTERVAL=NULL;
+LET _EXSTARTX=0,_EXSTARTY=0,_EXSNAPSHOT=NULL,_EXTEXTINPUT=NULL;
+
+FUNCTION EXSETCOLOR(C,BTN){
+  _EXCOLOR=C;
+  DOCUMENT.QUERYSELECTORALL('#EX-COLORS BUTTON').FOREACH(B=>B.STYLE.BORDERWIDTH='2PX');
+  IF(BTN)BTN.STYLE.BORDERWIDTH='3PX';
+  IF(_EXTOOL==='ERASER')EXSETTOOL('PEN');
+}
+FUNCTION EXSETTOOL(T){
+  _EXTOOL=T;
+  CONST C=DOCUMENT.GETELEMENTBYID('EX-CANVAS');
+  IF(C)C.STYLE.CURSOR=T==='ERASER'?'CELL':T==='TEXT'?'TEXT':'CROSSHAIR';
+}
+FUNCTION _EXGETPOS(E){
+  CONST C=DOCUMENT.GETELEMENTBYID('EX-CANVAS');
+  CONST R=C.GETBOUNDINGCLIENTRECT();
+  RETURN{X:(E.CLIENTX-R.LEFT)*(C.WIDTH/R.WIDTH),Y:(E.CLIENTY-R.TOP)*(C.HEIGHT/R.HEIGHT)};
+}
+FUNCTION _EXSTART(E){
+  IF(_EXTOOL==='TEXT')RETURN;
+  _EXDRAWING=TRUE;
+  CONST POS=_EXGETPOS(E);
+  _EXSTARTX=POS.X;_EXSTARTY=POS.Y;
+  CONST C=DOCUMENT.GETELEMENTBYID('EX-CANVAS');
+  IF(['LINE','RECT','CIRCLE'].INCLUDES(_EXTOOL))_EXSNAPSHOT=_EXCTX.GETIMAGEDATA(0,0,C.WIDTH,C.HEIGHT);
+  _EXCTX.BEGINPATH();_EXCTX.MOVETO(POS.X,POS.Y);
+}
+FUNCTION _EXMOVE(E){
+  IF(!_EXDRAWING||!_EXCTX)RETURN;
+  CONST POS=_EXGETPOS(E);
+  CONST SZ=PARSEINT(DOCUMENT.GETELEMENTBYID('EX-SIZE')?.VALUE||4);
+  IF(_EXTOOL==='PEN'||_EXTOOL==='MARKER'){
+    _EXCTX.GLOBALCOMPOSITEOPERATION='SOURCE-OVER';
+    _EXCTX.STROKESTYLE=_EXCOLOR;
+    _EXCTX.LINEWIDTH=_EXTOOL==='MARKER'?SZ*2.5:SZ;
+    _EXCTX.GLOBALALPHA=_EXTOOL==='MARKER'?0.4:1;
+    _EXCTX.LINETO(POS.X,POS.Y);_EXCTX.STROKE();
+    _EXCTX.BEGINPATH();_EXCTX.MOVETO(POS.X,POS.Y);
+  } ELSE IF(_EXTOOL==='ERASER'){
+    _EXCTX.GLOBALCOMPOSITEOPERATION='DESTINATION-OUT';
+    _EXCTX.LINEWIDTH=SZ*3;
+    _EXCTX.LINETO(POS.X,POS.Y);_EXCTX.STROKE();
+    _EXCTX.BEGINPATH();_EXCTX.MOVETO(POS.X,POS.Y);
+  } ELSE IF(_EXTOOL==='LINE'&&_EXSNAPSHOT){
+    CONST C=DOCUMENT.GETELEMENTBYID('EX-CANVAS');
+    _EXCTX.PUTIMAGEDATA(_EXSNAPSHOT,0,0);
+    _EXCTX.GLOBALCOMPOSITEOPERATION='SOURCE-OVER';_EXCTX.GLOBALALPHA=1;
+    _EXCTX.STROKESTYLE=_EXCOLOR;_EXCTX.LINEWIDTH=SZ;
+    _EXCTX.BEGINPATH();_EXCTX.MOVETO(_EXSTARTX,_EXSTARTY);_EXCTX.LINETO(POS.X,POS.Y);_EXCTX.STROKE();
+  } ELSE IF(_EXTOOL==='RECT'&&_EXSNAPSHOT){
+    CONST C=DOCUMENT.GETELEMENTBYID('EX-CANVAS');
+    _EXCTX.PUTIMAGEDATA(_EXSNAPSHOT,0,0);
+    _EXCTX.GLOBALCOMPOSITEOPERATION='SOURCE-OVER';_EXCTX.GLOBALALPHA=1;
+    _EXCTX.STROKESTYLE=_EXCOLOR;_EXCTX.LINEWIDTH=SZ;
+    _EXCTX.STROKERECT(_EXSTARTX,_EXSTARTY,POS.X-_EXSTARTX,POS.Y-_EXSTARTY);
+  } ELSE IF(_EXTOOL==='CIRCLE'&&_EXSNAPSHOT){
+    CONST C=DOCUMENT.GETELEMENTBYID('EX-CANVAS');
+    _EXCTX.PUTIMAGEDATA(_EXSNAPSHOT,0,0);
+    _EXCTX.GLOBALCOMPOSITEOPERATION='SOURCE-OVER';_EXCTX.GLOBALALPHA=1;
+    _EXCTX.STROKESTYLE=_EXCOLOR;_EXCTX.LINEWIDTH=SZ;
+    CONST RX=MATH.ABS(POS.X-_EXSTARTX)/2,RY=MATH.ABS(POS.Y-_EXSTARTY)/2;
+    CONST CX=_EXSTARTX+(POS.X-_EXSTARTX)/2,CY=_EXSTARTY+(POS.Y-_EXSTARTY)/2;
+    _EXCTX.BEGINPATH();_EXCTX.ELLIPSE(CX,CY,RX,RY,0,0,2*MATH.PI);_EXCTX.STROKE();
+  }
+}
+FUNCTION _EXEND(){
+  IF(!_EXDRAWING)RETURN;
+  _EXDRAWING=FALSE;
+  _EXCTX.GLOBALALPHA=1;_EXCTX.GLOBALCOMPOSITEOPERATION='SOURCE-OVER';
+  _EXSAVEHISTORY();_EXAUTOSYNC();
+}
+FUNCTION _EXCLICKTEXT(E){
+  IF(_EXTOOL!=='TEXT')RETURN;
+  CONST POS=_EXGETPOS(E);
+  IF(_EXTEXTINPUT){_EXTEXTINPUT.REMOVE();_EXTEXTINPUT=NULL;}
+  CONST SZ=PARSEINT(DOCUMENT.GETELEMENTBYID('EX-SIZE')?.VALUE||4);
+  CONST INP=DOCUMENT.CREATEELEMENT('INPUT');
+  INP.TYPE='TEXT';INP.PLACEHOLDER='TYPE, THEN ENTER';
+  INP.STYLE.CSSTEXT=`POSITION:FIXED;LEFT:${E.CLIENTX}PX;TOP:${E.CLIENTY}PX;Z-INDEX:9999;PADDING:4PX 8PX;BORDER:2PX DASHED ${_EXCOLOR};BORDER-RADIUS:6PX;BACKGROUND:RGBA(255,255,255,.95);COLOR:#000;FONT-FAMILY:'DM SANS',SANS-SERIF;FONT-SIZE:${MATH.MAX(12,SZ*3)}PX;MIN-WIDTH:120PX;OUTLINE:NONE;`;
+  DOCUMENT.BODY.APPENDCHILD(INP);_EXTEXTINPUT=INP;INP.FOCUS();
+  INP.ADDEVENTLISTENER('KEYDOWN',EV=>{
+    IF(EV.KEY==='ENTER'){
+      CONST TXT=INP.VALUE.TRIM();
+      IF(TXT){
+        _EXCTX.GLOBALALPHA=1;_EXCTX.GLOBALCOMPOSITEOPERATION='SOURCE-OVER';
+        _EXCTX.FILLSTYLE=_EXCOLOR;
+        _EXCTX.FONT=`${MATH.MAX(14,SZ*3)}PX 'DM SANS',SANS-SERIF`;
+        _EXCTX.FILLTEXT(TXT,POS.X,POS.Y);
+        _EXSAVEHISTORY();_EXAUTOSYNC();
+      }
+      INP.REMOVE();_EXTEXTINPUT=NULL;
+    }
+    IF(EV.KEY==='ESCAPE'){INP.REMOVE();_EXTEXTINPUT=NULL;}
+  });
+  INP.ADDEVENTLISTENER('BLUR',()=>SETTIMEOUT(()=>{IF(_EXTEXTINPUT===INP){INP.REMOVE();_EXTEXTINPUT=NULL;}},150));
+}
+FUNCTION _EXSAVEHISTORY(){
+  CONST C=DOCUMENT.GETELEMENTBYID('EX-CANVAS');
+  IF(!C||!_EXCTX)RETURN;
+  _EXHISTORY.PUSH(_EXCTX.GETIMAGEDATA(0,0,C.WIDTH,C.HEIGHT));
+  IF(_EXHISTORY.LENGTH>30)_EXHISTORY.SHIFT();
+}
+FUNCTION EXUNDO(){
+  IF(_EXHISTORY.LENGTH<2)RETURN;
+  _EXHISTORY.POP();
+  CONST C=DOCUMENT.GETELEMENTBYID('EX-CANVAS');
+  _EXCTX.PUTIMAGEDATA(_EXHISTORY[_EXHISTORY.LENGTH-1],0,0);
+  _EXAUTOSYNC();
+}
+FUNCTION EXCLEAR(){
+  IF(!CONFIRM('CLEAR THE WHITEBOARD?'))RETURN;
+  CONST C=DOCUMENT.GETELEMENTBYID('EX-CANVAS');
+  _EXCTX.CLEARRECT(0,0,C.WIDTH,C.HEIGHT);
+  _EXCTX.FILLSTYLE='#FFF';_EXCTX.FILLRECT(0,0,C.WIDTH,C.HEIGHT);
+  _EXSAVEHISTORY();_EXAUTOSYNC();
+}
+FUNCTION EXSAVE(){
+  CONST C=DOCUMENT.GETELEMENTBYID('EX-CANVAS');
+  IF(!C)RETURN;
+  CONST A=DOCUMENT.CREATEELEMENT('A');
+  A.HREF=C.TODATAURL('IMAGE/PNG');A.DOWNLOAD='WHITEBOARD.PNG';A.CLICK();
+}
+FUNCTION EXADDIMAGE(E){
+  CONST FILE=E.TARGET.FILES[0];IF(!FILE)RETURN;
+  CONST C=DOCUMENT.GETELEMENTBYID('EX-CANVAS');
+  CONST IMG=NEW IMAGE();
+  IMG.ONLOAD=()=>{
+    CONST MAXW=C.WIDTH*0.8,MAXH=(C.HEIGHT-44)*0.6;
+    LET W=IMG.NATURALWIDTH,H=IMG.NATURALHEIGHT;
+    IF(W>MAXW){H=H*(MAXW/W);W=MAXW;}
+    IF(H>MAXH){W=W*(MAXH/H);H=MAXH;}
+    _EXCTX.GLOBALALPHA=1;_EXCTX.GLOBALCOMPOSITEOPERATION='SOURCE-OVER';
+    _EXCTX.DRAWIMAGE(IMG,(C.WIDTH-W)/2,44+(C.HEIGHT-44-H)/2,W,H);
+    _EXSAVEHISTORY();_EXAUTOSYNC();
+    SHOWTOAST('IMAGE ADDED TO BOARD','SUCCESS');
+  };
+  IMG.SRC=URL.CREATEOBJECTURL(FILE);
+  E.TARGET.VALUE='';
+}
+ASYNC FUNCTION _EXAUTOSYNC(){
+  IF(!BSSESSIONID)RETURN;
+  CLEARTIMEOUT(_EXSYNCTIMER);
+  _EXSYNCTIMER=SETTIMEOUT(ASYNC()=>{
+    CONST C=DOCUMENT.GETELEMENTBYID('EX-CANVAS');IF(!C)RETURN;
+    CONST IMAGEDATA=C.TODATAURL('IMAGE/PNG');
+    TRY{
+      AWAIT FETCH('/API/SAVE-WHITEBOARD',{METHOD:'POST',HEADERS:{'CONTENT-TYPE':'APPLICATION/JSON'},BODY:JSON.STRINGIFY({SESSION_ID:BSSESSIONID,IMAGE_DATA:IMAGEDATA})});
+      CONST LBL=DOCUMENT.GETELEMENTBYID('EX-SYNC-LABEL');
+      IF(LBL){LBL.TEXTCONTENT='✅ SYNCED';SETTIMEOUT(()=>LBL.TEXTCONTENT='',2000);}
+    }CATCH{}
+  },1500);
+}
+FUNCTION _STARTEXVIEWPOLLING(){
+  IF(_EXVIEWPOLLINTERVAL)CLEARINTERVAL(_EXVIEWPOLLINTERVAL);
+  _EXVIEWPOLLINTERVAL=SETINTERVAL(ASYNC()=>{
+    IF(!BSSESSIONID||ISCOORD())RETURN;
+    TRY{
+      CONST DATA=AWAIT FETCH(`/API/GET-WHITEBOARD/${BSSESSIONID}`).THEN(R=>R.JSON());
+      IF(!DATA.SUCCESS||!DATA.IMAGE_DATA)RETURN;
+      CONST C=DOCUMENT.GETELEMENTBYID('EX-CANVAS');IF(!C||!_EXCTX)RETURN;
+      CONST IMG=NEW IMAGE();
+      IMG.ONLOAD=()=>{_EXCTX.CLEARRECT(0,0,C.WIDTH,C.HEIGHT);_EXCTX.DRAWIMAGE(IMG,0,0,C.WIDTH,C.HEIGHT);};
+      IMG.SRC=DATA.IMAGE_DATA;
+    }CATCH{}
+  },3000);
+}
 let _sessionNotes=[];
 async function generateAINotes(){
   const container=document.getElementById('bs-notes-content');
@@ -1703,8 +1954,12 @@ async function leaveBSSession(){
 function closeBSOverlay(){
   document.getElementById('bs-overlay').style.display='none';
   disposeJitsi();
-  const iframe=document.getElementById('excalidraw-iframe');
-  if(iframe)iframe.src='';
+  // Clean up built-in whiteboard
+  if(_exViewPollInterval){clearInterval(_exViewPollInterval);_exViewPollInterval=null;}
+  clearTimeout(_exSyncTimer);
+  const wrap=document.getElementById('bs-view-whiteboard');
+  if(wrap){wrap.dataset.init='';wrap.innerHTML='';}
+  _exCtx=null;_exHistory=[];
   bsSessionId=null;bsGroupId=null;bsCoordId=null;
   _sessionNotes=[];
 }
