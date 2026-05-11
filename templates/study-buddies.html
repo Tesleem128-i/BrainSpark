@@ -1535,7 +1535,6 @@ function initExcalidraw(){
   // hide toolbar for non-coordinators
   if(!amcoord){
     tb.style.display='none';
-    // add viewer label instead
     const vl=document.createelement('div');
     vl.style.csstext='position:absolute;top:0;left:0;right:0;z-index:10;padding:6px 12px;background:rgba(59,107,255,.08);border-bottom:1px solid rgba(59,107,255,.2);font-size:.75rem;color:var(--blue2);font-style:italic;';
     vl.textcontent='📺 viewing whiteboard (read-only) — syncs every 3s';
@@ -1670,168 +1669,168 @@ LET _EXCTX=NULL,_EXDRAWING=FALSE,_EXCOLOR='#000000',_EXSIZE=4,_EXTOOL='PEN';
 LET _EXHISTORY=[],_EXSYNCTIMER=NULL,_EXVIEWPOLLINTERVAL=NULL;
 LET _EXSTARTX=0,_EXSTARTY=0,_EXSNAPSHOT=NULL,_EXTEXTINPUT=NULL;
 
-FUNCTION EXSETCOLOR(C,BTN){
-  _EXCOLOR=C;
-  DOCUMENT.QUERYSELECTORALL('#EX-COLORS BUTTON').FOREACH(B=>B.STYLE.BORDERWIDTH='2PX');
-  IF(BTN)BTN.STYLE.BORDERWIDTH='3PX';
-  IF(_EXTOOL==='ERASER')EXSETTOOL('PEN');
+function exSetColor(c,btn){
+  _exColor=c;
+  document.querySelectorAll('#ex-colors button').forEach(b=>b.style.borderWidth='2px');
+  if(btn)btn.style.borderWidth='3px';
+  if(_exTool==='eraser')exSetTool('pen');
 }
-FUNCTION EXSETTOOL(T){
-  _EXTOOL=T;
-  CONST C=DOCUMENT.GETELEMENTBYID('EX-CANVAS');
-  IF(C)C.STYLE.CURSOR=T==='ERASER'?'CELL':T==='TEXT'?'TEXT':'CROSSHAIR';
+function exSetTool(t){
+  _exTool=t;
+  const c=document.getElementById('ex-canvas');
+  if(c)c.style.cursor=t==='eraser'?'cell':t==='text'?'text':'crosshair';
 }
-FUNCTION _EXGETPOS(E){
-  CONST C=DOCUMENT.GETELEMENTBYID('EX-CANVAS');
-  CONST R=C.GETBOUNDINGCLIENTRECT();
-  RETURN{X:(E.CLIENTX-R.LEFT)*(C.WIDTH/R.WIDTH),Y:(E.CLIENTY-R.TOP)*(C.HEIGHT/R.HEIGHT)};
+function _exGetPos(e){
+  const c=document.getElementById('ex-canvas');
+  const r=c.getBoundingClientRect();
+  return{x:(e.clientX-r.left)*(c.width/r.width),y:(e.clientY-r.top)*(c.height/r.height)};
 }
-FUNCTION _EXSTART(E){
-  IF(_EXTOOL==='TEXT')RETURN;
-  _EXDRAWING=TRUE;
-  CONST POS=_EXGETPOS(E);
-  _EXSTARTX=POS.X;_EXSTARTY=POS.Y;
-  CONST C=DOCUMENT.GETELEMENTBYID('EX-CANVAS');
-  IF(['LINE','RECT','CIRCLE'].INCLUDES(_EXTOOL))_EXSNAPSHOT=_EXCTX.GETIMAGEDATA(0,0,C.WIDTH,C.HEIGHT);
-  _EXCTX.BEGINPATH();_EXCTX.MOVETO(POS.X,POS.Y);
+function _exStart(e){
+  if(_exTool==='text')return;
+  _exDrawing=true;
+  const pos=_exGetPos(e);
+  _exStartX=pos.x;_exStartY=pos.y;
+  const c=document.getElementById('ex-canvas');
+  if(['line','rect','circle'].includes(_exTool))_exSnapshot=_exCtx.getImageData(0,0,c.width,c.height);
+  _exCtx.beginPath();_exCtx.moveTo(pos.x,pos.y);
 }
-FUNCTION _EXMOVE(E){
-  IF(!_EXDRAWING||!_EXCTX)RETURN;
-  CONST POS=_EXGETPOS(E);
-  CONST SZ=PARSEINT(DOCUMENT.GETELEMENTBYID('EX-SIZE')?.VALUE||4);
-  IF(_EXTOOL==='PEN'||_EXTOOL==='MARKER'){
-    _EXCTX.GLOBALCOMPOSITEOPERATION='SOURCE-OVER';
-    _EXCTX.STROKESTYLE=_EXCOLOR;
-    _EXCTX.LINEWIDTH=_EXTOOL==='MARKER'?SZ*2.5:SZ;
-    _EXCTX.GLOBALALPHA=_EXTOOL==='MARKER'?0.4:1;
-    _EXCTX.LINETO(POS.X,POS.Y);_EXCTX.STROKE();
-    _EXCTX.BEGINPATH();_EXCTX.MOVETO(POS.X,POS.Y);
-  } ELSE IF(_EXTOOL==='ERASER'){
-    _EXCTX.GLOBALCOMPOSITEOPERATION='DESTINATION-OUT';
-    _EXCTX.LINEWIDTH=SZ*3;
-    _EXCTX.LINETO(POS.X,POS.Y);_EXCTX.STROKE();
-    _EXCTX.BEGINPATH();_EXCTX.MOVETO(POS.X,POS.Y);
-  } ELSE IF(_EXTOOL==='LINE'&&_EXSNAPSHOT){
-    CONST C=DOCUMENT.GETELEMENTBYID('EX-CANVAS');
-    _EXCTX.PUTIMAGEDATA(_EXSNAPSHOT,0,0);
-    _EXCTX.GLOBALCOMPOSITEOPERATION='SOURCE-OVER';_EXCTX.GLOBALALPHA=1;
-    _EXCTX.STROKESTYLE=_EXCOLOR;_EXCTX.LINEWIDTH=SZ;
-    _EXCTX.BEGINPATH();_EXCTX.MOVETO(_EXSTARTX,_EXSTARTY);_EXCTX.LINETO(POS.X,POS.Y);_EXCTX.STROKE();
-  } ELSE IF(_EXTOOL==='RECT'&&_EXSNAPSHOT){
-    CONST C=DOCUMENT.GETELEMENTBYID('EX-CANVAS');
-    _EXCTX.PUTIMAGEDATA(_EXSNAPSHOT,0,0);
-    _EXCTX.GLOBALCOMPOSITEOPERATION='SOURCE-OVER';_EXCTX.GLOBALALPHA=1;
-    _EXCTX.STROKESTYLE=_EXCOLOR;_EXCTX.LINEWIDTH=SZ;
-    _EXCTX.STROKERECT(_EXSTARTX,_EXSTARTY,POS.X-_EXSTARTX,POS.Y-_EXSTARTY);
-  } ELSE IF(_EXTOOL==='CIRCLE'&&_EXSNAPSHOT){
-    CONST C=DOCUMENT.GETELEMENTBYID('EX-CANVAS');
-    _EXCTX.PUTIMAGEDATA(_EXSNAPSHOT,0,0);
-    _EXCTX.GLOBALCOMPOSITEOPERATION='SOURCE-OVER';_EXCTX.GLOBALALPHA=1;
-    _EXCTX.STROKESTYLE=_EXCOLOR;_EXCTX.LINEWIDTH=SZ;
-    CONST RX=MATH.ABS(POS.X-_EXSTARTX)/2,RY=MATH.ABS(POS.Y-_EXSTARTY)/2;
-    CONST CX=_EXSTARTX+(POS.X-_EXSTARTX)/2,CY=_EXSTARTY+(POS.Y-_EXSTARTY)/2;
-    _EXCTX.BEGINPATH();_EXCTX.ELLIPSE(CX,CY,RX,RY,0,0,2*MATH.PI);_EXCTX.STROKE();
+function _exMove(e){
+  if(!_exDrawing||!_exCtx)return;
+  const pos=_exGetPos(e);
+  const sz=parseInt(document.getElementById('ex-size')?.value||4);
+  if(_exTool==='pen'||_exTool==='marker'){
+    _exCtx.globalCompositeOperation='source-over';
+    _exCtx.strokeStyle=_exColor;
+    _exCtx.lineWidth=_exTool==='marker'?sz*2.5:sz;
+    _exCtx.globalAlpha=_exTool==='marker'?0.4:1;
+    _exCtx.lineTo(pos.x,pos.y);_exCtx.stroke();
+    _exCtx.beginPath();_exCtx.moveTo(pos.x,pos.y);
+  } else if(_exTool==='eraser'){
+    _exCtx.globalCompositeOperation='destination-out';
+    _exCtx.lineWidth=sz*3;
+    _exCtx.lineTo(pos.x,pos.y);_exCtx.stroke();
+    _exCtx.beginPath();_exCtx.moveTo(pos.x,pos.y);
+  } else if(_exTool==='line'&&_exSnapshot){
+    const c=document.getElementById('ex-canvas');
+    _exCtx.putImageData(_exSnapshot,0,0);
+    _exCtx.globalCompositeOperation='source-over';_exCtx.globalAlpha=1;
+    _exCtx.strokeStyle=_exColor;_exCtx.lineWidth=sz;
+    _exCtx.beginPath();_exCtx.moveTo(_exStartX,_exStartY);_exCtx.lineTo(pos.x,pos.y);_exCtx.stroke();
+  } else if(_exTool==='rect'&&_exSnapshot){
+    const c=document.getElementById('ex-canvas');
+    _exCtx.putImageData(_exSnapshot,0,0);
+    _exCtx.globalCompositeOperation='source-over';_exCtx.globalAlpha=1;
+    _exCtx.strokeStyle=_exColor;_exCtx.lineWidth=sz;
+    _exCtx.strokeRect(_exStartX,_exStartY,pos.x-_exStartX,pos.y-_exStartY);
+  } else if(_exTool==='circle'&&_exSnapshot){
+    const c=document.getElementById('ex-canvas');
+    _exCtx.putImageData(_exSnapshot,0,0);
+    _exCtx.globalCompositeOperation='source-over';_exCtx.globalAlpha=1;
+    _exCtx.strokeStyle=_exColor;_exCtx.lineWidth=sz;
+    const rx=Math.abs(pos.x-_exStartX)/2,ry=Math.abs(pos.y-_exStartY)/2;
+    const cx=_exStartX+(pos.x-_exStartX)/2,cy=_exStartY+(pos.y-_exStartY)/2;
+    _exCtx.beginPath();_exCtx.ellipse(cx,cy,rx,ry,0,0,2*Math.PI);_exCtx.stroke();
   }
 }
-FUNCTION _EXEND(){
-  IF(!_EXDRAWING)RETURN;
-  _EXDRAWING=FALSE;
-  _EXCTX.GLOBALALPHA=1;_EXCTX.GLOBALCOMPOSITEOPERATION='SOURCE-OVER';
-  _EXSAVEHISTORY();_EXAUTOSYNC();
+function _exEnd(){
+  if(!_exDrawing)return;
+  _exDrawing=false;
+  _exCtx.globalAlpha=1;_exCtx.globalCompositeOperation='source-over';
+  _exSaveHistory();_exAutoSync();
 }
-FUNCTION _EXCLICKTEXT(E){
-  IF(_EXTOOL!=='TEXT')RETURN;
-  CONST POS=_EXGETPOS(E);
-  IF(_EXTEXTINPUT){_EXTEXTINPUT.REMOVE();_EXTEXTINPUT=NULL;}
-  CONST SZ=PARSEINT(DOCUMENT.GETELEMENTBYID('EX-SIZE')?.VALUE||4);
-  CONST INP=DOCUMENT.CREATEELEMENT('INPUT');
-  INP.TYPE='TEXT';INP.PLACEHOLDER='TYPE, THEN ENTER';
-  INP.STYLE.CSSTEXT=`POSITION:FIXED;LEFT:${E.CLIENTX}PX;TOP:${E.CLIENTY}PX;Z-INDEX:9999;PADDING:4PX 8PX;BORDER:2PX DASHED ${_EXCOLOR};BORDER-RADIUS:6PX;BACKGROUND:RGBA(255,255,255,.95);COLOR:#000;FONT-FAMILY:'DM SANS',SANS-SERIF;FONT-SIZE:${MATH.MAX(12,SZ*3)}PX;MIN-WIDTH:120PX;OUTLINE:NONE;`;
-  DOCUMENT.BODY.APPENDCHILD(INP);_EXTEXTINPUT=INP;INP.FOCUS();
-  INP.ADDEVENTLISTENER('KEYDOWN',EV=>{
-    IF(EV.KEY==='ENTER'){
-      CONST TXT=INP.VALUE.TRIM();
-      IF(TXT){
-        _EXCTX.GLOBALALPHA=1;_EXCTX.GLOBALCOMPOSITEOPERATION='SOURCE-OVER';
-        _EXCTX.FILLSTYLE=_EXCOLOR;
-        _EXCTX.FONT=`${MATH.MAX(14,SZ*3)}PX 'DM SANS',SANS-SERIF`;
-        _EXCTX.FILLTEXT(TXT,POS.X,POS.Y);
-        _EXSAVEHISTORY();_EXAUTOSYNC();
+function _exClickText(e){
+  if(_exTool!=='text')return;
+  const pos=_exGetPos(e);
+  if(_exTextInput){_exTextInput.remove();_exTextInput=null;}
+  const sz=parseInt(document.getElementById('ex-size')?.value||4);
+  const inp=document.createElement('input');
+  inp.type='text';inp.placeholder='Type, then Enter';
+  inp.style.cssText=`position:fixed;left:${e.clientX}px;top:${e.clientY}px;z-index:9999;padding:4px 8px;border:2px dashed ${_exColor};border-radius:6px;background:rgba(255,255,255,.95);color:#000;font-family:'DM Sans',sans-serif;font-size:${Math.max(12,sz*3)}px;min-width:120px;outline:none;`;
+  document.body.appendChild(inp);_exTextInput=inp;inp.focus();
+  inp.addEventListener('keydown',ev=>{
+    if(ev.key==='Enter'){
+      const txt=inp.value.trim();
+      if(txt){
+        _exCtx.globalAlpha=1;_exCtx.globalCompositeOperation='source-over';
+        _exCtx.fillStyle=_exColor;
+        _exCtx.font=`${Math.max(14,sz*3)}px 'DM Sans',sans-serif`;
+        _exCtx.fillText(txt,pos.x,pos.y);
+        _exSaveHistory();_exAutoSync();
       }
-      INP.REMOVE();_EXTEXTINPUT=NULL;
+      inp.remove();_exTextInput=null;
     }
-    IF(EV.KEY==='ESCAPE'){INP.REMOVE();_EXTEXTINPUT=NULL;}
+    if(ev.key==='Escape'){inp.remove();_exTextInput=null;}
   });
-  INP.ADDEVENTLISTENER('BLUR',()=>SETTIMEOUT(()=>{IF(_EXTEXTINPUT===INP){INP.REMOVE();_EXTEXTINPUT=NULL;}},150));
+  inp.addEventListener('blur',()=>setTimeout(()=>{if(_exTextInput===inp){inp.remove();_exTextInput=null;}},150));
 }
-FUNCTION _EXSAVEHISTORY(){
-  CONST C=DOCUMENT.GETELEMENTBYID('EX-CANVAS');
-  IF(!C||!_EXCTX)RETURN;
-  _EXHISTORY.PUSH(_EXCTX.GETIMAGEDATA(0,0,C.WIDTH,C.HEIGHT));
-  IF(_EXHISTORY.LENGTH>30)_EXHISTORY.SHIFT();
+function _exSaveHistory(){
+  const c=document.getElementById('ex-canvas');
+  if(!c||!_exCtx)return;
+  _exHistory.push(_exCtx.getImageData(0,0,c.width,c.height));
+  if(_exHistory.length>30)_exHistory.shift();
 }
-FUNCTION EXUNDO(){
-  IF(_EXHISTORY.LENGTH<2)RETURN;
-  _EXHISTORY.POP();
-  CONST C=DOCUMENT.GETELEMENTBYID('EX-CANVAS');
-  _EXCTX.PUTIMAGEDATA(_EXHISTORY[_EXHISTORY.LENGTH-1],0,0);
-  _EXAUTOSYNC();
+function exUndo(){
+  if(_exHistory.length<2)return;
+  _exHistory.pop();
+  const c=document.getElementById('ex-canvas');
+  _exCtx.putImageData(_exHistory[_exHistory.length-1],0,0);
+  _exAutoSync();
 }
-FUNCTION EXCLEAR(){
-  IF(!CONFIRM('CLEAR THE WHITEBOARD?'))RETURN;
-  CONST C=DOCUMENT.GETELEMENTBYID('EX-CANVAS');
-  _EXCTX.CLEARRECT(0,0,C.WIDTH,C.HEIGHT);
-  _EXCTX.FILLSTYLE='#FFF';_EXCTX.FILLRECT(0,0,C.WIDTH,C.HEIGHT);
-  _EXSAVEHISTORY();_EXAUTOSYNC();
+function exClear(){
+  if(!confirm('Clear the whiteboard?'))return;
+  const c=document.getElementById('ex-canvas');
+  _exCtx.clearRect(0,0,c.width,c.height);
+  _exCtx.fillStyle='#fff';_exCtx.fillRect(0,0,c.width,c.height);
+  _exSaveHistory();_exAutoSync();
 }
-FUNCTION EXSAVE(){
-  CONST C=DOCUMENT.GETELEMENTBYID('EX-CANVAS');
-  IF(!C)RETURN;
-  CONST A=DOCUMENT.CREATEELEMENT('A');
-  A.HREF=C.TODATAURL('IMAGE/PNG');A.DOWNLOAD='WHITEBOARD.PNG';A.CLICK();
+function exSave(){
+  const c=document.getElementById('ex-canvas');
+  if(!c)return;
+  const a=document.createElement('a');
+  a.href=c.toDataURL('image/png');a.download='whiteboard.png';a.click();
 }
-FUNCTION EXADDIMAGE(E){
-  CONST FILE=E.TARGET.FILES[0];IF(!FILE)RETURN;
-  CONST C=DOCUMENT.GETELEMENTBYID('EX-CANVAS');
-  CONST IMG=NEW IMAGE();
-  IMG.ONLOAD=()=>{
-    CONST MAXW=C.WIDTH*0.8,MAXH=(C.HEIGHT-44)*0.6;
-    LET W=IMG.NATURALWIDTH,H=IMG.NATURALHEIGHT;
-    IF(W>MAXW){H=H*(MAXW/W);W=MAXW;}
-    IF(H>MAXH){W=W*(MAXH/H);H=MAXH;}
-    _EXCTX.GLOBALALPHA=1;_EXCTX.GLOBALCOMPOSITEOPERATION='SOURCE-OVER';
-    _EXCTX.DRAWIMAGE(IMG,(C.WIDTH-W)/2,44+(C.HEIGHT-44-H)/2,W,H);
-    _EXSAVEHISTORY();_EXAUTOSYNC();
-    SHOWTOAST('IMAGE ADDED TO BOARD','SUCCESS');
+function exAddImage(e){
+  const file=e.target.files[0];if(!file)return;
+  const c=document.getElementById('ex-canvas');
+  const img=new Image();
+  img.onload=()=>{
+    const maxW=c.width*0.8,maxH=(c.height-44)*0.6;
+    let w=img.naturalWidth,h=img.naturalHeight;
+    if(w>maxW){h=h*(maxW/w);w=maxW;}
+    if(h>maxH){w=w*(maxH/h);h=maxH;}
+    _exCtx.globalAlpha=1;_exCtx.globalCompositeOperation='source-over';
+    _exCtx.drawImage(img,(c.width-w)/2,44+(c.height-44-h)/2,w,h);
+    _exSaveHistory();_exAutoSync();
+    showToast('Image added to board','success');
   };
-  IMG.SRC=URL.CREATEOBJECTURL(FILE);
-  E.TARGET.VALUE='';
+  img.src=URL.createObjectURL(file);
+  e.target.value='';
 }
-ASYNC FUNCTION _EXAUTOSYNC(){
-  IF(!BSSESSIONID||!ISCOORD())RETURN;
-  CLEARTIMEOUT(_EXSYNCTIMER);
-  _EXSYNCTIMER=SETTIMEOUT(ASYNC()=>{
-    CONST C=DOCUMENT.GETELEMENTBYID('EX-CANVAS');IF(!C)RETURN;
-    CONST IMAGEDATA=C.TODATAURL('IMAGE/PNG');
-    TRY{
-      AWAIT FETCH('/API/SAVE-WHITEBOARD',{METHOD:'POST',HEADERS:{'CONTENT-TYPE':'APPLICATION/JSON'},BODY:JSON.STRINGIFY({SESSION_ID:BSSESSIONID,IMAGE_DATA:IMAGEDATA})});
-      CONST LBL=DOCUMENT.GETELEMENTBYID('EX-SYNC-LABEL');
-      IF(LBL){LBL.TEXTCONTENT='✅ SYNCED';SETTIMEOUT(()=>LBL.TEXTCONTENT='',2000);}
-    }CATCH{}
+async function _exAutoSync(){
+  if(!bsSessionId||!isCoord())return;
+  clearTimeout(_exSyncTimer);
+  _exSyncTimer=setTimeout(async()=>{
+    const c=document.getElementById('ex-canvas');if(!c)return;
+    const imageData=c.toDataURL('image/png');
+    try{
+      await fetch('/api/save-whiteboard',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:bsSessionId,image_data:imageData})});
+      const lbl=document.getElementById('ex-sync-label');
+      if(lbl){lbl.textContent='✅ Synced';setTimeout(()=>lbl.textContent='',2000);}
+    }catch{}
   },1500);
 }
-FUNCTION _STARTEXVIEWPOLLING(){
-  IF(_EXVIEWPOLLINTERVAL)CLEARINTERVAL(_EXVIEWPOLLINTERVAL);
-  _EXVIEWPOLLINTERVAL=SETINTERVAL(ASYNC()=>{
-    IF(!BSSESSIONID||ISCOORD())RETURN;
-    TRY{
-      CONST DATA=AWAIT FETCH(`/API/GET-WHITEBOARD/${BSSESSIONID}`).THEN(R=>R.JSON());
-      IF(!DATA.SUCCESS||!DATA.IMAGE_DATA)RETURN;
-      CONST C=DOCUMENT.GETELEMENTBYID('EX-CANVAS');IF(!C||!_EXCTX)RETURN;
-      CONST IMG=NEW IMAGE();
-      IMG.ONLOAD=()=>{_EXCTX.CLEARRECT(0,0,C.WIDTH,C.HEIGHT);_EXCTX.DRAWIMAGE(IMG,0,0,C.WIDTH,C.HEIGHT);};
-      IMG.SRC=DATA.IMAGE_DATA;
-    }CATCH{}
+function _startExViewPolling(){
+  if(_exViewPollInterval)clearInterval(_exViewPollInterval);
+  _exViewPollInterval=setInterval(async()=>{
+    if(!bsSessionId||isCoord())return;
+    try{
+      const data=await fetch(`/api/get-whiteboard/${bsSessionId}`).then(r=>r.json());
+      if(!data.success||!data.image_data)return;
+      const c=document.getElementById('ex-canvas');if(!c||!_exCtx)return;
+      const img=new Image();
+      img.onload=()=>{_exCtx.clearRect(0,0,c.width,c.height);_exCtx.drawImage(img,0,0,c.width,c.height);};
+      img.src=data.image_data;
+    }catch{}
   },3000);
 }
 let _sessionNotes=[];
