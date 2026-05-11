@@ -712,7 +712,8 @@
                     <div id="bs-live-group" style="font-size:.78rem;color:var(--muted);"></div>
                 </div>
                 <div style="display:flex;gap:8px;">
-                    <button onclick="endLiveSession()" class="btn btn-red btn-sm"><i class="fas fa-stop"></i> End Session</button>
+                    <button id="bs-end-btn" onclick="endLiveSession()" class="btn btn-red btn-sm" style="display:none;"><i class="fas fa-stop"></i> End Session</button>
+<button id="bs-leave-btn" onclick="leaveLiveSession()" class="btn btn-ghost btn-sm"><i class="fas fa-door-open"></i> Leave</button>
                     <button onclick="exportNotes()" class="btn btn-ghost btn-sm"><i class="fas fa-download"></i> Export</button>
                 </div>
             </div>
@@ -756,7 +757,11 @@
                         </select>
                         <button onclick="undoWB()" class="btn btn-ghost btn-sm" style="padding:4px 8px;"><i class="fas fa-undo"></i></button>
                         <button onclick="clearWB()" class="btn btn-red btn-sm" style="padding:4px 8px;"><i class="fas fa-trash"></i> Clear</button>
-                        <button onclick="saveWBImage()" class="btn btn-ghost btn-sm" style="padding:4px 8px;"><i class="fas fa-download"></i></button>
+                        <button onclick="saveWBImage()" class="btn btn-ghost btn-sm" style="padding:4px 8px;" title="Download whiteboard"><i class="fas fa-download"></i></button>
+<button onclick="document.getElementById('wb-img-upload').click()" class="btn btn-ghost btn-sm" style="padding:4px 8px;" title="Add image to whiteboard"><i class="fas fa-image"></i></button>
+<input type="file" id="wb-img-upload" accept="image/*" style="display:none;" onchange="addImageToWhiteboard(event)">
+<button onclick="document.getElementById('wb-pdf-upload').click()" class="btn btn-ghost btn-sm" style="padding:4px 8px;color:#f97316;" title="Share PDF to group chat"><i class="fas fa-file-pdf"></i></button>
+<input type="file" id="wb-pdf-upload" accept=".pdf" style="display:none;" onchange="sharePDFFromWhiteboard(event)">
                     </div>
                     <canvas id="bs-whiteboard" width="520" height="340" style="border:1px solid var(--border);border-radius:10px;cursor:crosshair;background:#fff;display:block;max-width:100%;"></canvas>
                     <div style="font-size:.72rem;color:var(--muted);margin-top:4px;text-align:right;" id="bs-doc-save-status">Whiteboard ready</div>
@@ -1404,18 +1409,38 @@ function renderGCMessage(container, msg, currentUserId) {
     if (isDeleted) {
         contentHtml = `<em style="opacity:.5;font-size:.82rem;">This message was deleted</em>`;
     } else if (msg.message_type==='image' && msg.image_url) {
-        const imgSrc = msg.image_url;
-        contentHtml = `<img src="${imgSrc}" class="wa-msg-img" onclick="openLightbox('${imgSrc}')" alt="Image" onerror="this.src='/static/image/KNOWITNOW.png'">`;
-        if (msg.content && msg.content !== '📷 Image') contentHtml += `<div>${escHtml(msg.content)}</div>`;
+        const imgSrc = '/' + msg.image_url.replace(/^\/+/, '');
+        const safeImgSrc = imgSrc.replace(/'/g, '%27');
+        contentHtml = `<div style="cursor:pointer;" onclick="openLightbox('${safeImgSrc}')">
+            <img src="${imgSrc}" alt="Image"
+                 style="max-width:220px;max-height:200px;border-radius:10px;object-fit:cover;display:block;margin-bottom:4px;"
+                 onerror="this.outerHTML='<div style=padding:8px;background:rgba(255,79,48,.1);border-radius:8px;font-size:.8rem;color:var(--accent)>Image unavailable</div>'">
+        </div>`;
+        if (msg.content && msg.content !== '📷 Image') contentHtml += `<div style="margin-top:4px;">${escHtml(msg.content)}</div>`;
+
     } else if (msg.message_type==='pdf' && msg.pdf_url) {
-        const pdfSrc = msg.pdf_url;
-        contentHtml = `<a href="${pdfSrc}" target="_blank" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(249,115,22,0.12);border:1px solid rgba(249,115,22,.3);border-radius:12px;text-decoration:none;color:inherit;">
+        const pdfSrc = '/' + msg.pdf_url.replace(/^\/+/, '');
+        contentHtml = `<a href="${pdfSrc}" target="_blank" rel="noopener"
+            style="display:flex;align-items:center;gap:10px;padding:10px 14px;
+                   background:rgba(249,115,22,0.12);border:1px solid rgba(249,115,22,.3);
+                   border-radius:12px;text-decoration:none;color:inherit;margin-bottom:4px;">
             <i class="fas fa-file-pdf" style="font-size:1.4rem;color:#f97316;flex-shrink:0;"></i>
-            <div><div style="font-weight:600;font-size:.875rem;">${escHtml(msg.content||'Shared PDF')}</div><div style="font-size:.73rem;opacity:.65;">Click to open</div></div>
+            <div>
+                <div style="font-weight:600;font-size:.875rem;">${escHtml(msg.content||'Shared PDF')}</div>
+                <div style="font-size:.73rem;opacity:.65;">Tap to open PDF</div>
+            </div>
+            <i class="fas fa-external-link-alt" style="margin-left:auto;opacity:.5;font-size:.8rem;"></i>
         </a>`;
+
     } else if (msg.message_type==='voice' && msg.voice_url) {
-        const voiceSrc = msg.voice_url;
-        contentHtml = `<div style="display:flex;align-items:center;gap:8px;"><i class="fas fa-microphone" style="opacity:.7;"></i><audio controls src="${voiceSrc}" style="height:32px;max-width:200px;"></audio></div>`;
+        const voiceSrc = '/' + msg.voice_url.replace(/^\/+/, '');
+        contentHtml = `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;min-width:200px;">
+            <i class="fas fa-microphone-alt" style="color:var(--green);flex-shrink:0;"></i>
+            <audio controls src="${voiceSrc}" preload="none"
+                   style="flex:1;height:32px;min-width:160px;max-width:220px;"
+                   onerror="this.outerHTML='<span style=font-size:.8rem;color:var(--muted)>Voice unavailable</span>'">
+            </audio>
+        </div>`;
     } else if (msg.message_type==='poll' && msg.poll) {
         const poll=msg.poll; const total=poll.total_votes||0;
         contentHtml = `<div style="min-width:220px;"><div style="font-size:.7rem;font-weight:700;color:var(--blue2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">📊 POLL</div>
@@ -1926,7 +1951,34 @@ async function loadNotifications(){
                 markNotifRead(n.id);
                 if(n.link_type==='dm'||n.type==='message'){document.getElementById('notification-panel').style.display='none';notifOpen=false;document.querySelector('[data-tab="messages"]').click();if(n.link_id)setTimeout(()=>openDMChat(n.link_id),300);}
                 else if(n.link_type==='group'||n.type==='group_message'){document.getElementById('notification-panel').style.display='none';notifOpen=false;document.querySelector('[data-tab="my-groups"]').click();}
-                else if(n.link_type==='brainstorm'){document.getElementById('notification-panel').style.display='none';notifOpen=false;document.querySelector('[data-tab="brainstorm"]').click();}
+                else if (n.link_type === 'brainstorm') {
+    document.getElementById('notification-panel').style.display = 'none';
+    notifOpen = false;
+    markNotifRead(n.id);
+    document.querySelector('[data-tab="brainstorm"]').click();
+    if (n.link_id) {
+        setTimeout(async () => {
+            try {
+                const data = await fetch('/api/join-brainstorm-session', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({session_id: n.link_id})
+                }).then(r => r.json());
+                if (data.success && data.session) {
+                    bsCurrentSessionId = data.session.id;
+                    bsCurrentGroupId = data.session.group_id;
+                    bsCurrentTeacherId = data.session.teacher_id || null;
+                    showToast('🧠 Joined brainstorm session!', 'success');
+                    await showLiveArea(data.session.title, data.session.group_id);
+                    setTimeout(initWhiteboard, 400);
+                    loadSessionNotes(data.session.id);
+                    loadRecentSessions();
+                } else {
+                    showToast('❌ ' + (data.error || 'Could not join session'), 'error');
+                }
+            } catch { showToast('Connection error joining session', 'error'); }
+        }, 700);
+    }
+}
             };
             const icons={message:'💬',group_message:'👥',connection:'🤝',join_request:'🔔',join_approved:'✅',join_rejected:'❌',mention:'@',reaction:'😊',brainstorm_scheduled:'📅',brainstorm_starting:'🧠',brainai_mention:'⚡'};
             const icon=icons[n.type||n.notif_type]||'🔔';
@@ -1936,7 +1988,8 @@ async function loadNotifications(){
                     <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.8rem;color:var(--ink);margin-bottom:2px;">${escHtml(n.title||n.notif_type||'Notification')}</div>
                     <div style="font-size:.78rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(n.body||n.content||'')}</div>
                     <div style="font-size:.7rem;color:var(--muted);margin-top:3px;">${n.created_at?new Date(n.created_at).toLocaleString():''}</div>
-                    ${n.type==='join_request'?`<div style="display:flex;gap:6px;margin-top:6px;"><button onclick="event.stopPropagation();acceptJoinRequest(${n.request_id||n.link_id})" class="btn btn-green btn-sm"><i class="fas fa-check"></i> Accept</button><button onclick="event.stopPropagation();rejectJoinRequest(${n.request_id||n.link_id})" class="btn btn-red btn-sm"><i class="fas fa-times"></i> Reject</button></div>`:''}
+                    ${n.type==='join_request'||n.notif_type==='join_request' ? `<div style="display:flex;gap:6px;margin-top:6px;"><button onclick="event.stopPropagation();acceptJoinRequest(${n.link_id})" class="btn btn-green btn-sm"><i class="fas fa-check"></i> Accept</button><button onclick="event.stopPropagation();rejectJoinRequest(${n.link_id})" class="btn btn-red btn-sm"><i class="fas fa-times"></i> Reject</button></div>` : ''}
+            ${(n.notif_type==='brainstorm_scheduled'||n.notif_type==='brainstorm_starting') && n.link_id ? `<div style="margin-top:6px;"><button onclick="event.stopPropagation();joinBrainstormFromNotif(${n.link_id},this)" class="btn btn-blue btn-sm" style="border-radius:50px;"><i class="fas fa-brain"></i> Join Session</button></div>` : ''}
                 </div>
             </div>`;
             list.appendChild(item);
@@ -1991,21 +2044,27 @@ async function startLiveSession() {
         // Mark as ongoing
         await fetch('/api/update-session-status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:data.session_id,status:'ongoing'})});
         showToast('🚀 Live session started! Members notified.','success');
-        showLiveArea(title,groupId);
+        await showLiveArea(title, groupId);
         setTimeout(initWhiteboard, 400);
         loadRecentSessions();
     } else showToast('❌ '+(data.error||'Failed'),'error');
 }
-
 async function showLiveArea(title, groupId) {
     document.getElementById('bs-live-area').style.display = '';
     document.getElementById('bs-live-title').textContent = title;
 
-    // Ensure we have the current user ID
-    if (!bsCurrentUserId) {
+    // Always fetch current user ID fresh — never rely on stale cache
+    try {
+        const r = await fetch('/api/dashboard-stats').then(x => x.json());
+        if (r.success) bsCurrentUserId = r.user_id;
+    } catch {}
+
+    // Sync admin status if we don't already have it
+    if (!gcCurrentGroupIsAdmin && groupId) {
         try {
-            const r = await fetch('/api/dashboard-stats').then(x => x.json());
-            if (r.success) bsCurrentUserId = r.user_id;
+            const gd = await fetch('/api/get-groups').then(r => r.json());
+            const g = gd.groups?.find(x => String(x.id) === String(groupId));
+            if (g) gcCurrentGroupIsAdmin = g.your_role === 'admin';
         } catch {}
     }
 
@@ -2050,6 +2109,12 @@ async function showLiveArea(title, groupId) {
         const g = d.groups?.find(x => x.id == groupId);
         document.getElementById('bs-live-group').textContent = g ? g.name : '';
     });
+
+    // Show End button only to admins, Leave to everyone else
+    const endBtn = document.getElementById('bs-end-btn');
+    const leaveBtn = document.getElementById('bs-leave-btn');
+    if (endBtn) endBtn.style.display = gcCurrentGroupIsAdmin ? '' : 'none';
+    if (leaveBtn) leaveBtn.style.display = gcCurrentGroupIsAdmin ? 'none' : '';
 
     document.getElementById('bs-notes-grid').innerHTML = '';
     if (bsCurrentSessionId) loadSessionNotes(bsCurrentSessionId);
@@ -2128,52 +2193,94 @@ async function exportNotes() {
 }
 
 async function loadRecentSessions() {
-    const container=document.getElementById('recent-sessions');
-    container.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:32px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i></div>';
+    const container = document.getElementById('recent-sessions');
+    container.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:32px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i></div>';
     try {
-        const gd=await fetch('/api/get-groups').then(r=>r.json());
-        if(!gd.success||!gd.groups?.length){container.innerHTML='<div style="grid-column:1/-1;" class="empty-state"><i class="fas fa-calendar-alt"></i><p>No sessions yet. Join a group and schedule one!</p></div>';return;}
-        let all=[];
-        for(const g of gd.groups){try{const sd=await fetch(`/api/get-group-sessions/${g.id}`).then(r=>r.json());if(sd.success)sd.sessions.forEach(s=>{s.group_name=g.name;all.push(s);});}catch{}}
-        all.sort((a,b)=>new Date(b.scheduled_time)-new Date(a.scheduled_time));
-        const now=new Date();
-        if(!all.length){container.innerHTML='<div style="grid-column:1/-1;" class="empty-state"><i class="fas fa-calendar-plus"></i><p>No sessions yet!</p></div>';return;}
-        container.innerHTML='';
-        all.slice(0,12).forEach(s=>{
-            const dt=new Date(s.scheduled_time);
-            const isLive=s.status==='ongoing';
-            const isUpcoming=dt>=now&&s.status==='scheduled';
-            const card=document.createElement('div');
-            card.className=`session-card ${isLive?'live':isUpcoming?'upcoming':''}`;
-            card.onclick=()=>openSession(s);
-            card.innerHTML=`
+        const gd = await fetch('/api/get-groups').then(r => r.json());
+        if (!gd.success || !gd.groups?.length) {
+            container.innerHTML = '<div style="grid-column:1/-1;" class="empty-state"><i class="fas fa-calendar-alt"></i><p>No sessions yet. Join a group and schedule one!</p></div>';
+            return;
+        }
+        // Fetch all groups in parallel — one failure won't kill the rest
+        const results = await Promise.allSettled(
+            gd.groups.map(g =>
+                fetch(`/api/get-group-sessions/${g.id}`)
+                    .then(r => r.json())
+                    .then(sd => sd.success ? sd.sessions : [])
+                    .catch(() => [])
+            )
+        );
+        let all = results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
+        all.sort((a, b) => new Date(b.scheduled_time) - new Date(a.scheduled_time));
+        if (!all.length) {
+            container.innerHTML = '<div style="grid-column:1/-1;" class="empty-state"><i class="fas fa-calendar-plus"></i><p>No sessions yet!</p></div>';
+            return;
+        }
+        container.innerHTML = '';
+        const now = new Date();
+        all.slice(0, 12).forEach(s => {
+            const dt = new Date(s.scheduled_time);
+            const isLive = s.status === 'ongoing';
+            const isUpcoming = dt >= now && s.status === 'scheduled';
+            const card = document.createElement('div');
+            card.className = `session-card ${isLive ? 'live' : isUpcoming ? 'upcoming' : ''}`;
+            card.onclick = () => openSession(s);
+            card.innerHTML = `
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
                     <div style="flex:1;min-width:0;">
                         <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.875rem;color:var(--ink);margin-bottom:2px;">${escHtml(s.title)}</div>
-                        <div style="font-size:.75rem;color:var(--blue2);font-weight:600;">${escHtml(s.group_name)}</div>
+                        <div style="font-size:.75rem;color:var(--blue2);font-weight:600;">${escHtml(s.group_name || '')}</div>
                     </div>
-                    ${isLive?'<span class="live-badge"><span style="width:6px;height:6px;background:#fff;border-radius:50%;display:inline-block;margin-right:3px;"></span>LIVE</span>':isUpcoming?'<span class="tag tag-blue">Upcoming</span>':'<span class="tag tag-muted">Past</span>'}
+                    ${isLive ? '<span class="live-badge"><span style="width:6px;height:6px;background:#fff;border-radius:50%;display:inline-block;margin-right:3px;"></span>LIVE</span>' : isUpcoming ? '<span class="tag tag-blue">Upcoming</span>' : '<span class="tag tag-muted">Past</span>'}
                 </div>
-                <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px;">${escHtml(s.description||'No description')}</div>
+                <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px;">${escHtml(s.description || 'No description')}</div>
                 <div style="display:flex;justify-content:space-between;font-size:.75rem;color:var(--muted);">
                     <span><i class="far fa-clock" style="margin-right:4px;"></i>${dt.toLocaleString()}</span>
-                    <span>${s.note_count||0} notes</span>
+                    <span>${s.note_count || 0} notes</span>
                 </div>`;
             container.appendChild(card);
         });
-    } catch {}
+    } catch(e) {
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error loading sessions. Refresh to retry.</p></div>';
+    }
 }
 
-function openSession(s) {
-    if(s.status==='ongoing'){
-        bsCurrentSessionId=s.id;
-        bsCurrentGroupId=s.group_id;
-        bsCurrentTeacherId=s.teacher_id||null;
-        showLiveArea(s.title,s.group_id);
-        if(s.shared_doc)document.getElementById('bs-shared-doc').value=s.shared_doc;
-    } else {
-        showToast(`Session: ${s.title} (${s.status})`, 'info');
+async function openSession(s) {
+    bsCurrentSessionId = s.id;
+    bsCurrentGroupId = s.group_id;
+    bsCurrentTeacherId = s.teacher_id || null;
+    gcCurrentGroupIsAdmin = s.is_admin || false;
+
+    // Join the session via API (validates membership)
+    try {
+        const joined = await fetch('/api/join-brainstorm-session', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({session_id: s.id})
+        }).then(r => r.json());
+        if (!joined.success) { showToast('❌ ' + (joined.error || 'Cannot join session'), 'error'); return; }
+    } catch { showToast('Connection error', 'error'); return; }
+
+    // All statuses open the live area so notes and whiteboard are always viewable
+    await showLiveArea(s.title, s.group_id);
+
+    // If session is scheduled and current user is admin, offer to start it
+    if (s.status === 'scheduled' && s.is_admin) {
+        if (confirm(`Start "${s.title}" now? Members will be notified.`)) {
+            await fetch('/api/update-session-status', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({session_id: s.id, status: 'ongoing'})
+            });
+            showToast('🚀 Session started! Members notified.', 'success');
+            loadRecentSessions();
+        }
+    } else if (s.status === 'scheduled') {
+        showToast(`📖 Viewing scheduled session: ${s.title}`, 'info');
+    } else if (s.status === 'completed') {
+        showToast(`📋 Viewing past session: ${s.title}`, 'info');
     }
+
+    setTimeout(initWhiteboard, 400);
+    if (s.id) loadSessionNotes(s.id);
 }
 
 async function askSparkAI(inputId, responseId, useContext=false) {
@@ -2443,6 +2550,96 @@ async function assignSessionTeacher() {
     } else {
         showToast('❌ '+(data.error||'Failed'), 'error');
     }
+}
+async function joinBrainstormFromNotif(sessionId, btn) {
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Joining…'; }
+    try {
+        const data = await fetch('/api/join-brainstorm-session', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({session_id: sessionId})
+        }).then(r => r.json());
+        if (data.success && data.session) {
+            document.getElementById('notification-panel').style.display = 'none';
+            notifOpen = false;
+            bsCurrentSessionId = data.session.id;
+            bsCurrentGroupId = data.session.group_id;
+            bsCurrentTeacherId = data.session.teacher_id || null;
+            document.querySelector('[data-tab="brainstorm"]').click();
+            setTimeout(async () => {
+                await showLiveArea(data.session.title, data.session.group_id);
+                setTimeout(initWhiteboard, 400);
+                loadSessionNotes(data.session.id);
+                showToast('🧠 Joined session!', 'success');
+            }, 500);
+        } else {
+            showToast('❌ ' + (data.error || 'Could not join'), 'error');
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-brain"></i> Join Session'; }
+        }
+    } catch {
+        showToast('Connection error', 'error');
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-brain"></i> Join Session'; }
+    }
+}
+async function leaveLiveSession() {
+    if (!bsCurrentSessionId) return;
+    if (!confirm('Leave this brainstorm session?')) return;
+    await fetch('/api/leave-brainstorm-session', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({session_id: bsCurrentSessionId})
+    }).catch(() => {});
+    showToast('You left the session', 'info');
+    document.getElementById('bs-live-area').style.display = 'none';
+    bsCurrentSessionId = null;
+    bsCurrentGroupId = null;
+    loadRecentSessions();
+}
+
+
+function addImageToWhiteboard(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const canvas = document.getElementById('bs-whiteboard');
+    if (!wbCtx) { showToast('Open a session first', 'warn'); return; }
+    const img = new Image();
+    img.onload = () => {
+        const maxW = canvas.width * 0.8;
+        const maxH = canvas.height * 0.6;
+        let w = img.naturalWidth, h = img.naturalHeight;
+        if (w > maxW) { h = h * (maxW / w); w = maxW; }
+        if (h > maxH) { w = w * (maxH / h); h = maxH; }
+        const x = (canvas.width - w) / 2;
+        const y = (canvas.height - h) / 4;
+        wbCtx.globalAlpha = 1;
+        wbCtx.globalCompositeOperation = 'source-over';
+        wbCtx.drawImage(img, x, y, w, h);
+        wbSaveHistory();
+        showToast('Image added to whiteboard', 'success');
+    };
+    img.onerror = () => showToast('Could not load image', 'error');
+    img.src = URL.createObjectURL(file);
+    e.target.value = '';
+}
+
+async function sharePDFFromWhiteboard(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!gcCurrentGroupId) {
+        showToast('Open a group chat first to share PDF', 'warn');
+        e.target.value = '';
+        return;
+    }
+    showToast('Sharing PDF to group chat…', 'info');
+    const fd = new FormData();
+    fd.append('group_id', gcCurrentGroupId);
+    fd.append('message_type', 'pdf');
+    fd.append('content', '📄 ' + file.name);
+    fd.append('pdf', file);
+    try {
+        const data = await fetch('/api/send-group-message', {method: 'POST', body: fd}).then(r => r.json());
+        if (data.success) showToast('✅ PDF shared to group chat!', 'success');
+        else showToast('❌ ' + (data.error || 'Share failed'), 'error');
+    } catch { showToast('Share failed', 'error'); }
+    e.target.value = '';
 }
 
 </script>

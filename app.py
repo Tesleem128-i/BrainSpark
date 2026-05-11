@@ -1012,6 +1012,7 @@ def ask_ai():
                     has_pdf = True
                     content_parts.append(f"\n\n[PDF CONTENT]\n{pdf_text[:5000]}")
 
+        saved_image_url = None
         if is_multipart and 'image' in request.files:
             img_file = request.files['image']
             if img_file and img_file.filename:
@@ -1023,6 +1024,16 @@ def ask_ai():
                     mime_type = mime_map.get(ext, 'image/jpeg')
                     content_parts.append({'mime_type': mime_type, 'data': img_bytes})
                     has_image = True
+                    try:
+                        ai_img_dir = os.path.join('uploads', 'ai_chat')
+                        os.makedirs(ai_img_dir, exist_ok=True)
+                        ts = int(datetime.utcnow().timestamp() * 1000)
+                        img_filename = f"ai_{session['user_id']}_{ts}.{ext}"
+                        with open(os.path.join(ai_img_dir, img_filename), 'wb') as f_out:
+                            f_out.write(img_bytes)
+                        saved_image_url = f'/uploads/ai_chat/{img_filename}'
+                    except Exception as save_err:
+                        logger.warning(f"Image save failed (non-fatal): {save_err}")
                 except Exception as img_err:
                     logger.warning(f"Image processing error: {img_err}")
 
@@ -1039,7 +1050,13 @@ def ask_ai():
             q = question.strip() if question.strip() else explanation[:60]
             youtube_query = q[:80]
 
-        conversation_history.append({'question': question or '[file attachment]', 'answer': explanation[:500]})
+        conversation_history.append({
+            'question': question or '[file attachment]',
+            'answer': explanation[:500],
+            'image_url': saved_image_url if 'saved_image_url' in dir() else None,
+            'has_pdf': has_pdf,
+            'timestamp': datetime.utcnow().isoformat()
+        })
         session['ai_conversation'] = conversation_history[-20:]
         session.modified = True
 
@@ -1049,6 +1066,7 @@ def ask_ai():
             'youtube_query':      youtube_query,
             'has_pdf':            has_pdf,
             'has_image':          has_image,
+            'saved_image_url':    saved_image_url if 'saved_image_url' in dir() else None,
             'conversation_count': len(conversation_history)
         })
 
@@ -1802,6 +1820,12 @@ def schedule_brainstorm():
 def get_group_sessions(group_id):
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    user_id = session['user_id']
+    member = ChatGroupMember.query.filter_by(group_id=group_id, user_id=user_id).first()
+    if not member:
+        return jsonify({'error': 'Not a member'}), 403
+    is_admin = member.role == 'admin'
+    group = ChatGroup.query.get(group_id)
     sessions = BrainstormSession.query.filter_by(group_id=group_id).order_by(BrainstormSession.scheduled_time.desc()).all()
     return jsonify({'success': True, 'sessions': [{
         'id': s.id, 'title': s.title, 'description': s.description,
@@ -1809,7 +1833,9 @@ def get_group_sessions(group_id):
         'note_count': len(s.notes), 'created_at': s.created_at.isoformat(),
         'teacher_id': s.teacher_id,
         'teacher_name': s.teacher.name if s.teacher else None,
-        'group_id': s.group_id
+        'group_id': s.group_id,
+        'group_name': group.name if group else '',
+        'is_admin': is_admin
     } for s in sessions]})
 
 
@@ -2565,6 +2591,10 @@ Return ONLY valid JSON:
 @app.route('/uploads/<path:filename>')
 def uploaded_file(filename):
     uploads_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
+    os.makedirs(os.path.join(uploads_dir, 'group_chat'), exist_ok=True)
+    os.makedirs(os.path.join(uploads_dir, 'voice_notes'), exist_ok=True)
+    os.makedirs(os.path.join(uploads_dir, 'profiles'), exist_ok=True)
+    os.makedirs(os.path.join(uploads_dir, 'ai_chat'), exist_ok=True)
     return send_from_directory(uploads_dir, filename)
 
 @app.route('/legal')
@@ -2608,7 +2638,8 @@ def join_brainstorm_session():
         return jsonify({'error': 'Not a group member'}), 403
     return jsonify({'success': True, 'session': {
         'id': s.id, 'title': s.title, 'shared_doc': s.shared_doc,
-        'whiteboard_data': s.whiteboard_data, 'status': s.status
+        'whiteboard_data': s.whiteboard_data, 'status': s.status,
+        'group_id': s.group_id, 'teacher_id': s.teacher_id
     }})
 
 
