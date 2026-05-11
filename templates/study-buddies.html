@@ -882,7 +882,6 @@
 <div id="lightbox" class="modal-overlay" style="display:none;" onclick="closeModal('lightbox')">
     <img id="lightbox-img" style="max-width:90vw;max-height:90vh;border-radius:12px;cursor:zoom-out;" onclick="event.stopPropagation()">
 </div>
-
 <script>
 // ═══════════════════════════════════════════════════════════════════════════
 //  GLOBALS & STATE
@@ -2094,11 +2093,13 @@ async function showLiveArea(title, groupId) {
     document.getElementById('bs-live-area').style.display = '';
     document.getElementById('bs-live-title').textContent = title;
 
-    // 1. Always fetch current user ID fresh
-    try {
-        const r = await fetch('/api/dashboard-stats').then(x=>x.json());
-        if (r.success) bsCurrentUserId = r.user_id;
-    } catch {}
+    // 1. Ensure userId is resolved — only fetch if not yet set
+    if (!bsCurrentUserId) {
+        try {
+            const r = await fetch('/api/dashboard-stats').then(x=>x.json());
+            if (r.success) bsCurrentUserId = r.user_id;
+        } catch {}
+    }
 
     // 2. Sync admin status
     if (groupId) {
@@ -2180,14 +2181,15 @@ async function showLiveArea(title, groupId) {
 
 // Start live session — admin is default teacher
 async function startLiveSession() {
+    // Guarantee userId before anything else
+    if (window._userIdReady) await window._userIdReady;
+
     const title=document.getElementById('bs-title').value.trim()||'Live Session';
     const groupId=document.getElementById('bs-group').value;
     if(!groupId){showToast('Please select a group first','warn');return;}
     const data=await fetch('/api/schedule-brainstorm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_id:groupId,title,description:document.getElementById('bs-desc').value.trim(),scheduled_time:new Date().toISOString()})}).then(r=>r.json());
     if(!data.success){showToast('❌ '+(data.error||'Failed'),'error');return;}
     bsCurrentSessionId=data.session_id; bsCurrentGroupId=groupId; gcCurrentGroupIsAdmin=true;
-    // Fetch userId if needed
-    if(!bsCurrentUserId){try{const r=await fetch('/api/dashboard-stats').then(x=>x.json());if(r.success)bsCurrentUserId=r.user_id;}catch{}}
     // Admin becomes teacher by default
     bsCurrentTeacherId=bsCurrentUserId;
     if(bsCurrentSessionId&&bsCurrentUserId){
@@ -2233,18 +2235,23 @@ async function leaveLiveSession() {
 
 // Open / rejoin a session from the cards
 async function openSession(s) {
+    // Wait for userId to be resolved before doing anything
+    if (window._userIdReady) await window._userIdReady;
+
     bsCurrentSessionId=s.id; bsCurrentGroupId=s.group_id;
     bsCurrentTeacherId=s.teacher_id||null; gcCurrentGroupIsAdmin=s.is_admin||false;
     try {
         const joined=await fetch('/api/join-brainstorm-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:s.id})}).then(r=>r.json());
         if(!joined.success){showToast('❌ '+(joined.error||'Cannot join'),'error');return;}
+        // Pick up teacher_id from server response if available
+        if(joined.session && joined.session.teacher_id) bsCurrentTeacherId=joined.session.teacher_id;
     } catch {showToast('Connection error','error');return;}
-    await showLiveArea(s.title,s.group_id);
-    setTimeout(initWhiteboard,400);
-    loadSessionNotes(s.id);
-    const isTeacher=bsCurrentUserId&&bsCurrentTeacherId&&String(bsCurrentUserId)===String(bsCurrentTeacherId);
-    if(isTeacher) startTeacherHandPolling();
-    if(s.status==='scheduled'&&s.is_admin){
+
+    // Always show live area for every status so rejoining works
+    await showLiveArea(s.title, s.group_id);
+
+    // Status-specific feedback
+    if(s.status==='scheduled' && s.is_admin){
         if(confirm(`Start "${s.title}" now? Members will be notified.`)){
             await fetch('/api/update-session-status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:s.id,status:'ongoing'})});
             showToast('🚀 Session started!','success'); loadRecentSessions();
@@ -2253,7 +2260,17 @@ async function openSession(s) {
         showToast(`📖 Viewing scheduled session: ${s.title}`,'info');
     } else if(s.status==='completed'){
         showToast(`📋 Reviewing past session: ${s.title}`,'info');
+    } else if(s.status==='ongoing'){
+        showToast(`🧠 Rejoined live session: ${s.title}`,'success');
     }
+
+    // Init whiteboard AFTER showLiveArea fully resolves so canDraw() uses correct state
+    initWhiteboard();
+    loadSessionNotes(s.id);
+
+    const isTeacher=bsCurrentUserId&&bsCurrentTeacherId&&String(bsCurrentUserId)===String(bsCurrentTeacherId);
+    if(isTeacher) startTeacherHandPolling();
+    else startWBPolling();
 }
 
 // Assign teacher (admin only)
@@ -2265,8 +2282,8 @@ async function assignSessionTeacher() {
     if(data.success){
         bsCurrentTeacherId=parseInt(teacherId);
         showToast(`✅ ${data.teacher_name} is now the teacher!`,'success');
-        await showLiveArea(document.getElementById('bs-live-title').textContent,bsCurrentGroupId);
-        setTimeout(initWhiteboard,200);
+        await showLiveArea(document.getElementById('bs-live-title').textContent, bsCurrentGroupId);
+        initWhiteboard();
     } else showToast('❌ '+(data.error||'Failed'),'error');
 }
 
@@ -2355,7 +2372,7 @@ function startTeacherHandPolling() {
     _teacherHandPollInterval = setInterval(async()=>{
         if(!bsCurrentSessionId) return;
         const isTeacher=bsCurrentUserId&&bsCurrentTeacherId&&String(bsCurrentUserId)===String(bsCurrentTeacherId);
-        if(!isTeacher) return;
+        if(!isTeacher){ clearInterval(_teacherHandPollInterval); _teacherHandPollInterval=null; return; }
         try {
             const data=await fetch(`/api/get-raised-hands/${bsCurrentSessionId}`).then(r=>r.json());
             if(!data.success) return;
@@ -2480,6 +2497,7 @@ async function loadRecentSessions() {
 }
 
 async function joinBrainstormFromNotif(sessionId, btn) {
+    if (window._userIdReady) await window._userIdReady;
     if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Joining…';}
     try {
         const data=await fetch('/api/join-brainstorm-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sessionId})}).then(r=>r.json());
@@ -2586,12 +2604,13 @@ document.addEventListener('DOMContentLoaded', () => {
     loadBuddies();
     loadNotifications();
     setInterval(loadNotifications, 30000);
-    fetch('/api/dashboard-stats').then(r=>r.json()).then(d=>{ if(d.success) bsCurrentUserId=d.user_id; }).catch(()=>{});
+    window._useridready = fetch('/api/dashboard-stats').then(r=>r.json()).then(d=>{ if(d.success) bsCurrentUserId=d.user_id; }).catch(()=>{});
     const params=new URLSearchParams(window.location.search);
     const joinId=params.get('join');
     if(joinId){ document.querySelector('[data-tab="my-groups"]').click(); setTimeout(()=>showToast(`Opening group ${joinId}…`,'info'),500); }
 });
 </script>
+
 <!-- Teacher Voice Intro Modal -->
 <div id="teacher-voice-modal" class="modal-overlay" style="display:none;">
     <div class="modal-box">
