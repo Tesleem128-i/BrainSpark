@@ -1042,8 +1042,6 @@ async function sendMessage(){
     const input=document.getElementById('message-input');const content=input.value.trim();
     if(!content&&!waSelectedImage)return;if(!waCurrentUserId)return;
     const container=document.getElementById('chat-messages');const emptyState=container.querySelector('.empty-state');if(emptyState)emptyState.remove();
-    const tempMsg={id:'tmp-'+Date.now(),sender_id:'me',content,created_at:new Date().toISOString(),is_read:false};
-    container.appendChild(buildDMBubble(tempMsg,-1));scrollToBottom('chat-messages');
     input.value='';autoResizeTA(input);cancelReply();
     try{await fetch('/api/send-message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({receiver_id:waCurrentUserId,content})});}catch{}
     clearWAImage();
@@ -1478,6 +1476,7 @@ function isCoord(){return bsCurrentUserId&&bsCoordId&&String(bsCurrentUserId)===
 //  BS VIEW TABS
 // ═══════════════════════════════════════════════════════════
 let _currentBSView='video';
+function switchbsview(view){return switchBSView(view);}
 function switchBSView(view){
   _currentBSView=view;
   ['video','whiteboard','notes'].forEach(v=>{
@@ -1496,7 +1495,7 @@ function switchBSView(view){
 
 function initExcalidraw(){
   const wrap=document.getElementById('bs-view-whiteboard');
-  if(!wrap||wrap.dataset.init==='1')return;
+  if(!wrap)return;
   wrap.dataset.init='1';
   const amCoord=isCoord();
   wrap.innerHTML='';
@@ -1544,7 +1543,7 @@ function initExcalidraw(){
   // Canvas
   const canvas=document.createElement('canvas');
   canvas.id='ex-canvas';
-  canvas.style.cssText='position:absolute;top:44px;left:0;right:0;bottom:0;width:100%;cursor:crosshair;touch-action:none;';
+  canvas.style.cssText=`position:absolute;top:${amCoord?44:28}px;left:0;right:0;bottom:0;width:100%;cursor:crosshair;touch-action:none;`;
   wrap.appendChild(tb);
   wrap.appendChild(canvas);
 
@@ -1913,7 +1912,7 @@ async function showBSOverlay(title,desc){
     // Buttons
     document.getElementById('bs-voice-btn-overlay').style.display=coord?'':'none';
     // raise hand removed
-    document.getElementById('bs-coord-assign-wrap').style.display=bsIsAdmin?'flex':'none';
+    const coordWrap=document.getElementById('bs-coord-assign-wrap');if(coordWrap)coordWrap.style.display=bsIsAdmin?'flex':'none';
     document.getElementById('bs-end-btn').style.display=bsIsAdmin?'':'none';
     // hands panel removed
     // Coord label
@@ -1938,7 +1937,7 @@ async function assignCoordinator(){
     if(!bsSessionId){showToast('No active session','warn');return;}
     const coordId=document.getElementById('bs-coord-pick').value;if(!coordId){showToast('Select a member','warn');return;}
     const data=await fetch('/api/set-session-teacher',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:bsSessionId,teacher_id:parseInt(coordId)})}).then(r=>r.json());
-    if(data.success){bsCoordId=parseInt(coordId);showToast(`✅ ${data.teacher_name} is now the coordinator!`,'success');await showBSOverlay(document.getElementById('bs-session-title').textContent,document.getElementById('bs-session-subtitle').textContent);initBSWhiteboard();}
+    if(data.success){bsCoordId=parseInt(coordId);showToast(`✅ ${data.teacher_name} is now the coordinator!`,'success');await showBSOverlay(document.getElementById('bs-session-title').textContent,document.getElementById('bs-session-subtitle').textContent);const wrapEl=document.getElementById('bs-view-whiteboard');if(wrapEl){wrapEl.dataset.init='';wrapEl.innerHTML='';}if(_currentBSView==='whiteboard')switchBSView('whiteboard');}
     else showToast('❌ '+(data.error||'Failed'),'error');
 }
 
