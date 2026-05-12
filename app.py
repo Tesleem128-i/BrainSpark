@@ -831,7 +831,7 @@ def find_study_buddies():
             'profession': buddy.profession or '',
             'tags': [t.tag for t in buddy.tags], 'total_quizzes': buddy.get_total_quizzes(),
             'average_score': buddy.get_average_score(), 'is_connected': is_connected,
-            'has_pending_request': False,
+            'has_pending_request': AppNotification.query.filter_by(notif_type='connection_request', link_id=user_id, user_id=buddy.id, is_read=False).first() is not None or AppNotification.query.filter_by(notif_type='connection_request', link_id=buddy.id, user_id=user_id, is_read=False).first() is not None,
             'shared_count': shared, 'priority': priority,
             'match_country':    bool(user.country    and buddy.country    and user.country == buddy.country),
             'match_school':     bool(user.school     and buddy.school     and user.school.strip().lower() == buddy.school.strip().lower()),
@@ -943,16 +943,20 @@ def connect_user():
     ).first()
     if existing:
         return jsonify({'error': 'Already connected with this user'}), 400
+    # Check if request already sent
+    pending = AppNotification.query.filter_by(
+        notif_type='connection_request', link_id=user_id, user_id=connected_user_id
+    ).first()
+    if pending:
+        return jsonify({'success': True, 'pending': True, 'message': 'Request already sent!'})
     try:
-        db.session.add(Connection(user_id=user_id, connected_user_id=connected_user_id))
-        db.session.add(Connection(user_id=connected_user_id, connected_user_id=user_id))
-        db.session.flush()
-        # Notify the other user
         me = User.query.get(user_id)
-        _create_notification(connected_user_id, 'connection', f'New Connection!',
-                             f'{me.name} connected with you.', 'dm', user_id)
+        _create_notification(connected_user_id, 'connection_request',
+                             f'{me.name} wants to connect!',
+                             f'Tap to accept or decline.',
+                             'dm', user_id)
         db.session.commit()
-        return jsonify({'success': True, 'message': 'Connected successfully!'})
+        return jsonify({'success': True, 'pending': True, 'message': 'Connection request sent!'})
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
@@ -1481,9 +1485,9 @@ def _serialize_group_message(msg, current_user_id):
         'is_deleted':     msg.is_deleted,
         'is_edited':      msg.is_edited,
         'is_sent':        msg.sender_id == current_user_id,
-        'image_url':      f'/uploads/group_chat/{msg.image_path}' if msg.image_path else None,
-        'pdf_url':        f'/uploads/group_chat/{msg.pdf_path}'   if msg.pdf_path   else None,
-        'voice_url':      f'/uploads/voice_notes/{msg.voice_path}' if msg.voice_path else None,
+        'image_url':      f'uploads/group_chat/{msg.image_path}' if msg.image_path else None,
+        'pdf_url':        f'uploads/group_chat/{msg.pdf_path}'   if msg.pdf_path   else None,
+        'voice_url':      f'uploads/voice_notes/{msg.voice_path}' if msg.voice_path else None,
         'reply_to':       reply_data,
         'mentions':       mentions,
         'reactions':      reactions,
