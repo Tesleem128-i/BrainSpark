@@ -862,7 +862,7 @@ def find_study_buddies():
                     'study_level':  buddy.study_level or '',
                     'country':      buddy.country or '',
                     'profession':   buddy.profession or '',
-                    'bio':          buddy.bio or '',
+                    'bio':          getattr(buddy, 'bio', '') or '',
                     'tags':         tags,
                     'total_quizzes':        total_quizzes,
                     'average_score':        average_score,
@@ -1114,7 +1114,7 @@ def get_connections():
                 'study_level':   buddy.study_level or '',
                 'average_score': avg,
                 'tags':          tags,
-                'bio':           buddy.bio or '',
+                'bio':           getattr(buddy, 'bio', '') or '',
                 'unread_count':  unread,
             })
 
@@ -1491,7 +1491,7 @@ def get_group_members(group_id):
     return jsonify({'success': True, 'members': [{
         'id': m.user.id, 'name': m.user.name, 'username': m.user.username,
         'profile_pic': m.user.get_profile_pic_url(), 'role': m.role,
-        'bio': m.user.bio or '',
+        'bio': getattr(m.user, 'bio', '') or '',
         'joined_at': m.joined_at.isoformat()
     } for m in members]})
 
