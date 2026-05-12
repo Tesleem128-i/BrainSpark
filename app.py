@@ -756,97 +756,146 @@ def logout():
 def find_study_buddies():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
-    user_id = session['user_id']
-    user    = User.query.get(user_id)
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
+    try:
+        user_id = session['user_id']
+        user    = User.query.get(user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
 
-    search_query = request.args.get('search', '').lower()
-    filter_type  = request.args.get('filter', '')
+        search_query = request.args.get('search', '').lower().strip()
+        filter_type  = request.args.get('filter', '').strip()
 
-    def _shared_count(buddy):
-        count = 0
-        if user.profession and buddy.profession and user.profession.strip().lower() == buddy.profession.strip().lower():
-            count += 1
-        if user.study_level and buddy.study_level and user.study_level == buddy.study_level:
-            count += 1
-        if user.school and buddy.school and user.school.strip().lower() == buddy.school.strip().lower():
-            count += 1
-        return count
+        def _shared_count(buddy):
+            count = 0
+            try:
+                if user.profession and buddy.profession and user.profession.strip().lower() == buddy.profession.strip().lower():
+                    count += 1
+                if user.study_level and buddy.study_level and user.study_level == buddy.study_level:
+                    count += 1
+                if user.school and buddy.school and user.school.strip().lower() == buddy.school.strip().lower():
+                    count += 1
+            except Exception:
+                pass
+            return count
 
-    query = User.query.filter(User.id != user_id, User.is_verified == True)
+        query = User.query.filter(User.id != user_id, User.is_verified == True)
 
-    if filter_type == 'country' and user.country:
-        query = query.filter(User.country == user.country)
-    elif filter_type == 'school' and user.school:
-        query = query.filter(User.school.ilike(f'%{user.school}%'))
-    elif filter_type == 'profession' and user.profession:
-        query = query.filter(User.profession.ilike(f'%{user.profession}%'))
-    elif filter_type == 'level' and user.study_level:
-        query = query.filter(User.study_level == user.study_level)
+        if filter_type == 'country' and user.country:
+            query = query.filter(User.country == user.country)
+        elif filter_type == 'school' and user.school:
+            query = query.filter(User.school.ilike(f'%{user.school}%'))
+        elif filter_type == 'profession' and user.profession:
+            query = query.filter(User.profession.ilike(f'%{user.profession}%'))
+        elif filter_type == 'level' and user.study_level:
+            query = query.filter(User.study_level == user.study_level)
 
-    if search_query:
-        query = query.filter(
-            (User.name.ilike(f'%{search_query}%')) | (User.username.ilike(f'%{search_query}%'))
-        )
+        if search_query:
+            query = query.filter(
+                (User.name.ilike(f'%{search_query}%')) |
+                (User.username.ilike(f'%{search_query}%'))
+            )
 
-    buddies = query.limit(200).all()
+        buddies = query.limit(200).all()
 
-    # Pre-fetch all connections involving this user (one query)
-    connections = Connection.query.filter(
-        (Connection.user_id == user_id) | (Connection.connected_user_id == user_id)
-    ).all()
-    connected_ids = set()
-    for c in connections:
-        connected_ids.add(c.connected_user_id if c.user_id == user_id else c.user_id)
+        # Bulk fetch connections
+        try:
+            connections = Connection.query.filter(
+                (Connection.user_id == user_id) | (Connection.connected_user_id == user_id)
+            ).all()
+            connected_ids = set()
+            for c in connections:
+                other = c.connected_user_id if c.user_id == user_id else c.user_id
+                connected_ids.add(other)
+        except Exception:
+            connected_ids = set()
 
-    # Pre-fetch pending connection requests sent BY this user
-    sent_requests = AppNotification.query.filter_by(
-        notif_type='connection_request', link_id=user_id
-    ).all()
-    pending_ids = set(n.user_id for n in sent_requests if not n.is_read)
+        # Bulk fetch pending requests (sent by me)
+        try:
+            sent_notifs = AppNotification.query.filter_by(
+                notif_type='connection_request',
+                link_id=user_id,
+                is_read=False
+            ).all()
+            pending_ids = set(n.user_id for n in sent_notifs)
+        except Exception:
+            pending_ids = set()
 
-    # Also check requests sent TO this user (so both sides show pending)
-    received_requests = AppNotification.query.filter_by(
-        notif_type='connection_request', user_id=user_id
-    ).filter(AppNotification.is_read == False).all()
-    for n in received_requests:
-        pending_ids.add(n.link_id)
+        # Also pending requests sent TO me (so buddy card shows pending on both sides)
+        try:
+            recv_notifs = AppNotification.query.filter_by(
+                notif_type='connection_request',
+                user_id=user_id,
+                is_read=False
+            ).all()
+            for n in recv_notifs:
+                if n.link_id:
+                    pending_ids.add(n.link_id)
+        except Exception:
+            pass
 
-    buddies_data = []
-    for buddy in buddies:
-        shared   = _shared_count(buddy)
-        priority = shared * 50
-        if buddy.country == user.country:
-            priority += 10
+        buddies_data = []
+        for buddy in buddies:
+            try:
+                shared   = _shared_count(buddy)
+                priority = shared * 50
+                if user.country and buddy.country and buddy.country == user.country:
+                    priority += 10
 
-        is_connected      = buddy.id in connected_ids
-        has_pending       = buddy.id in pending_ids
+                try:
+                    total_quizzes = buddy.get_total_quizzes()
+                except Exception:
+                    total_quizzes = 0
 
-        buddies_data.append({
-            'id': buddy.id, 'name': buddy.name, 'username': buddy.username,
-            'profile_pic': buddy.get_profile_pic_url(), 'school': buddy.school or '',
-            'study_level': buddy.study_level or '', 'country': buddy.country or '',
-            'profession': buddy.profession or '',
-            'bio': buddy.bio or '',
-            'tags': [t.tag for t in buddy.tags],
-            'total_quizzes': buddy.get_total_quizzes(),
-            'average_score': buddy.get_average_score(),
-            'is_connected': is_connected,
-            'has_pending_request': has_pending,
-            'shared_count': shared,
-            'priority': priority,
-            'match_country':    bool(user.country    and buddy.country    and user.country == buddy.country),
-            'match_school':     bool(user.school     and buddy.school     and user.school.strip().lower()     == buddy.school.strip().lower()),
-            'match_profession': bool(user.profession and buddy.profession and user.profession.strip().lower() == buddy.profession.strip().lower()),
-            'match_level':      bool(user.study_level and buddy.study_level and user.study_level == buddy.study_level),
-        })
+                try:
+                    average_score = buddy.get_average_score()
+                except Exception:
+                    average_score = 0
 
-    buddies_data.sort(key=lambda x: (-x['priority'], x['name']))
-    for b in buddies_data:
-        del b['priority']
+                try:
+                    profile_pic = buddy.get_profile_pic_url()
+                except Exception:
+                    profile_pic = '/static/image/KNOWITNOW.png'
 
-    return jsonify({'success': True, 'buddies': buddies_data})
+                try:
+                    tags = [t.tag for t in buddy.tags]
+                except Exception:
+                    tags = []
+
+                buddies_data.append({
+                    'id':           buddy.id,
+                    'name':         buddy.name or '',
+                    'username':     buddy.username or '',
+                    'profile_pic':  profile_pic,
+                    'school':       buddy.school or '',
+                    'study_level':  buddy.study_level or '',
+                    'country':      buddy.country or '',
+                    'profession':   buddy.profession or '',
+                    'bio':          buddy.bio or '',
+                    'tags':         tags,
+                    'total_quizzes':        total_quizzes,
+                    'average_score':        average_score,
+                    'is_connected':         buddy.id in connected_ids,
+                    'has_pending_request':  buddy.id in pending_ids,
+                    'shared_count':         shared,
+                    'priority':             priority,
+                    'match_country':    bool(user.country    and buddy.country    and user.country    == buddy.country),
+                    'match_school':     bool(user.school     and buddy.school     and user.school.strip().lower()     == buddy.school.strip().lower()),
+                    'match_profession': bool(user.profession and buddy.profession and user.profession.strip().lower() == buddy.profession.strip().lower()),
+                    'match_level':      bool(user.study_level and buddy.study_level and user.study_level == buddy.study_level),
+                })
+            except Exception as buddy_err:
+                logger.warning(f"Skipping buddy {getattr(buddy, 'id', '?')}: {buddy_err}")
+                continue
+
+        buddies_data.sort(key=lambda x: (-x['priority'], x['name']))
+        for b in buddies_data:
+            del b['priority']
+
+        return jsonify({'success': True, 'buddies': buddies_data})
+
+    except Exception as e:
+        logger.error(f'find_study_buddies error: {e}', exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/add-tag', methods=['POST'])
 def add_tag():
@@ -1031,32 +1080,72 @@ def get_messages(buddy_id):
 def get_connections():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
-    user_id   = session['user_id']
-    initiated = Connection.query.filter_by(user_id=user_id).all()
-    received  = Connection.query.filter_by(connected_user_id=user_id).all()
-    connections_data, seen_ids = [], set()
+    try:
+        user_id   = session['user_id']
+        initiated = Connection.query.filter_by(user_id=user_id).all()
+        received  = Connection.query.filter_by(connected_user_id=user_id).all()
+        connections_data, seen_ids = [], set()
 
-    def _append(buddy, conn_ts):
-        unread = Message.query.filter(
-            (Message.sender_id == buddy.id) & (Message.receiver_id == user_id) & (Message.is_read == False)
-        ).count()
-        connections_data.append({
-            'id': buddy.id, 'name': buddy.name, 'username': buddy.username,
-            'profile_pic': buddy.get_profile_pic_url(), 'study_level': buddy.study_level,
-            'average_score': buddy.get_average_score(), 'tags': [t.tag for t in buddy.tags],
-            'bio': buddy.bio or '',
-            'unread_count': unread, 'connected_at': conn_ts
-        })
+        def _append(buddy):
+            try:
+                unread = Message.query.filter(
+                    (Message.sender_id == buddy.id) &
+                    (Message.receiver_id == user_id) &
+                    (Message.is_read == False)
+                ).count()
+            except Exception:
+                unread = 0
 
-    for conn in initiated:
-        if conn.connected_user_id not in seen_ids:
-            seen_ids.add(conn.connected_user_id)
-            _append(conn.connected_user, conn.created_at.isoformat())
-    for conn in received:
-        if conn.user_id not in seen_ids:
-            seen_ids.add(conn.user_id)
-            _append(conn.user, conn.created_at.isoformat())
-    return jsonify({'success': True, 'connections': connections_data})
+            try:
+                avg = buddy.get_average_score()
+            except Exception:
+                avg = 0
+
+            try:
+                pic = buddy.get_profile_pic_url()
+            except Exception:
+                pic = '/static/image/KNOWITNOW.png'
+
+            try:
+                tags = [t.tag for t in buddy.tags]
+            except Exception:
+                tags = []
+
+            connections_data.append({
+                'id':            buddy.id,
+                'name':          buddy.name or '',
+                'username':      buddy.username or '',
+                'profile_pic':   pic,
+                'study_level':   buddy.study_level or '',
+                'average_score': avg,
+                'tags':          tags,
+                'bio':           buddy.bio or '',
+                'unread_count':  unread,
+            })
+
+        for conn in initiated:
+            try:
+                if conn.connected_user_id not in seen_ids:
+                    seen_ids.add(conn.connected_user_id)
+                    _append(conn.connected_user)
+            except Exception as e:
+                logger.warning(f"Connection error: {e}")
+                continue
+
+        for conn in received:
+            try:
+                if conn.user_id not in seen_ids:
+                    seen_ids.add(conn.user_id)
+                    _append(conn.user)
+            except Exception as e:
+                logger.warning(f"Connection error: {e}")
+                continue
+
+        return jsonify({'success': True, 'connections': connections_data})
+
+    except Exception as e:
+        logger.error(f'get_connections error: {e}', exc_info=True)
+        return jsonify({'success': False, 'error': str(e), 'connections': []}), 500
 
 
 # ═════════════════════════════════════════════════════════════════════════════

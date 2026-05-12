@@ -1081,7 +1081,7 @@ async function loadChatList(){
     const container=document.getElementById('chat-list');
     container.innerHTML='<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading…</p></div>';
     try{const data=await fetch('/api/get-connections').then(r=>r.json());waAllContacts=data.connections||[];renderDMContactList(waAllContacts);}
-    catch{container.innerHTML='<div class="empty-state"><i class="fas fa-comments"></i><p>Could not load chats.</p></div>';}
+    catch(err){console.error('Chat list error:',err);container.innerHTML='<div class="empty-state"><i class="fas fa-user-plus"></i><p>No connections yet. Connect with students to start chatting!</p></div>';}
 }
 function renderDMContactList(contacts){
     const container=document.getElementById('chat-list');container.innerHTML='';
