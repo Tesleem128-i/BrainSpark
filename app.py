@@ -1073,8 +1073,11 @@ def get_connections():
         return jsonify({'error': 'Unauthorized'}), 401
     try:
         user_id   = session['user_id']
-        initiated = Connection.query.filter_by(user_id=user_id).all()
-        received  = Connection.query.filter_by(connected_user_id=user_id).all()
+        # Get all user IDs that are connected to me (either direction)
+        initiated_ids = [c.connected_user_id for c in Connection.query.filter_by(user_id=user_id).all()]
+        received_ids  = [c.user_id for c in Connection.query.filter_by(connected_user_id=user_id).all()]
+        all_buddy_ids = list(set(initiated_ids + received_ids))
+        buddies       = User.query.filter(User.id.in_(all_buddy_ids)).all()
         connections_data, seen_ids = [], set()
 
         def _append(buddy):
@@ -1114,20 +1117,14 @@ def get_connections():
                 'unread_count':  unread,
             })
 
-        for conn in initiated:
+        for buddy in buddies:
             try:
-                if conn.connected_user_id not in seen_ids:
-                    seen_ids.add(conn.connected_user_id)
-                    _append(conn.connected_user)
+                if buddy.id not in seen_ids:
+                    seen_ids.add(buddy.id)
+                    _append(buddy)
             except Exception as e:
                 logger.warning(f"Connection error: {e}")
                 continue
-
-        for conn in received:
-            try:
-                if conn.user_id not in seen_ids:
-                    seen_ids.add(conn.user_id)
-                    _append(conn.user)
             except Exception as e:
                 logger.warning(f"Connection error: {e}")
                 continue
