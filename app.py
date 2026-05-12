@@ -761,13 +761,9 @@ def find_study_buddies():
     if not user:
         return jsonify({'error': 'User not found'}), 404
 
-    search_query   = request.args.get('search', '').lower()
-    country_filter = request.args.get('country', '')
-    school_filter  = request.args.get('school', '')
-    level_filter   = request.args.get('level', '')
+    search_query = request.args.get('search', '').lower()
+    filter_type  = request.args.get('filter', '')
 
-    # Helper: count shared profile fields between current user and a buddy
-    # The 3 priority fields are profession, study_level, school
     def _shared_count(buddy):
         count = 0
         if user.profession and buddy.profession and user.profession.strip().lower() == buddy.profession.strip().lower():
@@ -779,18 +775,7 @@ def find_study_buddies():
         return count
 
     query = User.query.filter(User.id != user_id, User.is_verified == True)
-    if country_filter and country_filter != 'all':
-        query = query.filter(User.country == country_filter)
-    if school_filter and school_filter != 'all':
-        query = query.filter(User.school == school_filter)
-    if level_filter and level_filter != 'all':
-        query = query.filter(User.study_level == level_filter)
 
-    show_all     = request.args.get('show_all', 'false').lower() == 'true'
-    filter_type  = request.args.get('filter', '')  # country | school | profession | level | all
-    is_search    = bool(search_query)
-
-    # apply filter-specific query constraints
     if filter_type == 'country' and user.country:
         query = query.filter(User.country == user.country)
     elif filter_type == 'school' and user.school:
@@ -799,41 +784,60 @@ def find_study_buddies():
         query = query.filter(User.profession.ilike(f'%{user.profession}%'))
     elif filter_type == 'level' and user.study_level:
         query = query.filter(User.study_level == user.study_level)
-    if is_search:
-        # Explicit search: return any matching user regardless of shared fields
+
+    if search_query:
         query = query.filter(
             (User.name.ilike(f'%{search_query}%')) | (User.username.ilike(f'%{search_query}%'))
         )
 
-    buddies      = query.limit(500).all()
+    buddies = query.limit(200).all()
+
+    # Pre-fetch all connections involving this user (one query)
+    connections = Connection.query.filter(
+        (Connection.user_id == user_id) | (Connection.connected_user_id == user_id)
+    ).all()
+    connected_ids = set()
+    for c in connections:
+        connected_ids.add(c.connected_user_id if c.user_id == user_id else c.user_id)
+
+    # Pre-fetch pending connection requests sent BY this user
+    sent_requests = AppNotification.query.filter_by(
+        notif_type='connection_request', link_id=user_id
+    ).all()
+    pending_ids = set(n.user_id for n in sent_requests if not n.is_read)
+
+    # Also check requests sent TO this user (so both sides show pending)
+    received_requests = AppNotification.query.filter_by(
+        notif_type='connection_request', user_id=user_id
+    ).filter(AppNotification.is_read == False).all()
+    for n in received_requests:
+        pending_ids.add(n.link_id)
+
     buddies_data = []
     for buddy in buddies:
-        shared = _shared_count(buddy)
-
-        
-
-        is_connected = Connection.query.filter(
-            ((Connection.user_id == user_id) & (Connection.connected_user_id == buddy.id)) |
-            ((Connection.user_id == buddy.id) & (Connection.connected_user_id == user_id))
-        ).first() is not None
-
-        # Priority: shared profile fields (weighted heavily) + country bonus
+        shared   = _shared_count(buddy)
         priority = shared * 50
         if buddy.country == user.country:
             priority += 10
 
+        is_connected      = buddy.id in connected_ids
+        has_pending       = buddy.id in pending_ids
+
         buddies_data.append({
             'id': buddy.id, 'name': buddy.name, 'username': buddy.username,
-            'profile_pic': buddy.get_profile_pic_url(), 'school': buddy.school,
-            'study_level': buddy.study_level, 'country': buddy.country,
+            'profile_pic': buddy.get_profile_pic_url(), 'school': buddy.school or '',
+            'study_level': buddy.study_level or '', 'country': buddy.country or '',
             'profession': buddy.profession or '',
             'bio': buddy.bio or '',
-            'tags': [t.tag for t in buddy.tags], 'total_quizzes': buddy.get_total_quizzes(),
-            'average_score': buddy.get_average_score(), 'is_connected': is_connected,
-            'has_pending_request': AppNotification.query.filter_by(notif_type='connection_request', link_id=user_id, user_id=buddy.id, is_read=False).first() is not None or AppNotification.query.filter_by(notif_type='connection_request', link_id=buddy.id, user_id=user_id, is_read=False).first() is not None,
-            'shared_count': shared, 'priority': priority,
+            'tags': [t.tag for t in buddy.tags],
+            'total_quizzes': buddy.get_total_quizzes(),
+            'average_score': buddy.get_average_score(),
+            'is_connected': is_connected,
+            'has_pending_request': has_pending,
+            'shared_count': shared,
+            'priority': priority,
             'match_country':    bool(user.country    and buddy.country    and user.country == buddy.country),
-            'match_school':     bool(user.school     and buddy.school     and user.school.strip().lower() == buddy.school.strip().lower()),
+            'match_school':     bool(user.school     and buddy.school     and user.school.strip().lower()     == buddy.school.strip().lower()),
             'match_profession': bool(user.profession and buddy.profession and user.profession.strip().lower() == buddy.profession.strip().lower()),
             'match_level':      bool(user.study_level and buddy.study_level and user.study_level == buddy.study_level),
         })
@@ -841,8 +845,8 @@ def find_study_buddies():
     buddies_data.sort(key=lambda x: (-x['priority'], x['name']))
     for b in buddies_data:
         del b['priority']
-    return jsonify({'success': True, 'buddies': buddies_data})
 
+    return jsonify({'success': True, 'buddies': buddies_data})
 
 @app.route('/api/add-tag', methods=['POST'])
 def add_tag():
