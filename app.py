@@ -707,7 +707,7 @@ def dashboard_stats():
         average_score    = user.get_average_score()
         connection_count = Connection.query.filter(
             (Connection.user_id == user_id) | (Connection.connected_user_id == user_id)
-        ).count() // 2
+        ).filter(Connection.user_id == user_id).count()
 
         recent_results = QuizResult.query.filter_by(user_id=user_id).order_by(QuizResult.completed_at.desc()).limit(5).all()
         recent_activity = [{
@@ -780,7 +780,7 @@ def find_study_buddies():
                 pass
             return count
 
-        query = User.query.filter(User.id != user_id, User.is_verified == True)
+        query = User.query.filter(User.id != user_id)
 
         if filter_type == 'country' and user.country:
             query = query.filter(User.country == user.country)
