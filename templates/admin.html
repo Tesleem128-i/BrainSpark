@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ theme }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin — Brainspark</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root{--ink:#f0efe8;--surface:#0d0d18;--surface2:#16162a;--muted:#5a5a70;--accent:#ff4f30;--green:#00c98d;--blue:#3b6bff;--gold:#f5c842;--spark:#a855f7;--border:rgba(255,255,255,0.07);--radius:16px;}
+        *{box-sizing:border-box;margin:0;padding:0;}
+        body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink);min-height:100vh;}
+        nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:0 6vw;height:72px;display:flex;align-items:center;justify-content:space-between;background:rgba(13,13,24,0.95);border-bottom:1px solid var(--border);}
+        .nav-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.3rem;color:var(--accent);}
+        .wrap{max-width:1100px;margin:0 auto;padding:100px 6vw 60px;}
+        .page-title{font-family:'Syne',sans-serif;font-weight:800;font-size:2rem;margin-bottom:4px;}
+        .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px;}
+        .stat-card{background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:20px;}
+        .stat-label{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+        .stat-value{font-family:'Syne',sans-serif;font-weight:800;font-size:1.8rem;}
+        .card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px;}
+        .card-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;margin-bottom:16px;}
+        .txn-row{display:flex;align-items:center;gap:12px;padding:12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;flex-wrap:wrap;}
+        .btn{padding:7px 16px;border-radius:50px;border:none;font-family:'DM Sans',sans-serif;font-weight:600;font-size:.8rem;cursor:pointer;transition:all .2s;}
+        .btn-green{background:var(--green);color:#fff;}
+        .btn-red{background:#e03030;color:#fff;}
+        .btn-blue{background:var(--blue);color:#fff;}
+        .badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:99px;font-size:.72rem;font-weight:700;}
+        .badge-gold{background:rgba(245,200,66,.15);color:var(--gold);}
+        .badge-green{background:rgba(0,201,141,.15);color:var(--green);}
+    </style>
+</head>
+<body>
+<nav>
+    <span class="nav-logo">⚡ Admin — Brainspark</span>
+    <a href="/dashboard" style="color:var(--muted);font-size:.875rem;text-decoration:none;"><i class="fas fa-arrow-left" style="margin-right:6px;"></i>Dashboard</a>
+</nav>
+
+<div class="wrap">
+    <div class="page-title">Admin Panel</div>
+    <p style="color:var(--muted);margin-bottom:28px;">Welcome, Peace1. Here's everything.</p>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">Total Revenue</div>
+            <div class="stat-value" id="stat-revenue" style="color:var(--green);">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Platform Profit</div>
+            <div class="stat-value" id="stat-profit" style="color:var(--spark);">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">API Cost Covered</div>
+            <div class="stat-value" id="stat-api" style="color:var(--blue);">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Tokens Issued</div>
+            <div class="stat-value" id="stat-tokens" style="color:var(--gold);">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Pending Payments</div>
+            <div class="stat-value" id="stat-pending" style="color:var(--accent);">—</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">⏳ Pending Verifications</div>
+        <div id="pending-list"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">👥 Users with Tokens</div>
+        <div id="user-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;"></div>
+    </div>
+</div>
+
+<script>
+function showToast(msg,type='success'){const t=document.createElement('div');t.style.cssText=`position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 20px;background:${type==='success'?'var(--green)':'var(--accent)'};color:#fff;border-radius:12px;font-weight:600;font-size:.875rem;font-family:'DM Sans',sans-serif;`;t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3000);}
+
+async function verifyPayment(id, action){
+    const res=await fetch('/api/admin/verify-payment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transaction_id:id,action})}).then(r=>r.json());
+    if(res.success){showToast(action==='approve'?'✅ Approved! Tokens added.':'❌ Rejected.');loadStats();}
+    else showToast('Error: '+(res.error||'Failed'),'error');
+}
+
+async function loadStats(){
+    const data=await fetch('/api/admin/stats').then(r=>r.json());
+    if(!data.success)return;
+    document.getElementById('stat-revenue').textContent='₦'+data.total_revenue.toLocaleString();
+    document.getElementById('stat-profit').textContent='₦'+data.total_profit.toLocaleString();
+    document.getElementById('stat-api').textContent='₦'+data.total_api_cost.toLocaleString();
+    document.getElementById('stat-tokens').textContent=data.total_tokens_issued.toLocaleString();
+    document.getElementById('stat-pending').textContent=data.pending_count;
+
+    const pendingList=document.getElementById('pending-list');
+    if(!data.pending_transactions.length){pendingList.innerHTML='<div style="color:var(--muted);font-size:.875rem;padding:16px 0;">No pending payments 🎉</div>';} 
+    else {
+        pendingList.innerHTML=data.pending_transactions.map(t=>`
+            <div class="txn-row">
+                <div style="flex:1;min-width:0;">
+                    <div style="font-family:'Syne',sans-serif;font-weight:700;">${t.user_name}</div>
+                    <div style="font-size:.78rem;color:var(--muted);">${t.user_email}</div>
+                    <div style="font-size:.78rem;margin-top:2px;">₦${t.amount_paid.toLocaleString()} → <span style="color:var(--spark);">${t.tokens_added.toLocaleString()} tokens</span></div>
+                    <div style="font-size:.72rem;color:var(--muted);">${new Date(t.created_at).toLocaleString()}</div>
+                </div>
+                <a href="/uploads/receipts/${t.receipt_path}" target="_blank" class="btn btn-blue">
+                    <i class="fas fa-receipt"></i> Receipt
+                </a>
+                <button onclick="verifyPayment(${t.id},'approve')" class="btn btn-green">
+                    <i class="fas fa-check"></i> Approve
+                </button>
+                <button onclick="verifyPayment(${t.id},'reject')" class="btn btn-red">
+                    <i class="fas fa-times"></i> Reject
+                </button>
+            </div>
+        `).join('');
+    }
+
+    const userList=document.getElementById('user-list');
+    userList.innerHTML=data.user_stats.map(u=>`
+        <div style="padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;">
+            <div style="font-family:'Syne',sans-serif;font-weight:700;margin-bottom:2px;">${u.name}</div>
+            <div style="font-size:.75rem;color:var(--muted);margin-bottom:8px;">@${u.username}</div>
+            <div style="display:flex;justify-content:space-between;font-size:.82rem;">
+                <span>Balance: <strong style="color:var(--spark);">${u.spark_tokens.toLocaleString()}</strong></span>
+                <span>Spent: <strong style="color:var(--green);">₦${u.total_spent.toLocaleString()}</strong></span>
+            </div>
+        </div>
+    `).join('');
+}
+
+document.addEventListener('DOMContentLoaded', loadStats);
+setInterval(loadStats, 30000);
+</script>
+</body>
+</html>

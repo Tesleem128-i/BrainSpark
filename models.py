@@ -6,7 +6,30 @@ from flask_login import UserMixin
 from sqlalchemy.sql import func
 
 db = SQLAlchemy()
+class TokenTransaction(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    amount_paid = db.Column(db.Float, nullable=False)
+    platform_fee = db.Column(db.Float, default=500)
+    tokens_added = db.Column(db.Integer, nullable=False)
+    receipt_path = db.Column(db.String(500))
+    status = db.Column(db.String(20), default='pending')  # pending, approved, rejected
+    verified_by = db.Column(db.Integer, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    verified_at = db.Column(db.DateTime, nullable=True)
 
+    user = db.relationship('User', backref='token_transactions')
+
+
+class TokenUsageLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    feature = db.Column(db.String(100))
+    tokens_used = db.Column(db.Integer, default=1)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref='token_usage_logs')
+    
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
@@ -23,6 +46,9 @@ class User(UserMixin, db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     # Push notification subscription (JSON string of the Web Push subscription object)
     push_subscription = db.Column(db.Text, nullable=True)
+    spark_tokens = db.Column(db.Integer, default=0)
+    total_tokens_purchased = db.Column(db.Integer, default=0)
+    total_spent = db.Column(db.Float, default=0.0)
 
     # Relationships
     quiz_results = db.relationship('QuizResult', backref='user', lazy=True, cascade='all, delete-orphan')

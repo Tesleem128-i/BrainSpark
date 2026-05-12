@@ -6,7 +6,8 @@ from werkzeug.utils import secure_filename
 from models import (db, User, Quiz, QuizResult, Connection, UserTag, Message,
                     ChatGroup, ChatGroupMember, GroupMessage, BrainstormSession,
                     BrainstormNote, GroupJoinRequest, Poll, PollOption, PollVote,
-                    GeneratedQuestion, TopicMastery, WrongAnswer, AppNotification, HandRaise)
+                    GeneratedQuestion, TopicMastery, WrongAnswer, AppNotification,
+                    HandRaise, TokenTransaction, TokenUsageLog)
 import hashlib
 import os
 import requests as req
@@ -1144,6 +1145,11 @@ def get_connections():
 def ask_ai():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    
+    # Token check
+    token_check = require_tokens('ai_chat', 1)
+    if token_check:
+        return jsonify({'error': token_check['error']}), token_check['code']
 
     is_multipart = request.content_type and 'multipart/form-data' in request.content_type
 
@@ -1249,6 +1255,7 @@ def ask_ai():
         session['ai_conversation'] = conversation_history[-20:]
         session.modified = True
 
+        deduct_token(session['user_id'], 'ai_chat', 1)
         return jsonify({
             'success':            True,
             'explanation':        explanation,
@@ -3179,6 +3186,289 @@ def check_my_hand(session_id):
     if not h:
         return jsonify({'success': True, 'status': None, 'raise_id': None})
     return jsonify({'success': True, 'status': h.status, 'raise_id': h.id, 'question_text': h.question_text})
+
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+#  SPARK TOKEN SYSTEM
+# ═════════════════════════════════════════════════════════════════════════════
+
+BANK_NAME     = "Moniepoint MFB"
+ACCOUNT_NAME  = "Brainspark Technologies"
+ACCOUNT_NUMBER = "1234567890"  # replace with your real account number
+PLATFORM_FEE  = 500
+MIN_PAYMENT   = 1500
+MAX_PAYMENT   = 6000
+ADMIN_USERNAME = "Peace1"
+
+os.makedirs('uploads/receipts', exist_ok=True)
+
+
+def deduct_token(user_id, feature='ai', tokens=1):
+    """Deduct spark tokens and log usage. Returns True if successful."""
+    user = User.query.get(user_id)
+    if not user:
+        return False
+    tokens_available = getattr(user, 'spark_tokens', 0) or 0
+    if tokens_available < tokens:
+        return False
+    user.spark_tokens = tokens_available - tokens
+    log = TokenUsageLog(user_id=user_id, feature=feature, tokens_used=tokens)
+    db.session.add(log)
+    db.session.commit()
+    return True
+
+
+def require_tokens(feature='ai', tokens=1):
+    """Decorator/check — returns error dict if user has no tokens."""
+    if 'user_id' not in session:
+        return {'error': 'Unauthorized', 'code': 401}
+    user = User.query.get(session['user_id'])
+    if not user:
+        return {'error': 'User not found', 'code': 404}
+    available = getattr(user, 'spark_tokens', 0) or 0
+    if available < tokens:
+        return {'error': 'NO_TOKENS', 'code': 402}
+    return None
+
+
+@app.route('/tokens')
+def tokens_page():
+    if 'user_id' not in session:
+        return redirect(url_for('index'))
+    user  = User.query.get(session['user_id'])
+    theme = session.get('theme', 'dark')
+    return render_template('tokens.html', user=user, theme=theme,
+                           bank_name=BANK_NAME, account_name=ACCOUNT_NAME,
+                           account_number=ACCOUNT_NUMBER,
+                           min_payment=MIN_PAYMENT, max_payment=MAX_PAYMENT,
+                           platform_fee=PLATFORM_FEE)
+
+
+@app.route('/api/submit-payment', methods=['POST'])
+def submit_payment():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+
+    # Verify password first
+    password = request.form.get('password', '')
+    user = User.query.get(session['user_id'])
+    if not user.check_password(password):
+        return jsonify({'success': False, 'error': 'Incorrect password.'}), 403
+
+    amount_str = request.form.get('amount', '')
+    try:
+        amount = float(amount_str)
+    except ValueError:
+        return jsonify({'success': False, 'error': 'Invalid amount.'}), 400
+
+    if amount < MIN_PAYMENT or amount > MAX_PAYMENT:
+        return jsonify({'success': False,
+                        'error': f'Amount must be between ₦{MIN_PAYMENT:,} and ₦{MAX_PAYMENT:,}.'}), 400
+
+    receipt = request.files.get('receipt')
+    if not receipt or not receipt.filename:
+        return jsonify({'success': False, 'error': 'Receipt is required.'}), 400
+
+    if not allowed_file(receipt.filename):
+        return jsonify({'success': False, 'error': 'Receipt must be a PDF or image.'}), 400
+
+    try:
+        ext = receipt.filename.rsplit('.', 1)[1].lower()
+        ts  = int(datetime.utcnow().timestamp() * 1000)
+        filename = f"receipt_{session['user_id']}_{ts}.{ext}"
+        receipt.save(os.path.join('uploads/receipts', filename))
+
+        tokens_added = int(amount - PLATFORM_FEE)
+
+        txn = TokenTransaction(
+            user_id=session['user_id'],
+            amount_paid=amount,
+            platform_fee=PLATFORM_FEE,
+            tokens_added=tokens_added,
+            receipt_path=filename,
+            status='pending'
+        )
+        db.session.add(txn)
+        db.session.commit()
+
+        # Notify admin
+        admin = User.query.filter_by(username=ADMIN_USERNAME).first()
+        if admin:
+            _create_notification(admin.id, 'payment',
+                                 f'New payment from {user.name}',
+                                 f'₦{amount:,.0f} — {tokens_added} tokens pending verification.',
+                                 'admin', txn.id)
+
+        return jsonify({'success': True,
+                        'message': 'Payment submitted! We will verify within a few minutes.',
+                        'transaction_id': txn.id})
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Payment submission error: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)[:200]}), 500
+
+
+@app.route('/api/my-token-stats')
+def my_token_stats():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    user_id = session['user_id']
+    user    = User.query.get(user_id)
+
+    logs = TokenUsageLog.query.filter_by(user_id=user_id)\
+        .order_by(TokenUsageLog.created_at.desc()).limit(100).all()
+
+    # Daily usage last 7 days
+    daily = []
+    for i in range(7):
+        day = datetime.utcnow() - timedelta(days=6-i)
+        day_start = day.replace(hour=0,minute=0,second=0,microsecond=0)
+        day_end   = day.replace(hour=23,minute=59,second=59,microsecond=999999)
+        used = db.session.query(db.func.sum(TokenUsageLog.tokens_used))\
+            .filter(TokenUsageLog.user_id==user_id,
+                    TokenUsageLog.created_at>=day_start,
+                    TokenUsageLog.created_at<=day_end).scalar() or 0
+        daily.append({'day': day.strftime('%a'), 'tokens': used})
+
+    transactions = TokenTransaction.query.filter_by(user_id=user_id)\
+        .order_by(TokenTransaction.created_at.desc()).limit(20).all()
+
+    return jsonify({
+        'success': True,
+        'spark_tokens': getattr(user, 'spark_tokens', 0) or 0,
+        'total_purchased': getattr(user, 'total_tokens_purchased', 0) or 0,
+        'total_spent': getattr(user, 'total_spent', 0) or 0,
+        'daily_usage': daily,
+        'recent_logs': [{'feature': l.feature, 'tokens': l.tokens_used,
+                          'date': l.created_at.isoformat()} for l in logs],
+        'transactions': [{'id': t.id, 'amount': t.amount_paid,
+                           'tokens': t.tokens_added, 'status': t.status,
+                           'date': t.created_at.isoformat()} for t in transactions]
+    })
+
+
+# ── ADMIN ROUTES ─────────────────────────────────────────────────────────────
+
+@app.route('/admin')
+def admin_panel():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    user = User.query.get(session['user_id'])
+    if not user or user.username != ADMIN_USERNAME:
+        return redirect(url_for('dashboard'))
+    theme = session.get('theme', 'dark')
+    return render_template('admin.html', user=user, theme=theme)
+
+
+@app.route('/api/admin/stats')
+def admin_stats():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    user = User.query.get(session['user_id'])
+    if not user or user.username != ADMIN_USERNAME:
+        return jsonify({'error': 'Forbidden'}), 403
+
+    total_revenue = db.session.query(
+        db.func.sum(TokenTransaction.amount_paid)
+    ).filter_by(status='approved').scalar() or 0
+
+    total_profit = db.session.query(
+        db.func.sum(TokenTransaction.platform_fee)
+    ).filter_by(status='approved').scalar() or 0
+
+    total_api_cost = total_revenue - total_profit
+
+    total_tokens_issued = db.session.query(
+        db.func.sum(TokenTransaction.tokens_added)
+    ).filter_by(status='approved').scalar() or 0
+
+    pending_txns = TokenTransaction.query.filter_by(status='pending')\
+        .order_by(TokenTransaction.created_at.desc()).all()
+
+    all_users = User.query.all()
+    user_stats = []
+    for u in all_users:
+        tokens = getattr(u, 'spark_tokens', 0) or 0
+        spent  = getattr(u, 'total_spent', 0) or 0
+        if tokens > 0 or spent > 0:
+            user_stats.append({
+                'id': u.id, 'name': u.name, 'username': u.username,
+                'spark_tokens': tokens, 'total_spent': spent,
+                'total_purchased': getattr(u, 'total_tokens_purchased', 0) or 0
+            })
+
+    return jsonify({
+        'success': True,
+        'total_revenue': total_revenue,
+        'total_profit': total_profit,
+        'total_api_cost': total_api_cost,
+        'total_tokens_issued': total_tokens_issued,
+        'pending_count': len(pending_txns),
+        'pending_transactions': [{
+            'id': t.id, 'user_id': t.user_id,
+            'user_name': t.user.name, 'user_email': t.user.email,
+            'amount_paid': t.amount_paid, 'tokens_added': t.tokens_added,
+            'receipt_path': t.receipt_path,
+            'created_at': t.created_at.isoformat()
+        } for t in pending_txns],
+        'user_stats': user_stats
+    })
+
+
+@app.route('/api/admin/verify-payment', methods=['POST'])
+def admin_verify_payment():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    admin = User.query.get(session['user_id'])
+    if not admin or admin.username != ADMIN_USERNAME:
+        return jsonify({'error': 'Forbidden'}), 403
+
+    data   = request.json or {}
+    txn_id = data.get('transaction_id')
+    action = data.get('action', 'approve')  # approve or reject
+
+    txn = TokenTransaction.query.get(txn_id)
+    if not txn:
+        return jsonify({'error': 'Transaction not found'}), 404
+
+    try:
+        txn.status      = 'approved' if action == 'approve' else 'rejected'
+        txn.verified_by = session['user_id']
+        txn.verified_at = datetime.utcnow()
+
+        if action == 'approve':
+            user = User.query.get(txn.user_id)
+            user.spark_tokens = (getattr(user, 'spark_tokens', 0) or 0) + txn.tokens_added
+            user.total_tokens_purchased = (getattr(user, 'total_tokens_purchased', 0) or 0) + txn.tokens_added
+            user.total_spent = (getattr(user, 'total_spent', 0) or 0) + txn.amount_paid
+            _create_notification(txn.user_id, 'payment',
+                                 f'✅ {txn.tokens_added:,} Spark Tokens added!',
+                                 f'Your payment of ₦{txn.amount_paid:,.0f} has been verified.',
+                                 'tokens', txn.id)
+        else:
+            _create_notification(txn.user_id, 'payment',
+                                 '❌ Payment could not be verified',
+                                 'Please contact support if you believe this is an error.',
+                                 'tokens', txn.id)
+
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/uploads/receipts/<path:filename>')
+def receipt_file(filename):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    user = User.query.get(session['user_id'])
+    if not user or user.username != ADMIN_USERNAME:
+        return jsonify({'error': 'Forbidden'}), 403
+    return send_from_directory(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads', 'receipts'), filename)
+
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=app.debug)

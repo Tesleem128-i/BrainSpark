@@ -21,23 +21,21 @@ db_url += '?sslmode=require'
 
 engine = create_engine(db_url)
 
-# ── String-based migrations ──────────────────────────────────────────────────
-string_migrations = [
+all_migrations = [
 
-    # ── user ──────────────────────────────────────────────────────────────────
+    # ── user table ────────────────────────────────────────────────────────────
+    'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS bio VARCHAR(160)',
     'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS push_subscription TEXT',
-    # ── user ──────────────────────────────────────────────────────────────────
-    'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS push_subscription TEXT',
-    'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS bio VARCHAR(160)',   # ← ADD THIS LINE
-    # ── chat_group_member ─────────────────────────────────────────────────────
-    'ALTER TABLE chat_group_member ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT \'member\'',
-    'ALTER TABLE chat_group_member ADD COLUMN IF NOT EXISTS is_muted BOOLEAN DEFAULT FALSE',
-    # ── spark tokens ──────────────────────────────────────────────────────────
     'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS spark_tokens INTEGER DEFAULT 0',
     'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS total_tokens_purchased INTEGER DEFAULT 0',
     'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS total_spent REAL DEFAULT 0.0',
+
+    # ── chat_group_member ─────────────────────────────────────────────────────
+    "ALTER TABLE chat_group_member ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'member'",
+    'ALTER TABLE chat_group_member ADD COLUMN IF NOT EXISTS is_muted BOOLEAN DEFAULT FALSE',
+
     # ── group_message ─────────────────────────────────────────────────────────
-    'ALTER TABLE group_message ADD COLUMN IF NOT EXISTS message_type VARCHAR(20) DEFAULT \'text\'',
+    "ALTER TABLE group_message ADD COLUMN IF NOT EXISTS message_type VARCHAR(20) DEFAULT 'text'",
     'ALTER TABLE group_message ADD COLUMN IF NOT EXISTS image_path VARCHAR(500)',
     'ALTER TABLE group_message ADD COLUMN IF NOT EXISTS pdf_path VARCHAR(500)',
     'ALTER TABLE group_message ADD COLUMN IF NOT EXISTS voice_path VARCHAR(500)',
@@ -58,7 +56,7 @@ string_migrations = [
     'ALTER TABLE brainstorm_session ADD COLUMN IF NOT EXISTS teacher_id INTEGER REFERENCES "user"(id)',
 
     # ── brainstorm_note ───────────────────────────────────────────────────────
-    'ALTER TABLE brainstorm_note ADD COLUMN IF NOT EXISTS color VARCHAR(20) DEFAULT \'#ff4f30\'',
+    "ALTER TABLE brainstorm_note ADD COLUMN IF NOT EXISTS color VARCHAR(20) DEFAULT '#ff4f30'",
     'ALTER TABLE brainstorm_note ADD COLUMN IF NOT EXISTS mentions TEXT',
     'ALTER TABLE brainstorm_note ADD COLUMN IF NOT EXISTS tags TEXT',
     'ALTER TABLE brainstorm_note ADD COLUMN IF NOT EXISTS mention_ai BOOLEAN DEFAULT FALSE',
@@ -70,28 +68,9 @@ string_migrations = [
 
     # ── group_join_request ────────────────────────────────────────────────────
     'ALTER TABLE group_join_request ADD COLUMN IF NOT EXISTS responded_at TIMESTAMP',
-]
 
-# ── Tuple-based migrations (table, column, sql) ──────────────────────────────
-tuple_migrations = [
-    ("group_message", "voice_path", "ALTER TABLE group_message ADD COLUMN IF NOT EXISTS voice_path VARCHAR(500)"),
-    ("group_message", "reply_to_id", "ALTER TABLE group_message ADD COLUMN IF NOT EXISTS reply_to_id INTEGER"),
-    ("group_message", "mentions", "ALTER TABLE group_message ADD COLUMN IF NOT EXISTS mentions TEXT"),
-    ("group_message", "reactions", "ALTER TABLE group_message ADD COLUMN IF NOT EXISTS reactions TEXT"),
-    ("group_message", "is_edited", "ALTER TABLE group_message ADD COLUMN IF NOT EXISTS is_edited BOOLEAN DEFAULT FALSE"),
-    ("group_message", "is_deleted", "ALTER TABLE group_message ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE"),
-    ("group_message", "edited_at", "ALTER TABLE group_message ADD COLUMN IF NOT EXISTS edited_at TIMESTAMP"),
-    ("brainstorm_session", "whiteboard_data", "ALTER TABLE brainstorm_session ADD COLUMN IF NOT EXISTS whiteboard_data TEXT"),
-    ("brainstorm_session", "shared_doc", "ALTER TABLE brainstorm_session ADD COLUMN IF NOT EXISTS shared_doc TEXT"),
-    ("brainstorm_session", "teacher_id", "ALTER TABLE brainstorm_session ADD COLUMN IF NOT EXISTS teacher_id INTEGER"),
-    ("brainstorm_note", "color", "ALTER TABLE brainstorm_note ADD COLUMN IF NOT EXISTS color VARCHAR(20) DEFAULT '#ff4f30'"),
-    ("brainstorm_note", "upvotes", "ALTER TABLE brainstorm_note ADD COLUMN IF NOT EXISTS upvotes INTEGER DEFAULT 0"),
-    ("user", "push_subscription", "ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS push_subscription TEXT"),
-    ("chat_group_member", "is_muted", "ALTER TABLE chat_group_member ADD COLUMN IF NOT EXISTS is_muted BOOLEAN DEFAULT FALSE"),
-]
+    # ── NEW TABLES ────────────────────────────────────────────────────────────
 
-# ── NEW TABLES (CREATE IF NOT EXISTS) ───────────────────────────────────────
-table_migrations = [
     """
     CREATE TABLE IF NOT EXISTS generated_question (
         id SERIAL PRIMARY KEY,
@@ -104,7 +83,8 @@ table_migrations = [
         difficulty VARCHAR(20),
         question_type VARCHAR(20),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )""",
+    )
+    """,
 
     """
     CREATE TABLE IF NOT EXISTS topic_mastery (
@@ -117,7 +97,8 @@ table_migrations = [
         last_score REAL DEFAULT 0.0,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE (user_id, topic)
-    )""",
+    )
+    """,
 
     """
     CREATE TABLE IF NOT EXISTS wrong_answer (
@@ -128,7 +109,8 @@ table_migrations = [
         correct_answer VARCHAR(10),
         user_answer VARCHAR(10),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )""",
+    )
+    """,
 
     """
     CREATE TABLE IF NOT EXISTS app_notification (
@@ -141,7 +123,8 @@ table_migrations = [
         link_id INTEGER,
         is_read BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )""",
+    )
+    """,
 
     """
     CREATE TABLE IF NOT EXISTS hand_raise (
@@ -152,7 +135,9 @@ table_migrations = [
         question_text TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         answered_at TIMESTAMP
-    )"""
+    )
+    """,
+
     """
     CREATE TABLE IF NOT EXISTS token_transaction (
         id SERIAL PRIMARY KEY,
@@ -165,7 +150,8 @@ table_migrations = [
         verified_by INTEGER,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         verified_at TIMESTAMP
-    )""",
+    )
+    """,
 
     """
     CREATE TABLE IF NOT EXISTS token_usage_log (
@@ -174,27 +160,33 @@ table_migrations = [
         feature VARCHAR(100),
         tokens_used INTEGER DEFAULT 1,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )"""
+    )
+    """,
 ]
 
-# ── COMBINE ALL MIGRATIONS ───────────────────────────────────────────────────
-all_migrations = string_migrations + [sql for _, _, sql in tuple_migrations] + table_migrations
-
 print("🚀 Running PostgreSQL migrations...")
-print(f"📍 Database: {db_url.split('@')[-1].split('/')[0] if '@' in db_url else 'local'}\n")
+try:
+    host = db_url.split('@')[1].split('/')[0] if '@' in db_url else 'unknown'
+    print(f"📍 Database: {host}\n")
+except Exception:
+    pass
+
+success = 0
+failed = 0
 
 with engine.connect() as conn:
     conn.execution_options(isolation_level="AUTOCOMMIT")
-    
     for i, sql in enumerate(all_migrations, 1):
+        first_line = sql.strip().splitlines()[0][:80]
         try:
-            first_line = sql.strip().splitlines()[0][:80]
             conn.execute(text(sql))
-            print(f"✅ [{i:2d}] {first_line}...")
+            print(f"✅ [{i:2d}] {first_line}")
+            success += 1
         except Exception as e:
-            print(f"❌ [{i:2d}] {first_line}...")
-            print(f"    Error: {str(e)[:100]}")
-            continue
+            err = str(e).split('\n')[0][:120]
+            print(f"⚠️  [{i:2d}] {first_line}")
+            print(f"         {err}")
+            failed += 1
 
-print("\n🎉 PostgreSQL migration complete!")
-print(f"✅ {len([m for m in all_migrations if 'CREATE TABLE' in m or 'ALTER TABLE' in m])} migrations applied successfully!")
+print(f"\n🎉 Done! {success} succeeded, {failed} skipped/failed (warnings are usually OK).")
+print("\nNext step: deploy your app on Render — the buddy list error will be fixed.")

@@ -52,6 +52,11 @@
         .icon-btn { width: 36px; height: 36px; border-radius: 9px; border: 1px solid var(--card-border); background: var(--card); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--muted); font-size: 0.9rem; transition: all 0.2s; backdrop-filter: blur(10px); }
         .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
 
+/* Spark token nav button */
+.token-btn { display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.85rem; border-radius: 50px; background: rgba(168,85,247,0.12); border: 1px solid rgba(168,85,247,0.3); color: #c084fc; font-size: 0.8rem; font-weight: 700; text-decoration: none; transition: all 0.2s; }
+.token-btn:hover { background: rgba(168,85,247,0.25); color: #d8b4fe; }
+.token-btn i { font-size: 0.75rem; }
+
         /* LAYOUT */
         .page-wrap { padding-top: 68px; min-height: 100vh; display: flex; }
         .sidebar { width: 240px; flex-shrink: 0; position: fixed; top: 68px; left: 0; bottom: 0; background: rgba(10,10,20,0.6); border-right: 1px solid var(--card-border); backdrop-filter: blur(20px); padding: 2rem 1.25rem; display: flex; flex-direction: column; gap: 0.5rem; overflow-y: auto; z-index: 50; transition: transform 0.3s; }
@@ -449,10 +454,33 @@
         <li><a href="#performance-section">Analytics</a></li>
     </ul>
     <div class="nav-right">
-        
-            <button class="icon-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">
-            <i class="fas fa-moon" id="theme-icon"></i>
-        </button>
+    <!-- 🔥 SPARK TOKENS BUTTON -->
+    <a href="/tokens" class="token-btn" title="Buy Spark Tokens">
+        <i class="fas fa-bolt"></i>
+        <span id="token-count">0</span>
+    </a>
+    
+    <button class="icon-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">
+        <i class="fas fa-moon" id="theme-icon"></i>
+    </button>
+    <button class="icon-btn" onclick="window.location.href='/settings'" title="Settings">
+        <i class="fas fa-gear"></i>
+    </button>
+    <button class="icon-btn" onclick="openAIModal()" title="Ask AI" style="position:relative;">
+        <i class="fas fa-robot"></i>
+        <span id="ai-nav-dot" style="display:none;position:absolute;top:4px;right:4px;width:7px;height:7px;background:var(--green);border-radius:50%;border:1.5px solid var(--surface);"></span>
+    </button>
+    <button class="icon-btn" onclick="logout()" title="Logout" style="color:#ff4f30">
+        <i class="fas fa-sign-out-alt"></i>
+    </button>
+    <div class="nav-user">
+        <div class="nav-user-text">
+            <div class="name">{{ user.name }}</div>
+            <div class="level">{{ user.study_level }}</div>
+        </div>
+        <img src="{{ user.get_profile_pic_url() }}" alt="{{ user.name }}" class="nav-avatar">
+    </div>
+</div>
         <button class="icon-btn" onclick="window.location.href='/settings'" title="Settings">
             <i class="fas fa-gear"></i>
         </button>
@@ -1287,7 +1315,25 @@ window.addEventListener('load', () => {
     loadDashboardData();
     loadMasteryMap();   // <-- add this line
 });
+function handleAIError(errorMsg) {
+    if (errorMsg === 'NO_TOKENS') {
+        if (confirm('⚡ You have no Spark Tokens left.\n\nClick OK to buy tokens and power up your AI features.')) {
+            window.location.href = '/tokens';
+        }
+        return true;
+    }
+    return false;
+}
 
+fetch('/api/dashboard-stats').then(r=>r.json()).then(d=>{
+    if(d.success && '{{ session.get("username","") }}' === 'Peace1') {
+        const adminLink = document.createElement('a');
+        adminLink.href = '/admin';
+        adminLink.textContent = '⚡ Admin';
+        adminLink.style.cssText = 'color:var(--accent);font-weight:700;font-size:.875rem;';
+        document.querySelector('.nav-links')?.appendChild(Object.assign(document.createElement('li'), {}).appendChild(adminLink).parentNode);
+    }
+});
 </script>
 <style>
 @media (max-width: 768px) {

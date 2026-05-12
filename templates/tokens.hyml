@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ theme }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spark Tokens — Brainspark</title>
+    <link rel="icon" type="image/png" href="/static/image/KNOWITNOW.png">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <style>
+        :root{--ink:#0a0a14;--surface:#ffffff;--surface2:#f5f4f0;--muted:#7a7a8c;--accent:#ff4f30;--green:#00c98d;--blue:#3b6bff;--gold:#f5c842;--spark:#a855f7;--border:rgba(0,0,0,0.08);--radius:16px;}
+        [data-theme="dark"]{--ink:#f0efe8;--surface:#0d0d18;--surface2:#16162a;--muted:#5a5a70;--border:rgba(255,255,255,0.07);}
+        *{box-sizing:border-box;margin:0;padding:0;}
+        body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink);min-height:100vh;}
+        nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:0 6vw;height:72px;display:flex;align-items:center;justify-content:space-between;background:rgba(13,13,24,0.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);}
+        .nav-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.4rem;background:linear-gradient(135deg,#ff4f30,#ff8c5a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+        .wrap{max-width:1000px;margin:0 auto;padding:100px 6vw 60px;}
+        .page-title{font-family:'Syne',sans-serif;font-weight:800;font-size:2.2rem;margin-bottom:6px;}
+        .page-title span{color:var(--spark);}
+        .subtitle{color:var(--muted);margin-bottom:32px;}
+        .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+        @media(max-width:700px){.grid2{grid-template-columns:1fr;}}
+        .card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:24px;}
+        .card-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+        .token-balance{font-family:'Syne',sans-serif;font-weight:800;font-size:3rem;color:var(--spark);line-height:1;}
+        .token-sub{font-size:.875rem;color:var(--muted);margin-top:4px;}
+        .bank-box{background:linear-gradient(135deg,rgba(168,85,247,.12),rgba(59,107,255,.08));border:1px solid rgba(168,85,247,.3);border-radius:12px;padding:20px;margin-bottom:20px;}
+        .bank-label{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;}
+        .bank-value{font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;color:var(--ink);}
+        .bank-value.accent{color:var(--spark);font-size:1.5rem;letter-spacing:.05em;}
+        .copy-btn{background:none;border:1px solid var(--border);border-radius:8px;padding:4px 10px;color:var(--muted);cursor:pointer;font-size:.75rem;margin-left:8px;transition:all .2s;}
+        .copy-btn:hover{border-color:var(--spark);color:var(--spark);}
+        .inp{width:100%;padding:11px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--ink);font-size:.875rem;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s;margin-bottom:12px;}
+        .inp:focus{border-color:var(--spark);}
+        .btn{display:inline-flex;align-items:center;gap:6px;padding:11px 22px;border-radius:50px;border:none;font-family:'DM Sans',sans-serif;font-weight:600;font-size:.875rem;cursor:pointer;transition:all .2s;width:100%;justify-content:center;}
+        .btn-spark{background:var(--spark);color:#fff;}
+        .btn-spark:hover{filter:brightness(1.1);transform:translateY(-1px);}
+        .btn:disabled{opacity:.4;cursor:not-allowed;}
+        .tier-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;}
+        @media(max-width:500px){.tier-grid{grid-template-columns:1fr 1fr;}}
+        .tier-btn{padding:12px 8px;border-radius:12px;border:1px solid var(--border);background:var(--surface);cursor:pointer;text-align:center;transition:all .2s;font-family:'DM Sans',sans-serif;}
+        .tier-btn:hover,.tier-btn.active{border-color:var(--spark);background:rgba(168,85,247,.1);}
+        .tier-btn .amount{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;color:var(--ink);}
+        .tier-btn .tokens{font-size:.75rem;color:var(--spark);font-weight:600;margin-top:2px;}
+        .tier-btn .fee{font-size:.68rem;color:var(--muted);}
+        .receipt-drop{border:2px dashed var(--border);border-radius:12px;padding:28px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:12px;}
+        .receipt-drop:hover,.receipt-drop.drag{border-color:var(--spark);background:rgba(168,85,247,.05);}
+        .receipt-drop i{font-size:2rem;opacity:.25;display:block;margin-bottom:8px;}
+        .status-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:.72rem;font-weight:700;}
+        .status-pending{background:rgba(245,200,66,.15);color:var(--gold);}
+        .status-approved{background:rgba(0,201,141,.15);color:var(--green);}
+        .status-rejected{background:rgba(224,48,48,.12);color:#e03030;}
+        .usage-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:.85rem;}
+        .usage-row:last-child{border-bottom:none;}
+        .modal-overlay{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:16px;}
+        .modal-box{background:var(--surface);border:1px solid var(--border);border-radius:20px;width:100%;max-width:420px;padding:28px;}
+        .modal-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;margin-bottom:16px;}
+        .alert{padding:12px 16px;border-radius:10px;font-size:.85rem;margin-bottom:12px;}
+        .alert-info{background:rgba(59,107,255,.1);border:1px solid rgba(59,107,255,.2);color:var(--blue);}
+        .alert-warn{background:rgba(245,200,66,.1);border:1px solid rgba(245,200,66,.2);color:var(--gold);}
+    </style>
+</head>
+<body>
+<nav>
+    <a href="/dashboard" class="nav-logo">Brainspark</a>
+    <a href="/dashboard" style="color:var(--muted);font-size:.875rem;text-decoration:none;"><i class="fas fa-arrow-left" style="margin-right:6px;"></i>Dashboard</a>
+</nav>
+
+<div class="wrap">
+    <div class="page-title">⚡ <span>Spark</span> Tokens</div>
+    <div class="subtitle">Power your AI features with Spark Tokens. Pay once, use anytime.</div>
+
+    <div class="grid2" style="margin-bottom:20px;">
+        <!-- Balance card -->
+        <div class="card">
+            <div class="card-title"><i class="fas fa-bolt" style="color:var(--spark);"></i> Your Balance</div>
+            <div class="token-balance" id="token-balance">—</div>
+            <div class="token-sub">Spark Tokens remaining</div>
+            <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
+                <div style="flex:1;padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:10px;text-align:center;">
+                    <div style="font-size:.72rem;color:var(--muted);margin-bottom:2px;">Total Purchased</div>
+                    <div id="total-purchased" style="font-family:'Syne',sans-serif;font-weight:700;color:var(--spark);">—</div>
+                </div>
+                <div style="flex:1;padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:10px;text-align:center;">
+                    <div style="font-size:.72rem;color:var(--muted);margin-bottom:2px;">Total Spent</div>
+                    <div id="total-spent" style="font-family:'Syne',sans-serif;font-weight:700;color:var(--green);">—</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Usage chart -->
+        <div class="card">
+            <div class="card-title"><i class="fas fa-chart-bar" style="color:var(--blue);"></i> 7-Day Usage</div>
+            <canvas id="usage-chart" height="120"></canvas>
+        </div>
+    </div>
+
+    <div class="grid2">
+        <!-- Buy tokens -->
+        <div class="card">
+            <div class="card-title"><i class="fas fa-shopping-cart" style="color:var(--spark);"></i> Buy Spark Tokens</div>
+
+            <div class="bank-box">
+                <div class="bank-label">Bank Name</div>
+                <div class="bank-value" style="margin-bottom:12px;">{{ bank_name }}</div>
+                <div class="bank-label">Account Name</div>
+                <div class="bank-value" style="margin-bottom:12px;">{{ account_name }}</div>
+                <div class="bank-label">Account Number</div>
+                <div class="bank-value accent">
+                    {{ account_number }}
+                    <button class="copy-btn" onclick="copyAcct()"><i class="fas fa-copy"></i> Copy</button>
+                </div>
+            </div>
+
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                Transfer between ₦{{ '{:,}'.format(min_payment) }} and ₦{{ '{:,}'.format(max_payment) }}.
+                ₦{{ '{:,}'.format(platform_fee) }} is the platform fee — the rest converts 1:1 to Spark Tokens.
+            </div>
+
+            <div class="alert alert-warn">
+                <i class="fas fa-exclamation-triangle"></i>
+                Examples: ₦1,500 → 1,000 tokens &nbsp;|&nbsp; ₦3,000 → 2,500 tokens &nbsp;|&nbsp; ₦6,000 → 5,500 tokens
+            </div>
+
+            <div class="tier-grid">
+                {% for amt in [1500, 2000, 3000, 4000, 5000, 6000] %}
+                <div class="tier-btn" onclick="selectTier({{ amt }}, this)">
+                    <div class="amount">₦{{ '{:,}'.format(amt) }}</div>
+                    <div class="tokens">{{ '{:,}'.format(amt - platform_fee) }} tokens</div>
+                    <div class="fee">₦{{ '{:,}'.format(platform_fee) }} fee</div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <input type="number" id="amount-input" class="inp" placeholder="Or enter amount (₦1,500 – ₦6,000)"
+                   min="{{ min_payment }}" max="{{ max_payment }}" oninput="updatePreview()">
+            <div id="token-preview" style="font-size:.85rem;color:var(--spark);margin-bottom:14px;min-height:20px;"></div>
+
+            <div class="receipt-drop" id="receipt-drop" onclick="document.getElementById('receipt-file').click()"
+                 ondrop="handleDrop(event)" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')">
+                <i class="fas fa-file-upload"></i>
+                <div style="font-weight:600;font-size:.875rem;margin-bottom:4px;">Upload Transfer Receipt</div>
+                <div style="font-size:.78rem;color:var(--muted);" id="receipt-label">PDF or image (screenshot)</div>
+            </div>
+            <input type="file" id="receipt-file" accept=".pdf,image/*" style="display:none;" onchange="handleReceiptSelect(event)">
+
+            <button class="btn btn-spark" onclick="openPasswordModal()">
+                <i class="fas fa-bolt"></i> Submit Payment
+            </button>
+        </div>
+
+        <!-- Transaction history -->
+        <div class="card">
+            <div class="card-title"><i class="fas fa-history" style="color:var(--muted);"></i> Transaction History</div>
+            <div id="txn-list" style="display:flex;flex-direction:column;gap:8px;max-height:400px;overflow-y:auto;">
+                <div style="color:var(--muted);font-size:.875rem;text-align:center;padding:24px;">Loading…</div>
+            </div>
+            <div style="margin-top:20px;">
+                <div class="card-title" style="margin-bottom:10px;"><i class="fas fa-list" style="color:var(--muted);"></i> Recent Usage</div>
+                <div id="usage-list" style="max-height:200px;overflow-y:auto;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Password modal -->
+<div id="password-modal" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+        <div class="modal-title">🔒 Confirm Your Identity</div>
+        <p style="font-size:.875rem;color:var(--muted);margin-bottom:16px;">Enter your Brainspark password to submit this payment.</p>
+        <input type="password" id="confirm-password" class="inp" placeholder="Your password…">
+        <div id="pw-error" style="color:#e03030;font-size:.8rem;margin-bottom:10px;display:none;"></div>
+        <div style="display:flex;gap:10px;">
+            <button class="btn btn-spark" onclick="submitPayment()" style="flex:1;">
+                <i class="fas fa-check"></i> Confirm & Submit
+            </button>
+            <button onclick="document.getElementById('password-modal').style.display='none'"
+                    style="flex:1;padding:11px;border-radius:50px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+let selectedFile = null;
+
+function copyAcct(){
+    navigator.clipboard?.writeText('{{ account_number }}').then(()=>showToast('Account number copied!'));
+}
+
+function showToast(msg, type='success'){
+    const t=document.createElement('div');
+    const c={success:'var(--green)',error:'var(--accent)',info:'var(--blue)',warn:'var(--gold)'};
+    t.style.cssText=`position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 20px;background:${c[type]||c.info};color:#fff;border-radius:12px;font-weight:600;font-size:.875rem;font-family:'DM Sans',sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.3);`;
+    t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3000);
+}
+
+function selectTier(amt, el){
+    document.querySelectorAll('.tier-btn').forEach(b=>b.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('amount-input').value=amt;
+    updatePreview();
+}
+
+function updatePreview(){
+    const amt=parseFloat(document.getElementById('amount-input').value)||0;
+    const fee={{ platform_fee }};
+    const preview=document.getElementById('token-preview');
+    if(amt<{{ min_payment }}||amt>{{ max_payment }}){
+        preview.textContent=amt>0?`Amount must be between ₦{{ '{:,}'.format(min_payment) }} and ₦{{ '{:,}'.format(max_payment) }}`:'';
+        preview.style.color='var(--accent)';return;
+    }
+    const tokens=Math.floor(amt-fee);
+    preview.textContent=`✅ You will receive ${tokens.toLocaleString()} Spark Tokens (₦${fee.toLocaleString()} platform fee)`;
+    preview.style.color='var(--spark)';
+}
+
+function handleReceiptSelect(e){
+    const f=e.target.files[0];if(!f)return;
+    selectedFile=f;
+    document.getElementById('receipt-label').textContent=f.name;
+    document.getElementById('receipt-drop').style.borderColor='var(--spark)';
+}
+
+function handleDrop(e){
+    e.preventDefault();document.getElementById('receipt-drop').classList.remove('drag');
+    const f=e.dataTransfer.files[0];if(!f)return;
+    selectedFile=f;
+    document.getElementById('receipt-label').textContent=f.name;
+    document.getElementById('receipt-drop').style.borderColor='var(--spark)';
+}
+
+function openPasswordModal(){
+    const amt=parseFloat(document.getElementById('amount-input').value)||0;
+    if(amt<{{ min_payment }}||amt>{{ max_payment }}){showToast('Enter a valid amount first','warn');return;}
+    if(!selectedFile){showToast('Please upload your receipt first','warn');return;}
+    document.getElementById('confirm-password').value='';
+    document.getElementById('pw-error').style.display='none';
+    document.getElementById('password-modal').style.display='flex';
+    setTimeout(()=>document.getElementById('confirm-password').focus(),100);
+}
+
+async function submitPayment(){
+    const pw=document.getElementById('confirm-password').value;
+    if(!pw){document.getElementById('pw-error').textContent='Password required.';document.getElementById('pw-error').style.display='';return;}
+    const amt=document.getElementById('amount-input').value;
+    const fd=new FormData();
+    fd.append('amount',amt);
+    fd.append('password',pw);
+    fd.append('receipt',selectedFile);
+    try{
+        const res=await fetch('/api/submit-payment',{method:'POST',body:fd}).then(r=>r.json());
+        if(res.success){
+            document.getElementById('password-modal').style.display='none';
+            showToast('Payment submitted! Verification in progress.','success');
+            document.getElementById('amount-input').value='';
+            document.getElementById('receipt-label').textContent='PDF or image (screenshot)';
+            document.getElementById('receipt-drop').style.borderColor='';
+            selectedFile=null;
+            document.querySelectorAll('.tier-btn').forEach(b=>b.classList.remove('active'));
+            document.getElementById('token-preview').textContent='';
+            loadStats();
+        } else {
+            document.getElementById('pw-error').textContent=res.error||'Submission failed.';
+            document.getElementById('pw-error').style.display='';
+        }
+    }catch{document.getElementById('pw-error').textContent='Network error. Try again.';document.getElementById('pw-error').style.display='';}
+}
+
+let usageChart=null;
+async function loadStats(){
+    const data=await fetch('/api/my-token-stats').then(r=>r.json());
+    if(!data.success)return;
+    document.getElementById('token-balance').textContent=(data.spark_tokens||0).toLocaleString();
+    document.getElementById('total-purchased').textContent=(data.total_purchased||0).toLocaleString();
+    document.getElementById('total-spent').textContent='₦'+(data.total_spent||0).toLocaleString();
+
+    // Chart
+    const labels=data.daily_usage.map(d=>d.day);
+    const values=data.daily_usage.map(d=>d.tokens);
+    const ctx=document.getElementById('usage-chart').getContext('2d');
+    if(usageChart)usageChart.destroy();
+    usageChart=new Chart(ctx,{
+        type:'bar',
+        data:{labels,datasets:[{label:'Tokens Used',data:values,backgroundColor:'rgba(168,85,247,0.4)',borderColor:'rgba(168,85,247,1)',borderWidth:2,borderRadius:6}]},
+        options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#5a5a70'}},x:{grid:{display:false},ticks:{color:'#5a5a70'}}}}
+    });
+
+    // Transactions
+    const txnList=document.getElementById('txn-list');
+    if(!data.transactions.length){txnList.innerHTML='<div style="color:var(--muted);font-size:.875rem;text-align:center;padding:24px;">No transactions yet.</div>';return;}
+    txnList.innerHTML=data.transactions.map(t=>`
+        <div style="padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                <span style="font-family:'Syne',sans-serif;font-weight:700;">₦${t.amount.toLocaleString()}</span>
+                <span class="status-badge status-${t.status}">${t.status}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:.78rem;color:var(--muted);">
+                <span>${t.tokens.toLocaleString()} tokens</span>
+                <span>${new Date(t.date).toLocaleDateString()}</span>
+            </div>
+        </div>
+    `).join('');
+
+    // Usage log
+    const usageList=document.getElementById('usage-list');
+    if(!data.recent_logs.length){usageList.innerHTML='<div style="font-size:.8rem;color:var(--muted);padding:8px 0;">No usage yet.</div>';return;}
+    usageList.innerHTML=data.recent_logs.slice(0,10).map(l=>`
+        <div class="usage-row">
+            <span>${l.feature.replace(/_/g,' ')}</span>
+            <span style="color:var(--spark);font-weight:600;">-${l.tokens} token${l.tokens>1?'s':''}</span>
+            <span style="color:var(--muted);font-size:.75rem;">${new Date(l.date).toLocaleDateString()}</span>
+        </div>
+    `).join('');
+}
+
+document.addEventListener('DOMContentLoaded', loadStats);
+document.getElementById('confirm-password').addEventListener('keydown',e=>{if(e.key==='Enter')submitPayment();});
+</script>
+</body>
+</html>
