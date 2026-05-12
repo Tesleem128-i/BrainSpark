@@ -705,7 +705,9 @@ def dashboard_stats():
 
         total_quizzes    = user.get_total_quizzes()
         average_score    = user.get_average_score()
-        connection_count = user.get_connection_count()
+        connection_count = Connection.query.filter(
+            (Connection.user_id == user_id) | (Connection.connected_user_id == user_id)
+        ).count() // 2
 
         recent_results = QuizResult.query.filter_by(user_id=user_id).order_by(QuizResult.completed_at.desc()).limit(5).all()
         recent_activity = [{
@@ -820,18 +822,7 @@ def find_study_buddies():
         except Exception:
             pending_ids = set()
 
-        # Also pending requests sent TO me (so buddy card shows pending on both sides)
-        try:
-            recv_notifs = AppNotification.query.filter_by(
-                notif_type='connection_request',
-                user_id=user_id,
-                is_read=False
-            ).all()
-            for n in recv_notifs:
-                if n.link_id:
-                    pending_ids.add(n.link_id)
-        except Exception:
-            pass
+        
 
         buddies_data = []
         for buddy in buddies:
