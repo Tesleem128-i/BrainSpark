@@ -810,9 +810,7 @@ def find_study_buddies():
     for buddy in buddies:
         shared = _shared_count(buddy)
 
-        # When NOT searching and not showing all: only surface users with >= 2 shared profile fields
-        if not is_search and not show_all and shared < 1:
-            continue
+        
 
         is_connected = Connection.query.filter(
             ((Connection.user_id == user_id) & (Connection.connected_user_id == buddy.id)) |
@@ -1266,9 +1264,7 @@ def discover_groups():
         creator = User.query.get(g.created_by)
         shared  = _shared_with_user(creator)
 
-        # Only surface groups where user shares >= 2 profile fields with the admin
-        if shared < 2:
-            continue
+        
 
         pending = GroupJoinRequest.query.filter_by(group_id=g.id, user_id=user_id, status='pending').first()
         groups_data.append({
