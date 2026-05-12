@@ -26,7 +26,9 @@ string_migrations = [
 
     # ── user ──────────────────────────────────────────────────────────────────
     'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS push_subscription TEXT',
-
+    # ── user ──────────────────────────────────────────────────────────────────
+    'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS push_subscription TEXT',
+    'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS bio VARCHAR(160)',   # ← ADD THIS LINE
     # ── chat_group_member ─────────────────────────────────────────────────────
     'ALTER TABLE chat_group_member ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT \'member\'',
     'ALTER TABLE chat_group_member ADD COLUMN IF NOT EXISTS is_muted BOOLEAN DEFAULT FALSE',
