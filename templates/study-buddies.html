@@ -18,7 +18,7 @@
         [data-theme="light"]{--border:rgba(0,0,0,0.08);--border-hover:rgba(0,0,0,0.15);}
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
         html{scroll-behavior:smooth;}
-        body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink);overflow:hidden;transition:background .4s,color .4s;height:100vh;}
+        body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink);overflow-x:hidden;overflow-y:auto;transition:background .4s,color .4s;min-height:100vh;}
         ::selection{background:var(--accent);color:#fff;}
         a{text-decoration:none;color:inherit;}
         img{display:block;max-width:100%;}
@@ -65,6 +65,7 @@
         .page-subtitle{font-size:1rem;color:rgba(255,255,255,.45);font-weight:300;}
 
         .main-wrap{max-width:1300px;margin:0 auto;padding:16px 6vw 0;display:flex;flex-direction:column;height:calc(100vh - 72px - 100px);overflow:hidden;}
+@media(max-width:768px){.main-wrap{height:auto!important;overflow:visible!important;padding:8px 3vw 80px!important;}}
         .tabs-rail{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:16px;overflow-x:auto;scrollbar-width:none;flex-shrink:0;}
         .tabs-rail::-webkit-scrollbar{display:none;}
         .tab-btn{flex-shrink:0;padding:0 20px;height:48px;background:transparent;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.875rem;font-weight:500;color:var(--muted);display:flex;align-items:center;gap:7px;position:relative;transition:color .2s;white-space:nowrap;}
@@ -1067,7 +1068,7 @@ async function loadConnections(){
         data.connections.forEach(conn=>{
             const card=document.createElement('div');card.className='conn-card';
             card.onclick=()=>{document.querySelector('[data-tab="messages"]').click();setTimeout(()=>openDMChat(conn.id,conn.name,conn.profile_pic||'/static/image/KNOWITNOW.png',conn.username),300);};
-            card.innerHTML=`<img src="${conn.profile_pic||'/static/image/KNOWITNOW.png'}" style="width:36px;height:36px;border-radius:9px;object-fit:cover;flex-shrink:0;"><div style="flex:1;min-width:0;"><div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(conn.name)}</div><div style="font-size:.72rem;color:var(--muted);">@${escHtml(conn.username)} · ${escHtml(conn.study_level||'')} · ${conn.average_score}%</div></div>${conn.unread_count>0?`<span style="background:var(--accent);color:#fff;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:99px;display:flex;align-items:center;justify-content:center;padding:0 3px;flex-shrink:0;">${conn.unread_count}</span>`:''}`;
+            card.innerHTML=`<img src="${conn.profile_pic||'/static/image/KNOWITNOW.png'}" style="width:36px;height:36px;border-radius:9px;object-fit:cover;flex-shrink:0;"><div style="flex:1;min-width:0;"><div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(conn.name)}</div><div style="font-size:.72rem;color:var(--muted);">@${escHtml(conn.username)} · ${escHtml(conn.study_level||'')} · ${conn.average_score}%</div>${conn.bio?`<div style="font-size:.72rem;color:var(--ink2);font-style:italic;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${eschtml(conn.bio)}</div>`:''}</div>${conn.unread_count>0?`<span style="background:var(--accent);color:#fff;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:99px;display:flex;align-items:center;justify-content:center;padding:0 3px;flex-shrink:0;">${conn.unread_count}</span>`:''}`;
             container.appendChild(card);
         });
     }catch{}
@@ -1126,8 +1127,19 @@ async function sendMessage(){
     if(!content&&!waSelectedImage)return;if(!waCurrentUserId)return;
     const container=document.getElementById('chat-messages');const emptyState=container.querySelector('.empty-state');if(emptyState)emptyState.remove();
     input.value='';autoResizeTA(input);cancelReply();
-    try{await fetch('/api/send-message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({receiver_id:waCurrentUserId,content})});}catch{}
+    try{
+        if(waSelectedImage){
+            const fd=new FormData();
+            fd.append('receiver_id',waCurrentUserId);
+            fd.append('content',content||'📷 Image');
+            fd.append('image',waSelectedImage);
+            await fetch('/api/send-message',{method:'POST',body:fd});
+        } else {
+            await fetch('/api/send-message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({receiver_id:waCurrentUserId,content})});
+        }
+    }catch{}
     clearWAImage();
+    await loadDMMessages(waCurrentUserId);
 }
 function handleDMKeydown(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}}
 function clearChat(){if(!confirm('Clear chat locally?'))return;document.getElementById('chat-messages').innerHTML='<div class="empty-state" style="margin:auto;"><i class="fas fa-comment-dots"></i><p>Chat cleared locally.</p></div>';}
@@ -1206,7 +1218,7 @@ async function loadGCMembers(groupId){
 }
 function renderGCMembersList(members){
     const container=document.getElementById('gc-members-list');if(!container)return;container.innerHTML='';
-    members.forEach(m=>{const item=document.createElement('div');item.className='member-item';const canRemove=gcCurrentGroupIsAdmin&&m.id!==gcCurrentGroupCreatorId;item.innerHTML=`<img src="${m.profile_pic||'/static/image/KNOWITNOW.png'}" style="width:32px;height:32px;border-radius:8px;object-fit:cover;"><div style="flex:1;min-width:0;"><div style="font-size:.85rem;font-weight:600;color:var(--ink);">${escHtml(m.name)}</div><div style="font-size:.73rem;color:var(--muted);">@${escHtml(m.username)}</div></div><div style="display:flex;align-items:center;gap:6px;"><span class="member-role-badge ${m.role}">${m.role}</span>${canRemove?`<button onclick="removeMember(${m.id},'${escHtml(m.name)}')" style="background:none;border:none;cursor:pointer;color:#e03030;font-size:.8rem;"><i class="fas fa-user-times"></i></button>`:''}</div>`;container.appendChild(item);});
+    members.forEach(m=>{const item=document.createElement('div');item.className='member-item';const canRemove=gcCurrentGroupIsAdmin&&m.id!==gcCurrentGroupCreatorId;item.innerHTML=`<img src="${m.profile_pic||'/static/image/KNOWITNOW.png'}" style="width:32px;height:32px;border-radius:8px;object-fit:cover;"><div style="flex:1;min-width:0;"><div style="font-size:.85rem;font-weight:600;color:var(--ink);">${escHtml(m.name)}</div><div style="font-size:.73rem;color:var(--muted);">@${escHtml(m.username)}</div>${m.bio?`<div style="font-size:.7rem;color:var(--ink2);font-style:italic;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;">${escHtml(m.bio)}</div>`:''}</div><div style="display:flex;align-items:center;gap:6px;"><span class="member-role-badge ${m.role}">${m.role}</span>${canRemove?`<button onclick="removeMember(${m.id},'${escHtml(m.name)}')" style="background:none;border:none;cursor:pointer;color:#e03030;font-size:.8rem;"><i class="fas fa-user-times"></i></button>`:''}</div>`;container.appendChild(item);});
 }
 async function removeMember(userId,name){if(!confirm(`Remove ${name}?`))return;const data=await fetch('/api/remove-member-from-group',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_id:gcCurrentGroupId,user_id:userId})}).then(r=>r.json());if(data.success){showToast('Member removed','success');loadGCMembers(gcCurrentGroupId);}else showToast('❌ '+(data.error||'Failed'),'error');}
 

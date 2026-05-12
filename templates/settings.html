@@ -276,6 +276,11 @@
                         <label class="form-label" for="field-profession">Profession / Role</label>
                         <input class="form-input" id="field-profession" type="text" value="{{ user.profession or '' }}" maxlength="100" placeholder="e.g. Student, Engineer">
                     </div>
+                    <div class="form-field" style="grid-column:1/-1;">
+                        <label class="form-label" for="field-bio">Bio <span style="color:var(--muted);font-weight:400;">(max 160 chars)</span></label>
+                        <input class="form-input" id="field-bio" type="text" value="{{ user.bio or '' }}" maxlength="160" placeholder="One line about yourself…" oninput="document.getElementById('bio-count').textContent=this.value.length">
+                        <span class="form-hint"><span id="bio-count">{{ (user.bio or '')|length }}</span>/160 characters · Visible on your profile card</span>
+                    </div>
                 </div>
                 <div class="divider"></div>
                 <div style="display:flex;justify-content:flex-end;gap:0.75rem">
@@ -614,6 +619,7 @@ async function saveProfile() {
     const name     = document.getElementById('field-name').value.trim();
     const username = document.getElementById('field-username').value.trim();
     const prof     = document.getElementById('field-profession').value.trim();
+    const bio      = document.getElementById('field-bio').value.trim();
 
     if (!name)     { toast('Full name is required', 'error'); return; }
     if (!username) { toast('Username is required', 'error'); return; }
@@ -626,7 +632,7 @@ async function saveProfile() {
         const res = await fetch('/api/update-settings', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type: 'profile', name, username, profession: prof })
+            body: JSON.stringify({ type: 'profile', name, username, profession: prof, bio })
         });
         const data = await res.json();
         if (data.success) {

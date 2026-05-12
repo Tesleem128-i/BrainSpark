@@ -829,6 +829,7 @@ def find_study_buddies():
             'profile_pic': buddy.get_profile_pic_url(), 'school': buddy.school,
             'study_level': buddy.study_level, 'country': buddy.country,
             'profession': buddy.profession or '',
+            'bio': buddy.bio or '',
             'tags': [t.tag for t in buddy.tags], 'total_quizzes': buddy.get_total_quizzes(),
             'average_score': buddy.get_average_score(), 'is_connected': is_connected,
             'has_pending_request': AppNotification.query.filter_by(notif_type='connection_request', link_id=user_id, user_id=buddy.id, is_read=False).first() is not None or AppNotification.query.filter_by(notif_type='connection_request', link_id=buddy.id, user_id=user_id, is_read=False).first() is not None,
@@ -966,9 +967,15 @@ def connect_user():
 def send_message_api():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
-    data        = request.json
-    receiver_id = data.get('receiver_id')
-    content     = data.get('content', '').strip()
+    is_mp = request.content_type and 'multipart/form-data' in request.content_type
+    if is_mp:
+        data = request.form
+        receiver_id = data.get('receiver_id')
+        content     = data.get('content', '').strip()
+    else:
+        data        = request.json or {}
+        receiver_id = data.get('receiver_id')
+        content     = data.get('content', '').strip()
     if not receiver_id or not content:
         return jsonify({'error': 'Missing receiver or message content'}), 400
     if len(content) > 5000:
@@ -1035,6 +1042,7 @@ def get_connections():
             'id': buddy.id, 'name': buddy.name, 'username': buddy.username,
             'profile_pic': buddy.get_profile_pic_url(), 'study_level': buddy.study_level,
             'average_score': buddy.get_average_score(), 'tags': [t.tag for t in buddy.tags],
+            'bio': buddy.bio or '',
             'unread_count': unread, 'connected_at': conn_ts
         })
 
