@@ -1017,7 +1017,7 @@ async function applyBuddyFilters(){
         const params=new URLSearchParams();
         if(search)params.append('search',search);
         if(_buddyFilter&&_buddyFilter!=='suggested'&&_buddyFilter!=='all')params.append('filter',_buddyFilter);
-        params.append('show_all','true');
+        // show_all param removed — not used server-side
         const data=await fetch(`/api/find-study-buddies?${params}`).then(r=>r.json());
         container.innerHTML='';
         if(!data.success||!data.buddies?.length){

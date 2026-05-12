@@ -43,7 +43,7 @@ class User(UserMixin, db.Model):
             path = os.path.join('uploads', 'profiles', self.profile_pic)
             if os.path.exists(path):
                 return f'/uploads/profiles/{self.profile_pic}'
-        return None
+        return '/static/image/KNOWITNOW.png'
 
     def get_average_score(self):
         avg = db.session.query(func.avg(QuizResult.score)).filter_by(user_id=self.id).scalar()
@@ -53,7 +53,9 @@ class User(UserMixin, db.Model):
         return db.session.query(func.count(QuizResult.id)).filter_by(user_id=self.id).scalar() or 0
 
     def get_connection_count(self):
-        return len(self.connections)
+        initiated = Connection.query.filter_by(user_id=self.id).count()
+        received = Connection.query.filter_by(connected_user_id=self.id).count()
+        return initiated + received
 
     def __repr__(self):
         return f'<User {self.username}>'
