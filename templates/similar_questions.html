@@ -638,6 +638,31 @@ function esc(str){
 
 // ── Init ───────────────────────────────────────────────────────
 initSlots();
+
 </script>
+<style>
+@media (max-width: 768px) {
+    .sidebar { transform: translateX(-100%); }
+    .main { margin-left: 0 !important; padding: 1rem !important; }
+    .grid-2 { grid-template-columns: 1fr !important; }
+    .pdf-slots { grid-template-columns: 1fr 1fr !important; gap: 0.5rem; }
+    .pdf-slot { min-height: 75px; padding: 0.9rem 0.5rem; }
+    .q-options { grid-template-columns: 1fr !important; }
+    .q-card { padding: 1rem; }
+    .q-text { font-size: 0.875rem; }
+    .paper-title { font-size: 1.2rem; }
+    .paper-meta { font-size: 0.72rem; gap: 0.4rem; }
+    nav { padding: 0 1rem !important; }
+    .actions-bar { flex-direction: column; align-items: stretch; }
+    .actions-bar-left { flex-wrap: wrap; }
+    .panel-body { padding: 1rem; }
+    .settings-row { grid-template-columns: 1fr !important; }
+    .hero { padding: 1.5rem; min-height: 130px; }
+    .hero-title { font-size: 1.4rem; }
+    .hero-sub { font-size: 0.82rem; }
+    .btn-accent, .btn-primary, .btn-green { width: 100%; justify-content: center; border-radius: 10px; }
+    .fingerprint-grid { grid-template-columns: 1fr !important; }
+}
+</style>
 </body>
 </html>

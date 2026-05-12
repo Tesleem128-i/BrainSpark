@@ -1082,5 +1082,35 @@ function formatTime(s) {
 window.addEventListener('load', loadQuiz);
 
 </script>
+<style>
+@media (max-width: 640px) {
+    .wrap { padding: 0.75rem !important; }
+    .panel { padding: 1.1rem 1rem !important; border-radius: 16px; }
+    .panel-title { font-size: 1.2rem; }
+    .panel-sub { font-size: 0.82rem; }
+    .time-grid { grid-template-columns: repeat(2,1fr) !important; gap: 0.5rem; }
+    .time-chip { padding: 0.7rem 0.4rem; }
+    .time-chip-val { font-size: 1rem; }
+    .result-stats { grid-template-columns: 1fr 1fr !important; gap: 0.5rem; }
+    .question-text { font-size: 1rem; }
+    .option-btn { padding: 0.7rem 0.9rem; }
+    .option-letter { width: 26px; height: 26px; font-size: 0.72rem; }
+    .option-text { font-size: 0.83rem; }
+    .quiz-q-num { font-size: 1rem; }
+    .timer-val { font-size: 1.1rem; }
+    .nav-btn { padding: 0.5rem 0.85rem; font-size: 0.78rem; }
+    .score-ring { width: 110px; height: 110px; }
+    .score-ring svg { width: 110px; height: 110px; }
+    .score-pct { font-size: 1.6rem; }
+    .result-title { font-size: 1.5rem; }
+    .count-input-wrap { flex-direction: column; align-items: flex-start; }
+    .count-input { width: 80px; }
+    .btn-row { flex-direction: column; align-items: stretch; }
+    .btn-row .btn { justify-content: center; border-radius: 12px; }
+    .dot-row { gap: 0.2rem; }
+    .dot { width: 6px; height: 6px; }
+    nav { padding: 0 1rem !important; }
+}
+</style>
 </body>
 </html>

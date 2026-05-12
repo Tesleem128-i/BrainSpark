@@ -1015,8 +1015,8 @@ async function applyBuddyFilters(){
     try{
         const params=new URLSearchParams();
         if(search)params.append('search',search);
-        if(_buddyFilter&&_buddyFilter!=='suggested')params.append('filter',_buddyFilter);
-        if(_buddyFilter==='all'||search)params.append('show_all','true');
+        if(_buddyFilter&&_buddyFilter!=='suggested'&&_buddyFilter!=='all')params.append('filter',_buddyFilter);
+        if(_buddyFilter==='all'||_buddyFilter==='suggested'||search)params.append('show_all','true');
         const data=await fetch(`/api/find-study-buddies?${params}`).then(r=>r.json());
         container.innerHTML='';
         if(!data.success||!data.buddies?.length){
@@ -1043,7 +1043,7 @@ async function applyBuddyFilters(){
 card.innerHTML=`<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px;"><img src="${buddy.profile_pic||'/static/image/KNOWITNOW.png'}" alt="${buddy.name}" class="buddy-avatar"><div style="flex:1;min-width:0;"><div class="buddy-name">${escHtml(buddy.name)}</div><div class="buddy-username">@${escHtml(buddy.username)}</div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px;"><span class="tag tag-blue">${escHtml(buddy.study_level)}</span><span class="tag tag-green">${escHtml(buddy.country)}</span></div></div></div>${matchBadge}<div style="font-size:.8rem;color:var(--muted);margin-bottom:6px;">${escHtml(buddy.school||'Independent Learner')}</div><div style="font-size:.78rem;color:var(--muted);margin-bottom:10px;">${escHtml(buddy.profession||'')}</div><div style="display:flex;justify-content:space-between;margin-bottom:10px;"><span style="font-size:.75rem;color:var(--muted);">Quizzes: <strong>${buddy.total_quizzes}</strong></span><span style="font-size:.75rem;color:var(--muted);">Avg: <strong>${buddy.average_score}%</strong></span></div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px;">${(buddy.tags||[]).slice(0,4).map(t=>`<span class="tag tag-muted">${escHtml(t)}</span>`).join('')}${(buddy.tags||[]).length>4?`<span class="tag tag-muted">+${buddy.tags.length-4}</span>`:''}</div><button onclick="${btnState.disabled?'':(`connectUser(${buddy.id})`)}" class="btn btn-full" ${btnState.disabled?'disabled':''} style="border-radius:50px;padding:9px;background:${btnState.bg};color:${btnState.color};border:1px solid ${btnState.border};${btnState.disabled?'cursor:default;':''};">${btnState.label}</button>`;
             container.appendChild(card);
         });
-    }catch{container.innerHTML=`<div style="grid-column:1/-1;" class="empty-state"><i class="fas fa-exclamation-triangle" style="color:var(--accent);"></i><p>Error loading students.</p></div>`;}
+    }catch(err){console.error('Buddy filter error:',err);container.innerHTML=`<div style="grid-column:1/-1;" class="empty-state"><i class="fas fa-exclamation-triangle" style="color:var(--accent);"></i><p>Error loading students. Check console.</p></div>`;}
 }
 
 // Keep loadBuddies pointing to the filter system so tab switching still works
@@ -2187,6 +2187,35 @@ document.addEventListener('DOMContentLoaded',()=>{
     // ESC to close BS overlay
     document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('bs-overlay').style.display!=='none'){if(confirm('Leave the brainstorm session?'))leaveBSSession();}});
 });
+
 </script>
+<style>
+@media (max-width: 768px) {
+    .main-wrap { padding: 8px 3vw 80px !important; height: auto !important; overflow: visible !important; }
+    .page-hero { padding: 72px 4vw 10px; }
+    .tabs-rail { gap: 0; }
+    .tab-btn { padding: 0 10px; font-size: 0.72rem; height: 42px; }
+    .tab-btn span { display: none; }
+    .tab-btn i { font-size: 14px; }
+    .buddies-grid { grid-template-columns: 1fr !important; }
+    .buddy-card { padding: 14px; }
+    .conn-grid { grid-template-columns: 1fr !important; }
+    .notif-panel { width: calc(100vw - 24px); right: -60px; }
+    .wa-layout, .gc-layout { flex-direction: column; height: auto; min-height: 80vh; }
+    .wa-sidebar, .gc-sidebar { width: 100% !important; max-height: 190px; border-right: none; border-bottom: 1px solid var(--border); }
+    .wa-main, .gc-main { min-height: 400px; }
+    .group-info-panel { width: 100% !important; border-left: none; border-top: 1px solid var(--border); }
+    .wa-bubble, .gc-bubble { max-width: 90%; font-size: 0.85rem; }
+    .wa-input-bar, .gc-input-bar { padding: 8px; }
+    .bs-overlay-body { flex-direction: column; }
+    .bs-chat-panel { width: 100% !important; border-left: none; border-top: 1px solid var(--border); max-height: 220px; }
+    .bs-overlay-header { padding: 8px 12px; flex-wrap: wrap; gap: 6px; }
+    .bs-overlay-title { font-size: 0.875rem; }
+    .buddy-filter-pill { font-size: 0.7rem; padding: 4px 9px; }
+    .tab-content { min-height: 0; }
+    .modal-box { margin: 0 8px; }
+    nav { padding: 0 4vw !important; }
+}
+</style>
 </body>
 </html>

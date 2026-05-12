@@ -566,7 +566,7 @@
 
   
 <!-- SIMILAR QUESTIONS PROMO CARD -->
-<div class="panel reveal" style="margin-bottom:1.5rem;margin-left:240px;margin-right:0;padding:0 2.5rem;">
+<div class="panel reveal" style="margin-bottom:1.5rem;margin-left:clamp(0px,240px,240px);margin-right:0;padding:0 clamp(1rem,2.5rem,2.5rem);">
     <div class="panel-header">
         <div>
             <div class="panel-eyebrow">AI Paper Generator</div>
@@ -1287,6 +1287,34 @@ window.addEventListener('load', () => {
     loadDashboardData();
     loadMasteryMap();   // <-- add this line
 });
+
 </script>
+<style>
+@media (max-width: 768px) {
+    .sidebar { transform: translateX(-100%); width: 80vw; max-width: 280px; }
+    .sidebar.open { transform: translateX(0); box-shadow: 8px 0 32px rgba(0,0,0,0.4); }
+    .main { margin-left: 0 !important; padding: 1rem !important; }
+    .stats-row { grid-template-columns: 1fr !important; gap: 0.75rem; }
+    .stat-card { padding: 1.1rem; }
+    .stat-value { font-size: 2rem; }
+    nav { padding: 0 1rem !important; height: 60px; }
+    .nav-links { display: none !important; }
+    .nav-user-text { display: none; }
+    .nav-logo { font-size: 1.2rem; }
+    .greeting-hero { padding: 1.5rem; min-height: 150px; }
+    .greeting-title { font-size: 1.5rem; }
+    .content-grid { grid-template-columns: 1fr !important; gap: 1rem; }
+    .panel-body { padding: 1rem; }
+    .settings-row { grid-template-columns: 1fr; }
+    .tab-btn { font-size: 0.75rem; padding: 0.4rem 0.25rem; }
+    .ai-modal { width: 100% !important; height: 92vh; border-radius: 20px 20px 0 0; }
+    .modal-overlay { padding: 0 !important; align-items: flex-end !important; justify-content: stretch !important; }
+    .ai-mode-bar { overflow-x: auto; flex-wrap: nowrap; padding: 0.5rem 0.75rem 0; }
+    .ai-mode-pill { font-size: 0.7rem; padding: 0.25rem 0.6rem; white-space: nowrap; }
+    .panel { padding: 1rem; }
+    [style*="margin-left:240px"] { margin-left: 0 !important; }
+    [style*="margin-bottom:1.5rem;margin-left:240px"] { margin-left: 0 !important; padding: 0 1rem !important; }
+}
+</style>
 </body>
 </html>
