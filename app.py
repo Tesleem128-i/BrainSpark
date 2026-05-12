@@ -852,7 +852,7 @@ def find_study_buddies():
                     average_score = 0
 
                 try:
-                    profile_pic = buddy.get_profile_pic_url() or '/static/image/KNOWITNOW.png'
+                    profile_pic = buddy.get_profile_pic_url()
                 except Exception:
                     profile_pic = '/static/image/KNOWITNOW.png'
 

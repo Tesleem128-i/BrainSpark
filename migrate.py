@@ -21,7 +21,8 @@ db_url += '?sslmode=require'
 
 engine = create_engine(db_url)
 
-migrations = [
+# ── String-based migrations ──────────────────────────────────────────────────
+string_migrations = [
 
     # ── user ──────────────────────────────────────────────────────────────────
     'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS push_subscription TEXT',
@@ -64,8 +65,28 @@ migrations = [
 
     # ── group_join_request ────────────────────────────────────────────────────
     'ALTER TABLE group_join_request ADD COLUMN IF NOT EXISTS responded_at TIMESTAMP',
+]
 
-    # ── existing tables (safe IF NOT EXISTS) ──────────────────────────────────
+# ── Tuple-based migrations (table, column, sql) ──────────────────────────────
+tuple_migrations = [
+    ("group_message", "voice_path", "ALTER TABLE group_message ADD COLUMN IF NOT EXISTS voice_path VARCHAR(500)"),
+    ("group_message", "reply_to_id", "ALTER TABLE group_message ADD COLUMN IF NOT EXISTS reply_to_id INTEGER"),
+    ("group_message", "mentions", "ALTER TABLE group_message ADD COLUMN IF NOT EXISTS mentions TEXT"),
+    ("group_message", "reactions", "ALTER TABLE group_message ADD COLUMN IF NOT EXISTS reactions TEXT"),
+    ("group_message", "is_edited", "ALTER TABLE group_message ADD COLUMN IF NOT EXISTS is_edited BOOLEAN DEFAULT FALSE"),
+    ("group_message", "is_deleted", "ALTER TABLE group_message ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE"),
+    ("group_message", "edited_at", "ALTER TABLE group_message ADD COLUMN IF NOT EXISTS edited_at TIMESTAMP"),
+    ("brainstorm_session", "whiteboard_data", "ALTER TABLE brainstorm_session ADD COLUMN IF NOT EXISTS whiteboard_data TEXT"),
+    ("brainstorm_session", "shared_doc", "ALTER TABLE brainstorm_session ADD COLUMN IF NOT EXISTS shared_doc TEXT"),
+    ("brainstorm_session", "teacher_id", "ALTER TABLE brainstorm_session ADD COLUMN IF NOT EXISTS teacher_id INTEGER"),
+    ("brainstorm_note", "color", "ALTER TABLE brainstorm_note ADD COLUMN IF NOT EXISTS color VARCHAR(20) DEFAULT '#ff4f30'"),
+    ("brainstorm_note", "upvotes", "ALTER TABLE brainstorm_note ADD COLUMN IF NOT EXISTS upvotes INTEGER DEFAULT 0"),
+    ("user", "push_subscription", "ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS push_subscription TEXT"),
+    ("chat_group_member", "is_muted", "ALTER TABLE chat_group_member ADD COLUMN IF NOT EXISTS is_muted BOOLEAN DEFAULT FALSE"),
+]
+
+# ── NEW TABLES (CREATE IF NOT EXISTS) ───────────────────────────────────────
+table_migrations = [
     """
     CREATE TABLE IF NOT EXISTS generated_question (
         id SERIAL PRIMARY KEY,
@@ -117,7 +138,6 @@ migrations = [
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )""",
 
-    # ── NEW: hand_raise table ─────────────────────────────────────────────────
     """
     CREATE TABLE IF NOT EXISTS hand_raise (
         id SERIAL PRIMARY KEY,
@@ -127,18 +147,27 @@ migrations = [
         question_text TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         answered_at TIMESTAMP
-    )""",
+    )"""
 ]
 
+# ── COMBINE ALL MIGRATIONS ───────────────────────────────────────────────────
+all_migrations = string_migrations + [sql for _, _, sql in tuple_migrations] + table_migrations
+
+print("🚀 Running PostgreSQL migrations...")
+print(f"📍 Database: {db_url.split('@')[-1].split('/')[0] if '@' in db_url else 'local'}\n")
+
 with engine.connect() as conn:
-    for sql in migrations:
+    conn.execution_options(isolation_level="AUTOCOMMIT")
+    
+    for i, sql in enumerate(all_migrations, 1):
         try:
+            first_line = sql.strip().splitlines()[0][:80]
             conn.execute(text(sql))
-            conn.commit()
-            print(f"✅ {sql.strip().splitlines()[0][:80]}")
+            print(f"✅ [{i:2d}] {first_line}...")
         except Exception as e:
-            conn.rollback()
-            print(f"❌ {sql.strip().splitlines()[0][:80]}")
-            print(f"   Error: {e}")
+            print(f"❌ [{i:2d}] {first_line}...")
+            print(f"    Error: {str(e)[:100]}")
+            continue
 
 print("\n🎉 PostgreSQL migration complete!")
+print(f"✅ {len([m for m in all_migrations if 'CREATE TABLE' in m or 'ALTER TABLE' in m])} migrations applied successfully!")

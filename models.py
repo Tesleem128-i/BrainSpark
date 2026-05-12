@@ -53,9 +53,7 @@ class User(UserMixin, db.Model):
         return db.session.query(func.count(QuizResult.id)).filter_by(user_id=self.id).scalar() or 0
 
     def get_connection_count(self):
-        initiated = Connection.query.filter_by(user_id=self.id).count()
-        received = Connection.query.filter_by(connected_user_id=self.id).count()
-        return initiated + received
+        return len(self.connections)
 
     def __repr__(self):
         return f'<User {self.username}>'
