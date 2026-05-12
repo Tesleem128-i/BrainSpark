@@ -590,7 +590,7 @@ async function saveAvatar() {
             toast('Profile picture updated!');
             const newUrl = data.url + '?t=' + Date.now();
 document.getElementById('nav-avatar').src = newUrl;
-document.getElementById('avatar-preview-img').src = newurl;
+document.getElementById('avatar-preview-img').src = newUrl;
             document.getElementById('avatar-save-btn').style.display = 'none';
             document.getElementById('avatar-cancel-btn').style.display = 'none';
             avatarFile = null;

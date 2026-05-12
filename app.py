@@ -1407,6 +1407,7 @@ def get_group_members(group_id):
     return jsonify({'success': True, 'members': [{
         'id': m.user.id, 'name': m.user.name, 'username': m.user.username,
         'profile_pic': m.user.get_profile_pic_url(), 'role': m.role,
+        'bio': m.user.bio or '',
         'joined_at': m.joined_at.isoformat()
     } for m in members]})
 
@@ -2510,6 +2511,7 @@ def update_settings():
             user.name       = name
             user.username   = username
             user.profession = profession if profession else None
+            user.bio        = data.get('bio', '').strip()[:160] or None
             db.session.commit()
             session['username'] = username
             return jsonify({'success': True})
