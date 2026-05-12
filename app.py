@@ -792,13 +792,13 @@ def find_study_buddies():
 
     # apply filter-specific query constraints
     if filter_type == 'country' and user.country:
-        query = query.filter(user.country == user.country)
+        query = query.filter(User.country == user.country)
     elif filter_type == 'school' and user.school:
-        query = query.filter(user.school.ilike(f'%{user.school}%'))
+        query = query.filter(User.school.ilike(f'%{user.school}%'))
     elif filter_type == 'profession' and user.profession:
-        query = query.filter(user.profession.ilike(f'%{user.profession}%'))
+        query = query.filter(User.profession.ilike(f'%{user.profession}%'))
     elif filter_type == 'level' and user.study_level:
-        query = query.filter(user.study_level == user.study_level)
+        query = query.filter(User.study_level == user.study_level)
     if is_search:
         # Explicit search: return any matching user regardless of shared fields
         query = query.filter(
@@ -811,7 +811,7 @@ def find_study_buddies():
         shared = _shared_count(buddy)
 
         # When NOT searching and not showing all: only surface users with >= 2 shared profile fields
-        if not is_search and not show_all and shared < 2:
+        if not is_search and not show_all and shared < 1:
             continue
 
         is_connected = Connection.query.filter(
