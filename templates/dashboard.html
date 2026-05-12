@@ -454,33 +454,13 @@
         <li><a href="#performance-section">Analytics</a></li>
     </ul>
     <div class="nav-right">
-    <!-- 🔥 SPARK TOKENS BUTTON -->
-    <a href="/tokens" class="token-btn" title="Buy Spark Tokens">
-        <i class="fas fa-bolt"></i>
-        <span id="token-count">0</span>
-    </a>
-    
-    <button class="icon-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">
-        <i class="fas fa-moon" id="theme-icon"></i>
-    </button>
-    <button class="icon-btn" onclick="window.location.href='/settings'" title="Settings">
-        <i class="fas fa-gear"></i>
-    </button>
-    <button class="icon-btn" onclick="openAIModal()" title="Ask AI" style="position:relative;">
-        <i class="fas fa-robot"></i>
-        <span id="ai-nav-dot" style="display:none;position:absolute;top:4px;right:4px;width:7px;height:7px;background:var(--green);border-radius:50%;border:1.5px solid var(--surface);"></span>
-    </button>
-    <button class="icon-btn" onclick="logout()" title="Logout" style="color:#ff4f30">
-        <i class="fas fa-sign-out-alt"></i>
-    </button>
-    <div class="nav-user">
-        <div class="nav-user-text">
-            <div class="name">{{ user.name }}</div>
-            <div class="level">{{ user.study_level }}</div>
-        </div>
-        <img src="{{ user.get_profile_pic_url() }}" alt="{{ user.name }}" class="nav-avatar">
-    </div>
-</div>
+        <a href="/tokens" class="token-btn" title="Buy Spark Tokens">
+            <i class="fas fa-bolt"></i>
+            <span id="token-count">—</span>
+        </a>
+        <button class="icon-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">
+            <i class="fas fa-moon" id="theme-icon"></i>
+        </button>
         <button class="icon-btn" onclick="window.location.href='/settings'" title="Settings">
             <i class="fas fa-gear"></i>
         </button>
@@ -1313,8 +1293,18 @@ async function loadMasteryMap() {
 }
 window.addEventListener('load', () => {
     loadDashboardData();
-    loadMasteryMap();   // <-- add this line
+    loadMasteryMap();
+    loadTokenCount();
 });
+
+async function loadTokenCount() {
+    try {
+        const data = await fetch('/api/my-token-stats').then(r => r.json());
+        if (data.success) {
+            document.getElementById('token-count').textContent = (data.spark_tokens || 0).toLocaleString();
+        }
+    } catch(e) {}
+}
 function handleAIError(errorMsg) {
     if (errorMsg === 'NO_TOKENS') {
         if (confirm('⚡ You have no Spark Tokens left.\n\nClick OK to buy tokens and power up your AI features.')) {
