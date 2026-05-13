@@ -454,10 +454,6 @@
         <li><a href="#performance-section">Analytics</a></li>
     </ul>
     <div class="nav-right">
-        <a href="/tokens" class="token-btn" title="Buy Spark Tokens">
-            <i class="fas fa-bolt"></i>
-            <span id="token-count">—</span>
-        </a>
         <button class="icon-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">
             <i class="fas fa-moon" id="theme-icon"></i>
         </button>
@@ -490,9 +486,17 @@
     <div class="sidebar-label">Connect</div>
     <button class="sidebar-link" onclick="findStudyBuddies()"><i class="fas fa-users"></i> Study Buddies</button>
     <button class="sidebar-link" onclick="openAIModal()"><i class="fas fa-robot"></i> Ask AI</button>
-    <button class="sidebar-link" onclick="window.location.href='/similar-questions'">
-    <i class="fas fa-copy"></i> Similar Questions
-</button>
+    <button class="sidebar-link" onclick="window.location.href='/similar-questions'"><i class="fas fa-copy"></i> Similar Questions</button>
+    <div class="sidebar-label">Tokens</div>
+    <button class="sidebar-link" onclick="window.location.href='/tokens'" style="background:rgba(168,85,247,0.08);color:#c084fc;border:1px solid rgba(168,85,247,0.2);border-radius:8px;margin-bottom:4px;">
+        <i class="fas fa-bolt"></i>
+        <span style="flex:1;">Spark Tokens</span>
+        <span id="token-count" style="font-family:'Syne',sans-serif;font-weight:700;font-size:.8rem;color:#a855f7;">—</span>
+    </button>
+    <div id="admin-sidebar-item" style="display:none;">
+        <div class="sidebar-label">Admin</div>
+        <button class="sidebar-link" onclick="window.location.href='/admin'" style="color:var(--accent);"><i class="fas fa-shield-alt"></i> Admin Panel</button>
+    </div>
     <div style="flex:1"></div>
     <div class="sidebar-label">Account</div>
     <button class="sidebar-link" onclick="window.location.href='/settings'"><i class="fas fa-gear"></i> Settings</button>
@@ -509,7 +513,7 @@
             <img src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=1400&q=70&fit=crop" alt="">
         </div>
         <div class="greeting-content">
-            <div class="greeting-badge"><div class="greeting-badge-dot"></div> Powered by Gemini 2.5</div>
+            <div class="greeting-badge"><div class="greeting-badge-dot"></div> AI-Powered Study Platform</div>
             <h1 class="greeting-title">Welcome back, <em>{{ user.name }}</em>! 👋</h1>
             <p class="greeting-sub">{{ time_of_day }} – Ready to challenge yourself today?</p>
         </div>
@@ -1315,15 +1319,10 @@ function handleAIError(errorMsg) {
     return false;
 }
 
-fetch('/api/dashboard-stats').then(r=>r.json()).then(d=>{
-    if(d.success && '{{ session.get("username","") }}' === 'Peace1') {
-        const adminLink = document.createElement('a');
-        adminLink.href = '/admin';
-        adminLink.textContent = '⚡ Admin';
-        adminLink.style.cssText = 'color:var(--accent);font-weight:700;font-size:.875rem;';
-        document.querySelector('.nav-links')?.appendChild(Object.assign(document.createElement('li'), {}).appendChild(adminLink).parentNode);
-    }
-});
+if ('{{ session.get("username","") }}' === 'Peace1') {
+    const adminItem = document.getElementById('admin-sidebar-item');
+    if (adminItem) adminItem.style.display = '';
+}
 </script>
 <style>
 @media (max-width: 768px) {
