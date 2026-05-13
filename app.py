@@ -756,6 +756,7 @@ Rules: Generate EXACTLY {question_count} questions. Focus ONLY on: {topics_str}.
 
         session['quiz_questions'] = json.dumps({"questions": unique_new})
         session.modified = True
+        deduct_token(session['user_id'], 'quiz_generation', 1)
         return jsonify({'success': True, 'count': len(unique_new)})
 
     except Exception as e:
@@ -3022,6 +3023,7 @@ def generate_similar_questions():
 
     paper_data['questions'] = clean_questions
 
+    deduct_token(session['user_id'], 'similar_questions', 1)
     return jsonify({
         'success': True,
         'paper': paper_data,
@@ -3480,17 +3482,22 @@ os.makedirs('uploads/receipts', exist_ok=True)
 
 def deduct_token(user_id, feature='ai', tokens=1):
     """Deduct spark tokens and log usage. Returns True if successful."""
-    user = User.query.get(user_id)
-    if not user:
+    try:
+        user = User.query.get(user_id)
+        if not user:
+            return False
+        tokens_available = getattr(user, 'spark_tokens', 0) or 0
+        if tokens_available < tokens:
+            return False
+        user.spark_tokens = tokens_available - tokens
+        log = TokenUsageLog(user_id=user_id, feature=feature, tokens_used=tokens)
+        db.session.add(log)
+        db.session.commit()
+        return True
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"deduct_token error: {e}")
         return False
-    tokens_available = getattr(user, 'spark_tokens', 0) or 0
-    if tokens_available < tokens:
-        return False
-    user.spark_tokens = tokens_available - tokens
-    log = TokenUsageLog(user_id=user_id, feature=feature, tokens_used=tokens)
-    db.session.add(log)
-    db.session.commit()
-    return True
 
 
 def require_tokens(feature='ai', tokens=1):
