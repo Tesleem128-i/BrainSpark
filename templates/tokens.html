@@ -168,8 +168,8 @@
                     {% endfor %}
                 </div>
 
-                <input type="number" id="amount-input" class="inp" placeholder="Or enter amount (₦{{ '{:,}'.format(min_payment) }} – ₦{{ '{:,}'.format(max_payment) }})"
-                       min="{{ min_payment }}" max="{{ max_payment }}" oninput="updatePreview()">
+                <input type="number" id="amount-input" class="inp" placeholder="Or enter amount (₦1,500 – ₦6,000)"
+                       min="1500" max="6000" oninput="updatePreview()">
                 <div id="token-preview" style="font-size:.85rem;color:var(--spark);margin-bottom:14px;min-height:20px;"></div>
 
                 <button class="btn btn-spark" onclick="startPaymentFlow()">
@@ -357,7 +357,7 @@ function showStep(name){
 }
 
 function copyAcct(){
-    navigator.clipboard?.writeText('{{ account_number }}').then(()=>showToast('Account number copied!','success'));
+    navigator.clipboard?.writeText('1234567890').then(()=>showToast('Account number copied!','success'));
 }
 function copyRef(){
     if(currentRef) navigator.clipboard?.writeText(currentRef).then(()=>showToast('Reference copied!','success'));
@@ -372,18 +372,18 @@ function selectTier(amt, el){
 function updatePreview(){
     const amt=parseFloat(document.getElementById('amount-input').value)||0;
     const preview=document.getElementById('token-preview');
-    if(amt<{{ min_payment }}||amt>{{ max_payment }}){
-        preview.textContent=amt>0?`Amount must be ₦{{ '{:,}'.format(min_payment) }}–₦{{ '{:,}'.format(max_payment) }}`:'';
+    if(amt<1500||amt>6000){
+        preview.textContent=amt>0?`Amount must be ₦1,500–₦6,000`:'';
         preview.style.color='var(--accent)';return;
     }
-    const tokens=amt-{{ platform_fee }};
-    preview.textContent=`✅ You will receive ${tokens.toLocaleString()} Spark Tokens (₦{{ platform_fee }} platform fee deducted)`;
+    const tokens=amt-500;
+    preview.textContent=`✅ You will receive ${tokens.toLocaleString()} Spark Tokens (₦500 platform fee deducted)`;
     preview.style.color='var(--spark)';
 }
 
 function startPaymentFlow(){
     const amt=parseFloat(document.getElementById('amount-input').value)||0;
-    if(amt<{{ min_payment }}||amt>{{ max_payment }}){
+    if(amt<1500||amt>6000){
         showToast('Please select or enter a valid amount first','warn');return;
     }
     currentAmt=amt;
