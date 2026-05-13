@@ -459,13 +459,53 @@ def toggle_mode():
 @app.route('/send_email', methods=['POST'])
 def send_email():
     try:
-        data = request.json
-        body = f"Name: {data.get('name')}\nEmail: {data.get('email')}\nMessage: {data.get('message')}"
-        send_email_brevo(os.getenv('MAIL_USERNAME'), 'Brainspark Admin',
-                         f"Brainspark Contact: {data.get('name', 'No Name')}", body)
+        data = request.json or {}
+        name    = data.get('name', '').strip()
+        email   = data.get('email', '').strip()
+        message = data.get('message', '').strip()
+
+        if not name or not email or not message:
+            return jsonify({'message': 'Please fill in all fields.'}), 400
+
+        is_support = message.startswith('[Token Support]')
+        subject = f"{'🔴 Token Support Request' if is_support else 'Brainspark Contact'}: {name}"
+
+        body = (
+            f"Name:    {name}\n"
+            f"Email:   {email}\n"
+            f"{'─'*40}\n"
+            f"{message}\n\n"
+            f"{'─'*40}\n"
+            f"Sent from Brainspark {'token support form' if is_support else 'contact form'}\n"
+            f"Time: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}"
+        )
+
+        # Send to admin
+        send_email_brevo(
+            os.getenv('MAIL_USERNAME'), 'Brainspark Admin',
+            subject, body
+        )
+
+        # Send confirmation to user
+        confirmation_body = (
+            f"Hi {name},\n\n"
+            f"We received your message and will get back to you within 24 hours.\n\n"
+            f"Your message:\n{message}\n\n"
+            f"— The Brainspark Team"
+        )
+        try:
+            send_email_brevo(
+                email, name,
+                'Brainspark — We received your message',
+                confirmation_body
+            )
+        except Exception:
+            pass  # confirmation to user is non-fatal
+
         return jsonify({'message': 'Message sent successfully!'})
     except Exception as e:
-        return jsonify({'message': f'Error: {str(e)}'}), 500
+        logger.error(f"send_email error: {e}", exc_info=True)
+        return jsonify({'message': f'Error: {str(e)[:200]}'}), 500
 
 
 @app.route('/upload_notes', methods=['POST'])

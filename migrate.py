@@ -26,23 +26,25 @@ string_migrations = [
 
     # ── user ──────────────────────────────────────────────────────────────────
     'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS push_subscription TEXT',
-    # ── user ──────────────────────────────────────────────────────────────────
-    'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS push_subscription TEXT',
-    'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS bio VARCHAR(160)',   # ← ADD THIS LINE
-    # ── chat_group_member ─────────────────────────────────────────────────────
-    'ALTER TABLE chat_group_member ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT \'member\'',
-    'ALTER TABLE chat_group_member ADD COLUMN IF NOT EXISTS is_muted BOOLEAN DEFAULT FALSE',
-    # ── spark tokens ──────────────────────────────────────────────────────────
+    'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS bio VARCHAR(160)',
     'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS spark_tokens INTEGER DEFAULT 0',
     'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS total_tokens_purchased INTEGER DEFAULT 0',
     'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS total_spent REAL DEFAULT 0.0',
+
+    # ── chat_group_member ─────────────────────────────────────────────────────
+    "ALTER TABLE chat_group_member ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'member'",
+    'ALTER TABLE chat_group_member ADD COLUMN IF NOT EXISTS is_muted BOOLEAN DEFAULT FALSE',
+
+    # ── message ───────────────────────────────────────────────────────────────
+    'ALTER TABLE message ADD COLUMN IF NOT EXISTS image_path VARCHAR(500)',
+
     # ── group_message ─────────────────────────────────────────────────────────
-    'ALTER TABLE group_message ADD COLUMN IF NOT EXISTS message_type VARCHAR(20) DEFAULT \'text\'',
+    "ALTER TABLE group_message ADD COLUMN IF NOT EXISTS message_type VARCHAR(20) DEFAULT 'text'",
     'ALTER TABLE group_message ADD COLUMN IF NOT EXISTS image_path VARCHAR(500)',
     'ALTER TABLE group_message ADD COLUMN IF NOT EXISTS pdf_path VARCHAR(500)',
     'ALTER TABLE group_message ADD COLUMN IF NOT EXISTS voice_path VARCHAR(500)',
     'ALTER TABLE group_message ADD COLUMN IF NOT EXISTS poll_id INTEGER',
-    'ALTER TABLE group_message ADD COLUMN IF NOT EXISTS reply_to_id INTEGER REFERENCES group_message(id)',
+    'ALTER TABLE group_message ADD COLUMN IF NOT EXISTS reply_to_id INTEGER',
     'ALTER TABLE group_message ADD COLUMN IF NOT EXISTS mentions TEXT',
     'ALTER TABLE group_message ADD COLUMN IF NOT EXISTS reactions TEXT',
     'ALTER TABLE group_message ADD COLUMN IF NOT EXISTS is_edited BOOLEAN DEFAULT FALSE',
@@ -55,10 +57,10 @@ string_migrations = [
     # ── brainstorm_session ────────────────────────────────────────────────────
     'ALTER TABLE brainstorm_session ADD COLUMN IF NOT EXISTS whiteboard_data TEXT',
     'ALTER TABLE brainstorm_session ADD COLUMN IF NOT EXISTS shared_doc TEXT',
-    'ALTER TABLE brainstorm_session ADD COLUMN IF NOT EXISTS teacher_id INTEGER REFERENCES "user"(id)',
+    'ALTER TABLE brainstorm_session ADD COLUMN IF NOT EXISTS teacher_id INTEGER',
 
     # ── brainstorm_note ───────────────────────────────────────────────────────
-    'ALTER TABLE brainstorm_note ADD COLUMN IF NOT EXISTS color VARCHAR(20) DEFAULT \'#ff4f30\'',
+    "ALTER TABLE brainstorm_note ADD COLUMN IF NOT EXISTS color VARCHAR(20) DEFAULT '#ff4f30'",
     'ALTER TABLE brainstorm_note ADD COLUMN IF NOT EXISTS mentions TEXT',
     'ALTER TABLE brainstorm_note ADD COLUMN IF NOT EXISTS tags TEXT',
     'ALTER TABLE brainstorm_note ADD COLUMN IF NOT EXISTS mention_ai BOOLEAN DEFAULT FALSE',
@@ -70,28 +72,27 @@ string_migrations = [
 
     # ── group_join_request ────────────────────────────────────────────────────
     'ALTER TABLE group_join_request ADD COLUMN IF NOT EXISTS responded_at TIMESTAMP',
+
+    # ── token_transaction ─────────────────────────────────────────────────────
+    'ALTER TABLE token_transaction ADD COLUMN IF NOT EXISTS reference_code VARCHAR(20)',
+    'ALTER TABLE token_transaction ADD COLUMN IF NOT EXISTS verified_by INTEGER',
+    'ALTER TABLE token_transaction ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP',
+    'ALTER TABLE token_transaction ADD COLUMN IF NOT EXISTS platform_fee REAL DEFAULT 500',
 ]
 
-# ── Tuple-based migrations (table, column, sql) ──────────────────────────────
-tuple_migrations = [
-    ("group_message", "voice_path", "ALTER TABLE group_message ADD COLUMN IF NOT EXISTS voice_path VARCHAR(500)"),
-    ("group_message", "reply_to_id", "ALTER TABLE group_message ADD COLUMN IF NOT EXISTS reply_to_id INTEGER"),
-    ("group_message", "mentions", "ALTER TABLE group_message ADD COLUMN IF NOT EXISTS mentions TEXT"),
-    ("group_message", "reactions", "ALTER TABLE group_message ADD COLUMN IF NOT EXISTS reactions TEXT"),
-    ("group_message", "is_edited", "ALTER TABLE group_message ADD COLUMN IF NOT EXISTS is_edited BOOLEAN DEFAULT FALSE"),
-    ("group_message", "is_deleted", "ALTER TABLE group_message ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE"),
-    ("group_message", "edited_at", "ALTER TABLE group_message ADD COLUMN IF NOT EXISTS edited_at TIMESTAMP"),
-    ("brainstorm_session", "whiteboard_data", "ALTER TABLE brainstorm_session ADD COLUMN IF NOT EXISTS whiteboard_data TEXT"),
-    ("brainstorm_session", "shared_doc", "ALTER TABLE brainstorm_session ADD COLUMN IF NOT EXISTS shared_doc TEXT"),
-    ("brainstorm_session", "teacher_id", "ALTER TABLE brainstorm_session ADD COLUMN IF NOT EXISTS teacher_id INTEGER"),
-    ("brainstorm_note", "color", "ALTER TABLE brainstorm_note ADD COLUMN IF NOT EXISTS color VARCHAR(20) DEFAULT '#ff4f30'"),
-    ("brainstorm_note", "upvotes", "ALTER TABLE brainstorm_note ADD COLUMN IF NOT EXISTS upvotes INTEGER DEFAULT 0"),
-    ("user", "push_subscription", "ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS push_subscription TEXT"),
-    ("chat_group_member", "is_muted", "ALTER TABLE chat_group_member ADD COLUMN IF NOT EXISTS is_muted BOOLEAN DEFAULT FALSE"),
-]
-
-# ── NEW TABLES (CREATE IF NOT EXISTS) ───────────────────────────────────────
+# ── NEW TABLES (CREATE IF NOT EXISTS) ────────────────────────────────────────
 table_migrations = [
+    """
+    CREATE TABLE IF NOT EXISTS group_file (
+        id SERIAL PRIMARY KEY,
+        filename VARCHAR(300) NOT NULL,
+        file_data TEXT NOT NULL,
+        mime_type VARCHAR(100),
+        file_type VARCHAR(20),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """,
+
     """
     CREATE TABLE IF NOT EXISTS generated_question (
         id SERIAL PRIMARY KEY,
@@ -104,7 +105,8 @@ table_migrations = [
         difficulty VARCHAR(20),
         question_type VARCHAR(20),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )""",
+    )
+    """,
 
     """
     CREATE TABLE IF NOT EXISTS topic_mastery (
@@ -117,7 +119,8 @@ table_migrations = [
         last_score REAL DEFAULT 0.0,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE (user_id, topic)
-    )""",
+    )
+    """,
 
     """
     CREATE TABLE IF NOT EXISTS wrong_answer (
@@ -128,7 +131,8 @@ table_migrations = [
         correct_answer VARCHAR(10),
         user_answer VARCHAR(10),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )""",
+    )
+    """,
 
     """
     CREATE TABLE IF NOT EXISTS app_notification (
@@ -141,7 +145,8 @@ table_migrations = [
         link_id INTEGER,
         is_read BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )""",
+    )
+    """,
 
     """
     CREATE TABLE IF NOT EXISTS hand_raise (
@@ -152,7 +157,9 @@ table_migrations = [
         question_text TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         answered_at TIMESTAMP
-    )"""
+    )
+    """,
+
     """
     CREATE TABLE IF NOT EXISTS token_transaction (
         id SERIAL PRIMARY KEY,
@@ -162,10 +169,12 @@ table_migrations = [
         tokens_added INTEGER NOT NULL,
         receipt_path VARCHAR(500),
         status VARCHAR(20) DEFAULT 'pending',
+        reference_code VARCHAR(20),
         verified_by INTEGER,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         verified_at TIMESTAMP
-    )""",
+    )
+    """,
 
     """
     CREATE TABLE IF NOT EXISTS token_usage_log (
@@ -174,27 +183,45 @@ table_migrations = [
         feature VARCHAR(100),
         tokens_used INTEGER DEFAULT 1,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )"""
+    )
+    """,
 ]
 
-# ── COMBINE ALL MIGRATIONS ───────────────────────────────────────────────────
-all_migrations = string_migrations + [sql for _, _, sql in tuple_migrations] + table_migrations
+# ── COMBINE ALL ───────────────────────────────────────────────────────────────
+all_migrations = string_migrations + table_migrations
 
-print("🚀 Running PostgreSQL migrations...")
-print(f"📍 Database: {db_url.split('@')[-1].split('/')[0] if '@' in db_url else 'local'}\n")
+print("Running PostgreSQL migrations...")
+print(f"Database: {db_url.split('@')[-1].split('/')[0] if '@' in db_url else 'local'}\n")
+
+ok_count = 0
+skip_count = 0
+error_count = 0
 
 with engine.connect() as conn:
     conn.execution_options(isolation_level="AUTOCOMMIT")
-    
-    for i, sql in enumerate(all_migrations, 1):
-        try:
-            first_line = sql.strip().splitlines()[0][:80]
-            conn.execute(text(sql))
-            print(f"✅ [{i:2d}] {first_line}...")
-        except Exception as e:
-            print(f"❌ [{i:2d}] {first_line}...")
-            print(f"    Error: {str(e)[:100]}")
-            continue
 
-print("\n🎉 PostgreSQL migration complete!")
-print(f"✅ {len([m for m in all_migrations if 'CREATE TABLE' in m or 'ALTER TABLE' in m])} migrations applied successfully!")
+    for i, sql in enumerate(all_migrations, 1):
+        first_line = sql.strip().splitlines()[0][:80]
+        try:
+            conn.execute(text(sql))
+            print(f"OK    [{i:2d}] {first_line}")
+            ok_count += 1
+        except Exception as e:
+            err = str(e).strip()
+            if 'already exists' in err or 'duplicate column' in err.lower():
+                print(f"SKIP  [{i:2d}] {first_line}")
+                skip_count += 1
+            else:
+                print(f"ERROR [{i:2d}] {first_line}")
+                print(f"       {err[:120]}")
+                error_count += 1
+
+print(f"\nMigration complete!")
+print(f"  OK:     {ok_count}")
+print(f"  Skipped:{skip_count}")
+print(f"  Errors: {error_count}")
+
+if error_count == 0:
+    print("\nAll good! Your database is up to date.")
+else:
+    print(f"\n{error_count} error(s) above need attention.")

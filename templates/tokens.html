@@ -108,8 +108,8 @@
         .alert-error{background:rgba(255,79,48,.08);border:1px solid rgba(255,79,48,.2);color:var(--accent);}
         .alert-success{background:rgba(0,201,141,.08);border:1px solid rgba(0,201,141,.3);color:var(--green);}
 
-        /* Sections */
-        #step-amount{} 
+        /* Sections — all hidden by default except step-amount, JS controls visibility */
+        #step-password{display:none;}
         #step-payment{display:none;}
         #step-upload{display:none;}
         #step-verifying{display:none;}
@@ -349,11 +349,11 @@ function showToast(msg, type='success'){
     t.style.cssText=`position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 20px;background:${c[type]||c.info};color:#fff;border-radius:12px;font-weight:600;font-size:.875rem;font-family:'DM Sans',sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.3);max-width:340px;line-height:1.5;`;
     t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),4000);
 }
-
 function showStep(name){
     ['step-amount','step-password','step-payment','step-upload','step-verifying','step-done'].forEach(id=>{
         const el=document.getElementById(id);
-        if(el) el.style.display = id===name ? '' : 'none';
+        if(!el) return;
+        el.style.display = id===name ? 'block' : 'none';
     });
 }
 
@@ -388,10 +388,15 @@ function startPaymentFlow(){
         showToast('Please select or enter a valid amount first','warn');return;
     }
     currentAmt=amt;
-    document.getElementById('pw-amount-display').textContent=`₦${amt.toLocaleString()}`;
-    document.getElementById('payment-password').value='';
+    const pwDisplay=document.getElementById('pw-amount-display');
+    if(pwDisplay) pwDisplay.textContent=`₦${amt.toLocaleString()}`;
+    const pwInput=document.getElementById('payment-password');
+    if(pwInput) pwInput.value='';
     showStep('step-password');
-    setTimeout(()=>document.getElementById('payment-password').focus(),100);
+    setTimeout(()=>{
+        const el=document.getElementById('payment-password');
+        if(el) el.focus();
+    },150);
 }
 
 async function confirmPassword(){
