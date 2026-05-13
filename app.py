@@ -3659,8 +3659,16 @@ def verify_payment_receipt():
         receipt_path = os.path.join('uploads', 'receipts', filename)
         os.makedirs(os.path.join('uploads', 'receipts'), exist_ok=True)
         receipt_bytes = receipt.read()
-        with open(receipt_path, 'wb') as f:
-            f.write(receipt_bytes)
+        # Store in DB instead of disk (Render filesystem is ephemeral)
+        from models import GroupFile
+        gf = GroupFile(
+            filename=filename,
+            file_data=base64.b64encode(receipt_bytes).decode('utf-8'),
+            mime_type=mime_map.get(ext, 'image/jpeg'),
+            file_type='receipt'
+        )
+        db.session.add(gf)
+        db.session.flush()
         txn.receipt_path = filename
         db.session.flush()
         # AI verification using Gemini vision
@@ -3684,8 +3692,18 @@ def verify_payment_receipt():
                         'gif': 'image/gif', 'webp': 'image/webp', 'pdf': 'application/pdf'}
             mime_type = mime_map.get(ext, 'image/jpeg')
             if ext == 'pdf':
-                # For PDFs extract text and verify textually
-                pdf_text = extract_pdf_text_simple(receipt_path)
+                # Read from DB
+                from models import GroupFile as GF
+                gf_rec = GF.query.filter_by(filename=filename).first()
+                stored_bytes = base64.b64decode(gf_rec.file_data) if gf_rec else b''
+                import io as _io
+                pdf_stream = _io.BytesIO(stored_bytes)
+                import PyPDF2 as _PyPDF2
+                pdf_reader = _PyPDF2.PdfReader(pdf_stream)
+                pdf_text = ''
+                for page in pdf_reader.pages[:10]:
+                    try: pdf_text += page.extract_text() or ''
+                    except: continue
                 text_prompt = (
                     f"You are a payment verification system. Analyse this bank transfer receipt text.\n\n"
                     f"Receipt text:\n{pdf_text[:3000]}\n\n"
@@ -3702,8 +3720,10 @@ def verify_payment_receipt():
                 )
                 ai_resp = model.generate_content(text_prompt)
             else:
-                with open(receipt_path, 'rb') as img_f:
-                    img_bytes = img_f.read()
+                # Read from DB
+                from models import GroupFile as GF
+                gf_rec = GF.query.filter_by(filename=filename).first()
+                img_bytes = base64.b64decode(gf_rec.file_data) if gf_rec else b''
                 ai_resp = vision_model.generate_content([
                     verification_prompt,
                     {'mime_type': mime_type, 'data': img_bytes}
