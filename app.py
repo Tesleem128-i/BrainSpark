@@ -748,7 +748,7 @@ def dashboard_stats():
 @app.route('/logout', methods=['POST'])
 def logout():
     session.clear()
-    return jsonify({'success': True, 'message': 'Logged out successfully'})
+    return jsonify({'success': True, 'message': 'Logged out successfully', 'redirect': '/'})
 
 
 # ═════════════════════════════════════════════════════════════════════════════

@@ -957,7 +957,16 @@ function formatDateSep(iso){const d=new Date(iso),now=new Date();if(d.toDateStri
 function scrollToBottom(id){const el=document.getElementById(id);if(el)el.scrollTop=el.scrollHeight;}
 function hexToRgba(hex,alpha){hex=hex.replace('#','');const r=parseInt(hex.slice(0,2),16),g=parseInt(hex.slice(2,4),16),b=parseInt(hex.slice(4,6),16);return`rgba(${r},${g},${b},${alpha})`;}
 function stringToColor(str){let h=0;for(let i=0;i<str.length;i++)h=str.charCodeAt(i)+((h<<5)-h);const colors=['#ff6244','#7ba4ff','#00c98d','#f5c842','#a855f7','#f97316'];return colors[Math.abs(h)%colors.length];}
-function logout(){if(confirm('Logout?'))fetch('/logout',{method:'POST'}).then(()=>location.href='/');}
+async function logout(){
+    if(!confirm('Logout?'))return;
+    try{
+        const res=await fetch('/logout',{method:'POST'});
+        const data=await res.json();
+        window.location.href=data.redirect||'/login';
+    }catch(e){
+        window.location.href='/login';
+    }
+}
 function openLightbox(url){document.getElementById('lightbox-img').src=url;openModal('lightbox');}
 
 // ═══════════════════════════════════════════════════════════
