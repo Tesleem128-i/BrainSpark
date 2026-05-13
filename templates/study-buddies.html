@@ -1108,6 +1108,7 @@ async function openDMChat(userId,name,pic,username){
     if(!name){const c=waAllContacts.find(x=>x.id==userId);if(c){name=c.name;pic=c.profile_pic||'/static/image/KNOWITNOW.png';username=c.username;}else{await loadChatList();const f=waAllContacts.find(x=>x.id==userId);if(f){name=f.name;pic=f.profile_pic||'/static/image/KNOWITNOW.png';username=f.username;}else{name='User';pic='/static/image/KNOWITNOW.png';}}}
     waCurrentUserId=userId;waCurrentUserName=name;waCurrentUserPic=pic;waReplyTo=null;cancelReply();
     document.getElementById('wa-no-chat').style.display='none';const area=document.getElementById('wa-chat-area');area.style.display='flex';
+document.getElementById('wa-main').classList.add('mobile-open');
     document.getElementById('wa-header-pic').src=pic;document.getElementById('wa-header-name').textContent=name;
     document.querySelectorAll('.wa-contact-item').forEach(el=>el.classList.toggle('active',el.dataset.userId==userId));
     await loadDMMessages(userId);
@@ -1153,7 +1154,10 @@ async function sendMessage(){
     await loadDMMessages(waCurrentUserId);
 }
 function handleDMKeydown(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}}
-function clearChat(){if(!confirm('Clear chat locally?'))return;document.getElementById('chat-messages').innerHTML='<div class="empty-state" style="margin:auto;"><i class="fas fa-comment-dots"></i><p>Chat cleared locally.</p></div>';}
+function clearChat(){
+    if(window.innerWidth<=768){document.getElementById('wa-main').classList.remove('mobile-open');return;}
+    if(!confirm('Clear chat locally?'))return;document.getElementById('chat-messages').innerHTML='<div class="empty-state" style="margin:auto;"><i class="fas fa-comment-dots"></i><p>Chat cleared locally.</p></div>';
+}
 function setDMReply(id,sender,content){waReplyTo={id,sender,content};document.getElementById('wa-reply-name').textContent=sender;document.getElementById('wa-reply-text').textContent=content;document.getElementById('wa-reply-preview').style.display='';document.getElementById('message-input').focus();}
 function cancelReply(){waReplyTo=null;const el=document.getElementById('wa-reply-preview');if(el)el.style.display='none';}
 function handleWAImageSelect(e){const f=e.target.files[0];if(!f)return;waSelectedImage=f;document.getElementById('wa-img-filename').textContent=f.name;document.getElementById('wa-img-preview-strip').style.display='flex';const r=new FileReader();r.onload=ev=>{document.getElementById('wa-img-thumb').src=ev.target.result;};r.readAsDataURL(f);}
@@ -1426,8 +1430,8 @@ async function renameGroup(){const newName=document.getElementById('rename-input
 async function showAddMemberModal(){openModal('add-member-modal');const list=document.getElementById('add-member-list');list.innerHTML='<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading…</p></div>';const data=await fetch('/api/get-connections').then(r=>r.json());list.innerHTML='';const memberIds=new Set(gcMembers.map(m=>m.id));const available=(data.connections||[]).filter(c=>!memberIds.has(c.id));if(!available.length){list.innerHTML='<div class="empty-state"><i class="fas fa-user-check"></i><p>All connections already in group.</p></div>';return;}available.forEach(c=>{const item=document.createElement('div');item.className='member-item';item.innerHTML=`<img src="${c.profile_pic||'/static/image/KNOWITNOW.png'}" style="width:36px;height:36px;border-radius:9px;object-fit:cover;"><div style="flex:1;min-width:0;"><div style="font-size:.875rem;font-weight:600;">${escHtml(c.name)}</div><div style="font-size:.75rem;color:var(--muted);">@${escHtml(c.username)}</div></div><button onclick="addMemberToGroup(${c.id},'${escHtml(c.name)}')" class="btn btn-green btn-sm"><i class="fas fa-plus"></i> Add</button>`;list.appendChild(item);});}
 function filterAddMemberList(q){document.querySelectorAll('#add-member-list .member-item').forEach(item=>{item.style.display=q&&!item.textContent.toLowerCase().includes(q.toLowerCase())?'none':'';});}
 async function addMemberToGroup(userId,name){const data=await fetch('/api/add-member-to-group',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_id:gcCurrentGroupId,user_id:userId})}).then(r=>r.json());if(data.success){showToast(`✅ ${name} added!`,'success');closeModal('add-member-modal');loadGCMembers(gcCurrentGroupId);}else showToast('❌ '+(data.error||'Failed'),'error');}
-async function leaveGroupConfirm(){if(!window.confirm(`Leave "${gcCurrentGroupName}"?`))return;const data=await fetch('/api/leave-group',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_id:gcCurrentGroupId})}).then(r=>r.json());if(data.success){showToast('You left the group','info');gcCurrentGroupId=null;document.getElementById('gc-chat-area').style.display='none';document.getElementById('gc-no-group').style.display='';document.getElementById('gc-info-panel').style.display='none';loadMyGroups();}else showToast('❌ '+(data.error||'Failed'),'error');}
-async function deleteGroupConfirm(){if(!window.confirm(`DELETE "${gcCurrentGroupName}"? This cannot be undone!`))return;if(!window.confirm('All messages will be lost!'))return;const data=await fetch('/api/delete-group',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_id:gcCurrentGroupId})}).then(r=>r.json());if(data.success){showToast('Group deleted','info');gcCurrentGroupId=null;document.getElementById('gc-chat-area').style.display='none';document.getElementById('gc-no-group').style.display='';document.getElementById('gc-info-panel').style.display='none';loadMyGroups();}else showToast('❌ '+(data.error||'Failed'),'error');}
+async function leaveGroupConfirm(){if(!window.confirm(`Leave "${gcCurrentGroupName}"?`))return;const data=await fetch('/api/leave-group',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_id:gcCurrentGroupId})}).then(r=>r.json());if(data.success){showToast('You left the group','info');gcCurrentGroupId=null;document.getElementById('gc-chat-area').style.display='none';document.getElementById('gc-no-group').style.display='';document.getElementById('gc-main').classList.remove('mobile-open');document.getElementById('gc-info-panel').style.display='none';loadMyGroups();}else showToast('❌ '+(data.error||'Failed'),'error');}
+async function deleteGroupConfirm(){if(!window.confirm(`DELETE "${gcCurrentGroupName}"? This cannot be undone!`))return;if(!window.confirm('All messages will be lost!'))return;const data=await fetch('/api/delete-group',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_id:gcCurrentGroupId})}).then(r=>r.json());if(data.success){showToast('Group deleted','info');gcCurrentGroupId=null;document.getElementById('gc-chat-area').style.display='none';document.getElementById('gc-no-group').style.display='';document.getElementById('gc-main').classList.remove('mobile-open');document.getElementById('gc-info-panel').style.display='none';loadMyGroups();}else showToast('❌ '+(data.error||'Failed'),'error');}
 
 // Auto-poll group messages
 setInterval(async()=>{if(!gcCurrentGroupId)return;const container=document.getElementById('gc-msgs');try{const data=await fetch(`/api/get-group-messages/${gcCurrentGroupId}`).then(r=>r.json());if(!data.messages?.length)return;const rendered=new Set([...container.querySelectorAll('.gc-msg-row[data-msg-id]')].map(el=>el.dataset.msgId));let newMsgs=false;const empty=container.querySelector('.empty-state');if(empty)empty.remove();data.messages.forEach(msg=>{const id=String(msg.id);if(!rendered.has(id)){renderGCMessage(container,msg,data.current_user_id);newMsgs=true;}});if(newMsgs){const el=document.getElementById('gc-msgs');if(el&&el.scrollHeight-el.scrollTop-el.clientHeight<150)scrollToBottom('gc-msgs');}}catch{}},6000);
@@ -2216,30 +2220,78 @@ setInterval(loadNotifications,30000);
 </script>
 <style>
 @media (max-width: 768px) {
-    .main-wrap { padding: 8px 3vw 80px !important; height: auto !important; overflow: visible !important; }
-    .page-hero { padding: 72px 4vw 10px; }
-    .tabs-rail { gap: 0; }
-    .tab-btn { padding: 0 10px; font-size: 0.72rem; height: 42px; }
-    .tab-btn span { display: none; }
-    .tab-btn i { font-size: 14px; }
+    /* ── layout ── */
+    .main-wrap { padding: 0 !important; height: calc(100vh - 72px) !important; overflow: hidden !important; }
+    .page-hero { display: none !important; }
+
+    /* ── bottom tab bar ── */
+    .tabs-rail { position: fixed; bottom: 0; left: 0; right: 0; z-index: 90; background: var(--surface); border-top: 1px solid var(--border); border-bottom: none; height: 56px; display: flex; justify-content: space-around; padding: 0; margin: 0; }
+    .tab-btn { flex: 1; padding: 0; height: 56px; flex-direction: column; gap: 3px; font-size: 0.58rem; justify-content: center; }
+    .tab-btn i { font-size: 18px; }
+    .tab-btn span { display: block !important; font-size: 0.58rem; }
+    .tab-btn::after { display: none; }
+    .tab-btn.active { color: var(--accent); }
+    .tab-content { height: calc(100vh - 72px - 56px) !important; overflow-y: auto; padding: 12px !important; }
+    .tab-content.active { display: flex; flex-direction: column; }
+
+    /* ── messages tab: no padding ── */
+    #messages.tab-content, #my-groups.tab-content { padding: 0 !important; }
+
+    /* ── DM: sidebar full screen, chat overlay ── */
+    .wa-layout { flex-direction: column; height: 100% !important; min-height: 0; border: none; border-radius: 0; }
+    .wa-sidebar { width: 100% !important; height: 100% !important; max-height: none !important; flex: 1; border: none; display: flex; flex-direction: column; }
+    .wa-sidebar-header { background: var(--accent); padding: 14px 16px; }
+    .wa-sidebar-title { color: #fff; }
+    .wa-sidebar-header .nav-icon-btn { background: rgba(255,255,255,0.2); border-color: transparent; color: #fff; }
+    .wa-search-wrap input { border-radius: 20px; }
+    .wa-avatar { width: 50px !important; height: 50px !important; border-radius: 50% !important; }
+
+    /* DM chat area: fixed full screen overlay */
+    .wa-main { position: fixed !important; inset: 0 !important; z-index: 150 !important; display: none !important; flex-direction: column; background: var(--surface2); }
+    .wa-main.mobile-open { display: flex !important; }
+    #wa-chat-area { display: flex; flex-direction: column; height: 100%; }
+    .wa-chat-header { background: var(--accent); padding: 10px 14px; }
+    #wa-header-name { color: #fff; }
+    .wa-chat-header .nav-icon-btn { background: rgba(255,255,255,0.2); border-color: transparent; color: #fff; }
+    .wa-messages-area { flex: 1; overflow-y: auto; padding: 10px 12px; }
+    .wa-bubble { max-width: 82%; font-size: 0.875rem; }
+    .wa-input-bar { padding: 8px 10px; background: var(--surface); }
+    .wa-textarea { border-radius: 22px; }
+
+    /* ── Group chat: same pattern ── */
+    .gc-layout { flex-direction: column; height: 100% !important; min-height: 0; border: none; border-radius: 0; }
+    .gc-sidebar { width: 100% !important; height: 100% !important; max-height: none !important; flex: 1; border: none; display: flex; flex-direction: column; }
+    .gc-sidebar-hd { background: var(--accent); padding: 14px 16px; }
+    .gc-sidebar-hd span { color: #fff !important; }
+    .gc-sidebar-hd .nav-icon-btn { background: rgba(255,255,255,0.2); border-color: transparent; color: #fff; }
+    .gc-main { position: fixed !important; inset: 0 !important; z-index: 150 !important; display: none !important; flex-direction: column; }
+    .gc-main.mobile-open { display: flex !important; }
+    #gc-chat-area { display: flex; flex-direction: column; height: 100%; }
+    .gc-header { background: var(--accent); padding: 10px 14px; }
+    #gc-header-name { color: #fff; }
+    #gc-header-members { color: rgba(255,255,255,0.75) !important; }
+    .gc-header .nav-icon-btn { background: rgba(255,255,255,0.2); border-color: transparent; color: #fff; }
+    .gc-msgs { padding: 10px 12px; overflow-y: auto; }
+    .gc-bubble { max-width: 82%; font-size: 0.875rem; }
+    .gc-input-bar { padding: 8px 10px; background: var(--surface); }
+
+    /* Group info panel: fixed full screen */
+    .group-info-panel { position: fixed !important; inset: 0 !important; z-index: 160 !important; width: 100% !important; border: none; overflow-y: auto; }
+
+    /* ── other tabs ── */
     .buddies-grid { grid-template-columns: 1fr !important; }
     .buddy-card { padding: 14px; }
     .conn-grid { grid-template-columns: 1fr !important; }
+    .buddy-filter-pill { font-size: 0.7rem; padding: 4px 9px; }
     .notif-panel { width: calc(100vw - 24px); right: -60px; }
-    .wa-layout, .gc-layout { flex-direction: column; height: auto; min-height: 80vh; }
-    .wa-sidebar, .gc-sidebar { width: 100% !important; max-height: 190px; border-right: none; border-bottom: 1px solid var(--border); }
-    .wa-main, .gc-main { min-height: 400px; }
-    .group-info-panel { width: 100% !important; border-left: none; border-top: 1px solid var(--border); }
-    .wa-bubble, .gc-bubble { max-width: 90%; font-size: 0.85rem; }
-    .wa-input-bar, .gc-input-bar { padding: 8px; }
+    .modal-box { margin: 0 8px; }
+    nav { padding: 0 4vw !important; }
+
+    /* ── brainstorm overlay ── */
     .bs-overlay-body { flex-direction: column; }
     .bs-chat-panel { width: 100% !important; border-left: none; border-top: 1px solid var(--border); max-height: 220px; }
     .bs-overlay-header { padding: 8px 12px; flex-wrap: wrap; gap: 6px; }
     .bs-overlay-title { font-size: 0.875rem; }
-    .buddy-filter-pill { font-size: 0.7rem; padding: 4px 9px; }
-    .tab-content { min-height: 0; }
-    .modal-box { margin: 0 8px; }
-    nav { padding: 0 4vw !important; }
 }
 </style>
 </body>
