@@ -3122,7 +3122,46 @@ def join_brainstorm_session():
         'whiteboard_data': s.whiteboard_data, 'status': s.status,
         'group_id': s.group_id, 'teacher_id': s.teacher_id
     }})
+@app.route('/api/delete-dm-message', methods=['POST'])
+def delete_dm_message():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    data = request.json or {}
+    msg_id = data.get('message_id')
+    user_id = session['user_id']
+    msg = Message.query.get(msg_id)
+    if not msg:
+        return jsonify({'error': 'Message not found'}), 404
+    if msg.sender_id != user_id:
+        return jsonify({'error': 'Can only delete your own messages'}), 403
+    try:
+        db.session.delete(msg)
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
+
+@app.route('/api/clear-dm-chat', methods=['POST'])
+def clear_dm_chat():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    data = request.json or {}
+    buddy_id = data.get('buddy_id')
+    user_id = session['user_id']
+    if not buddy_id:
+        return jsonify({'error': 'buddy_id required'}), 400
+    try:
+        Message.query.filter(
+            Message.sender_id == user_id,
+            Message.receiver_id == buddy_id
+        ).delete(synchronize_session=False)
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/leave-brainstorm-session', methods=['POST'])
 def leave_brainstorm_session():

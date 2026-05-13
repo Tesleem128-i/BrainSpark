@@ -1157,16 +1157,31 @@ async function sendMessage(){
     await loadDMMessages(waCurrentUserId);
 }
 function handleDMKeydown(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}}
-function clearChat(){
-    if(window.innerWidth<=768){document.getElementById('wa-main').classList.remove('mobile-open');return;}
-    if(!confirm('Clear chat locally?'))return;document.getElementById('chat-messages').innerHTML='<div class="empty-state" style="margin:auto;"><i class="fas fa-comment-dots"></i><p>Chat cleared locally.</p></div>';
+async function clearChat(){
+    if(!waCurrentUserId)return;
+    if(!confirm('Clear entire conversation? This deletes your sent messages permanently.'))return;
+    try{
+        const data=await fetch('/api/clear-dm-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({buddy_id:waCurrentUserId})}).then(r=>r.json());
+        if(data.success){showToast('Chat cleared','info');loadDMMessages(waCurrentUserId);}
+        else showToast('❌ '+(data.error||'Failed'),'error');
+    }catch{showToast('❌ Error','error');}
 }
 function setDMReply(id,sender,content){waReplyTo={id,sender,content};document.getElementById('wa-reply-name').textContent=sender;document.getElementById('wa-reply-text').textContent=content;document.getElementById('wa-reply-preview').style.display='';document.getElementById('message-input').focus();}
+async function deleteDMMessage(msgId, isSent){
+    if(!isSent){showToast('You can only delete your own messages','warn');return;}
+    if(!confirm('Delete this message?'))return;
+    try{
+        const data=await fetch('/api/delete-dm-message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message_id:msgId})}).then(r=>r.json());
+        if(data.success){showToast('Message deleted','info');loadDMMessages(waCurrentUserId);}
+        else showToast('❌ '+(data.error||'Failed'),'error');
+    }catch{showToast('❌ Error','error');}
+}
 function cancelReply(){waReplyTo=null;const el=document.getElementById('wa-reply-preview');if(el)el.style.display='none';}
 function handleWAImageSelect(e){const f=e.target.files[0];if(!f)return;waSelectedImage=f;document.getElementById('wa-img-filename').textContent=f.name;document.getElementById('wa-img-preview-strip').style.display='flex';const r=new FileReader();r.onload=ev=>{document.getElementById('wa-img-thumb').src=ev.target.result;};r.readAsDataURL(f);}
 function clearWAImage(){waSelectedImage=null;const s=document.getElementById('wa-img-preview-strip');if(s)s.style.display='none';const fi=document.getElementById('wa-file-input');if(fi)fi.value='';}
 let _dmCtxMenu=null;
-function showDMCtxMenu(e,msgId,idx,contentEnc,isSent){e.preventDefault();if(_dmCtxMenu)_dmCtxMenu.remove();const content=decodeURIComponent(contentEnc);_dmCtxMenu=document.createElement('div');_dmCtxMenu.className='wa-context-menu';[{icon:'fa-reply',label:'Reply',fn:()=>setDMReply(msgId,isSent?'You':waCurrentUserName,content)},{icon:'fa-copy',label:'Copy',fn:()=>navigator.clipboard?.writeText(content)}].forEach(a=>{const d=document.createElement('div');d.className='wa-ctx-item';d.innerHTML=`<i class="fas ${a.icon}" style="width:14px;"></i> ${a.label}`;d.onclick=()=>{a.fn();_dmCtxMenu?.remove();_dmCtxMenu=null;};_dmCtxMenu.appendChild(d);});const x=Math.min(e.clientX,window.innerWidth-180),y=Math.min(e.clientY,window.innerHeight-120);_dmCtxMenu.style.cssText=`left:${x}px;top:${y}px;`;document.body.appendChild(_dmCtxMenu);setTimeout(()=>document.addEventListener('click',()=>{_dmCtxMenu?.remove();_dmCtxMenu=null;},{once:true}),10);}
+function showDMCtxMenu(e,msgId,idx,contentEnc,isSent){e.preventDefault();if(_dmCtxMenu)_dmCtxMenu.remove();const content=decodeURIComponent(contentEnc);_dmCtxMenu=document.createElement('div');_dmCtxMenu.className='wa-context-menu';[{icon:'fa-reply',label:'Reply',fn:()=>setDMReply(msgId,isSent?'You':waCurrentUserName,content)},{icon:'fa-copy',label:'Copy',fn:()=>navigator.clipboard?.writeText(content)},
+{icon:'fa-trash',label:'Delete',danger:true,fn:()=>deleteDMMessage(msgId,isSent)}].forEach(a=>{const d=document.createElement('div');d.className='wa-ctx-item';d.innerHTML=`<i class="fas ${a.icon}" style="width:14px;"></i> ${a.label}`;d.onclick=()=>{a.fn();_dmCtxMenu?.remove();_dmCtxMenu=null;};_dmCtxMenu.appendChild(d);});const x=Math.min(e.clientX,window.innerWidth-180),y=Math.min(e.clientY,window.innerHeight-120);_dmCtxMenu.style.cssText=`left:${x}px;top:${y}px;`;document.body.appendChild(_dmCtxMenu);setTimeout(()=>document.addEventListener('click',()=>{_dmCtxMenu?.remove();_dmCtxMenu=null;},{once:true}),10);}
 setInterval(async()=>{if(!waCurrentUserId)return;try{const data=await fetch(`/api/get-messages/${waCurrentUserId}`).then(r=>r.json());if(!data.messages?.length)return;const container=document.getElementById('chat-messages');if(!container||document.getElementById('messages').className.indexOf('active')===-1)return;const rendered=new Set([...container.querySelectorAll('.wa-msg-row[data-msg-id]')].map(el=>el.dataset.msgId));const empty=container.querySelector('.empty-state');if(empty&&data.messages.length)empty.remove();let newMsgs=false;data.messages.forEach((msg,idx)=>{const id=String(msg.id);if(!rendered.has(id)&&!id.startsWith('tmp-')){container.appendChild(buildDMBubble(msg,idx,data.current_user_id||_myUserId));newMsgs=true;}});if(newMsgs){const el=document.getElementById('chat-messages');if(el.scrollHeight-el.scrollTop-el.clientHeight<150)scrollToBottom('chat-messages');}}catch{}},8000);
 
 // ═══════════════════════════════════════════════════════════
@@ -1384,7 +1399,8 @@ function cancelGCReply(){gcReplyTo=null;document.getElementById('gc-reply-bar').
 let _gcCtxMenu=null;
 function showGCCtxMenu(e,msgId,contentEnc,isSent,isDeleted){
     e.preventDefault();if(_gcCtxMenu)_gcCtxMenu.remove();const content=decodeURIComponent(contentEnc);_gcCtxMenu=document.createElement('div');_gcCtxMenu.className='wa-context-menu';
-    const actions=[];if(!isDeleted){actions.push({icon:'fa-reply',label:'Reply',fn:()=>setGCReply(msgId,isSent?'You':'them',content)});actions.push({icon:'fa-copy',label:'Copy',fn:()=>navigator.clipboard?.writeText(content)});actions.push({icon:'fa-smile',label:'React',fn:()=>showGCReactPicker(msgId,e.clientX,e.clientY)});if(isSent)actions.push({icon:'fa-edit',label:'Edit',fn:()=>editGCMessage(msgId,content)});if(isSent||gcCurrentGroupIsAdmin)actions.push({icon:'fa-trash',label:'Delete',danger:true,fn:()=>deleteGCMessage(msgId)});}
+    const actions=[];if(!isDeleted){actions.push({icon:'fa-reply',label:'Reply',fn:()=>setGCReply(msgId,isSent?'You':'them',content)});actions.push({icon:'fa-copy',label:'Copy',fn:()=>navigator.clipboard?.writeText(content)},
+{icon:'fa-trash',label:'Delete',danger:true,fn:()=>deleteDMMessage(msgId,isSent)});actions.push({icon:'fa-smile',label:'React',fn:()=>showGCReactPicker(msgId,e.clientX,e.clientY)});if(isSent)actions.push({icon:'fa-edit',label:'Edit',fn:()=>editGCMessage(msgId,content)});if(isSent||gcCurrentGroupIsAdmin)actions.push({icon:'fa-trash',label:'Delete',danger:true,fn:()=>deleteGCMessage(msgId)});}
     actions.forEach(a=>{const d=document.createElement('div');d.className='wa-ctx-item'+(a.danger?' danger':'');d.innerHTML=`<i class="fas ${a.icon}" style="width:14px;"></i> ${a.label}`;d.onclick=()=>{a.fn();_gcCtxMenu?.remove();_gcCtxMenu=null;};_gcCtxMenu.appendChild(d);});
     const x=Math.min(e.clientX,window.innerWidth-180),y=Math.min(e.clientY,window.innerHeight-actions.length*42-20);_gcCtxMenu.style.cssText=`left:${x}px;top:${y}px;`;document.body.appendChild(_gcCtxMenu);
     setTimeout(()=>document.addEventListener('click',()=>{_gcCtxMenu?.remove();_gcCtxMenu=null;},{once:true}),10);
