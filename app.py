@@ -1096,7 +1096,7 @@ def get_messages(buddy_id):
         (Message.sender_id == buddy_id) & (Message.receiver_id == user_id) & (Message.is_read == False)
     ).update({Message.is_read: True})
     db.session.commit()
-    return jsonify({'success': True, 'messages': [{
+    return jsonify({'success': True, 'current_user_id': user_id, 'messages': [{
         'id': m.id, 'sender_id': m.sender_id, 'sender_name': m.sender.name,
         'receiver_id': m.receiver_id, 'content': m.content,
         'image_url': f'/api/file/{m.image_path}' if getattr(m, 'image_path', None) else None,
@@ -3116,6 +3116,27 @@ def delete_group():
     if group.created_by != user_id:
         return jsonify({'error': 'Only the group creator can delete this group'}), 403
     try:
+        # Delete related records that may not cascade automatically
+        GroupJoinRequest.query.filter_by(group_id=group_id).delete(synchronize_session=False)
+        AppNotification.query.filter_by(link_type='group', link_id=group_id).delete(synchronize_session=False)
+        # Delete brainstorm sessions and their notes/handraises
+        sessions = BrainstormSession.query.filter_by(group_id=group_id).all()
+        for s in sessions:
+            HandRaise.query.filter_by(session_id=s.id).delete(synchronize_session=False)
+            BrainstormNote.query.filter_by(session_id=s.id).delete(synchronize_session=False)
+        BrainstormSession.query.filter_by(group_id=group_id).delete(synchronize_session=False)
+        # Null out poll_id on messages before deleting polls (avoids FK constraint)
+        GroupMessage.query.filter_by(group_id=group_id).update({'poll_id': None}, synchronize_session=False)
+        db.session.flush()
+        # Delete polls and their options/votes
+        polls = Poll.query.filter_by(group_id=group_id).all()
+        for p in polls:
+            PollVote.query.filter_by(poll_id=p.id).delete(synchronize_session=False)
+            PollOption.query.filter_by(poll_id=p.id).delete(synchronize_session=False)
+        Poll.query.filter_by(group_id=group_id).delete(synchronize_session=False)
+        # Delete messages and members
+        GroupMessage.query.filter_by(group_id=group_id).delete(synchronize_session=False)
+        ChatGroupMember.query.filter_by(group_id=group_id).delete(synchronize_session=False)
         db.session.delete(group)
         db.session.commit()
         return jsonify({'success': True})

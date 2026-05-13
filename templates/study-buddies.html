@@ -920,6 +920,7 @@
 const EMOJI_SET=['👍','❤️','😂','😮','😢','🙏','🔥','✅','💯','🎉','👏','🤔','😊','💪','📚','🎓','⭐','🙌','💡','✍️','🤩','🥳','😎','💎','🏆'];
 
 // DM state
+let _myUserId=null;
 let waCurrentUserId=null,waCurrentUserName='',waCurrentUserPic='',waAllContacts=[],waReplyTo=null,waSelectedImage=null;
 
 // Group chat state
@@ -1116,13 +1117,14 @@ async function loadDMMessages(userId){
         const data=await fetch(`/api/get-messages/${userId}`).then(r=>r.json());
         const container=document.getElementById('chat-messages');container.innerHTML='';
         if(!data.messages?.length){container.innerHTML=`<div class="empty-state" style="margin:auto;"><i class="fas fa-hand-paper"></i><p>Say hello to <strong>${escHtml(waCurrentUserName)}</strong>! 👋</p></div>`;return;}
+        const myId=data.current_user_id||_myUserId;
         let lastDate='';
-        data.messages.forEach((msg,idx)=>{const d=new Date(msg.created_at).toDateString();if(d!==lastDate){lastDate=d;const sep=document.createElement('div');sep.className='wa-date-sep';sep.innerHTML=`<span>${formatDateSep(msg.created_at)}</span>`;container.appendChild(sep);}container.appendChild(buildDMBubble(msg,idx));});
+        data.messages.forEach((msg,idx)=>{const d=new Date(msg.created_at).toDateString();if(d!==lastDate){lastDate=d;const sep=document.createElement('div');sep.className='wa-date-sep';sep.innerHTML=`<span>${formatDateSep(msg.created_at)}</span>`;container.appendChild(sep);}container.appendChild(buildDMBubble(msg,idx,myId));});
         scrollToBottom('chat-messages');
     }catch{}
 }
-function buildDMBubble(msg,idx){
-    const isSent=msg.sender_id!==waCurrentUserId;const row=document.createElement('div');row.className=`wa-msg-row ${isSent?'sent':'received'}`;row.dataset.msgId=msg.id;
+function buildDMBubble(msg,idx,myId){
+    const isSent=msg.sender_id===(myId||_myUserId);const row=document.createElement('div');row.className=`wa-msg-row ${isSent?'sent':'received'}`;row.dataset.msgId=msg.id;
     const time=formatTime(msg.created_at);
     let replyHtml='';if(msg.reply_to_content)replyHtml=`<div class="wa-reply-block"><div class="rb-name">${escHtml(msg.reply_to_sender||'Message')}</div><div class="rb-text">${escHtml(msg.reply_to_content)}</div></div>`;
     let contentHtml='';if(msg.image_url){const _src=msg.image_url;contentHtml+=`<img src="${_src}" class="wa-msg-img" onclick="openLightbox('${_src}')" alt="Image">`;}else if(msg.content&&msg.content!=='📷 Image'){contentHtml+=`<div>${escHtml(msg.content)}</div>`;}else if(msg.content){contentHtml+=`<div>${escHtml(msg.content)}</div>`;}
@@ -1158,7 +1160,7 @@ function handleWAImageSelect(e){const f=e.target.files[0];if(!f)return;waSelecte
 function clearWAImage(){waSelectedImage=null;const s=document.getElementById('wa-img-preview-strip');if(s)s.style.display='none';const fi=document.getElementById('wa-file-input');if(fi)fi.value='';}
 let _dmCtxMenu=null;
 function showDMCtxMenu(e,msgId,idx,contentEnc,isSent){e.preventDefault();if(_dmCtxMenu)_dmCtxMenu.remove();const content=decodeURIComponent(contentEnc);_dmCtxMenu=document.createElement('div');_dmCtxMenu.className='wa-context-menu';[{icon:'fa-reply',label:'Reply',fn:()=>setDMReply(msgId,isSent?'You':waCurrentUserName,content)},{icon:'fa-copy',label:'Copy',fn:()=>navigator.clipboard?.writeText(content)}].forEach(a=>{const d=document.createElement('div');d.className='wa-ctx-item';d.innerHTML=`<i class="fas ${a.icon}" style="width:14px;"></i> ${a.label}`;d.onclick=()=>{a.fn();_dmCtxMenu?.remove();_dmCtxMenu=null;};_dmCtxMenu.appendChild(d);});const x=Math.min(e.clientX,window.innerWidth-180),y=Math.min(e.clientY,window.innerHeight-120);_dmCtxMenu.style.cssText=`left:${x}px;top:${y}px;`;document.body.appendChild(_dmCtxMenu);setTimeout(()=>document.addEventListener('click',()=>{_dmCtxMenu?.remove();_dmCtxMenu=null;},{once:true}),10);}
-setInterval(async()=>{if(!waCurrentUserId)return;try{const data=await fetch(`/api/get-messages/${waCurrentUserId}`).then(r=>r.json());if(!data.messages?.length)return;const container=document.getElementById('chat-messages');if(!container||document.getElementById('messages').className.indexOf('active')===-1)return;const rendered=new Set([...container.querySelectorAll('.wa-msg-row[data-msg-id]')].map(el=>el.dataset.msgId));const empty=container.querySelector('.empty-state');if(empty&&data.messages.length)empty.remove();let newMsgs=false;data.messages.forEach((msg,idx)=>{const id=String(msg.id);if(!rendered.has(id)&&!id.startsWith('tmp-')){container.appendChild(buildDMBubble(msg,idx));newMsgs=true;}});if(newMsgs){const el=document.getElementById('chat-messages');if(el.scrollHeight-el.scrollTop-el.clientHeight<150)scrollToBottom('chat-messages');}}catch{}},8000);
+setInterval(async()=>{if(!waCurrentUserId)return;try{const data=await fetch(`/api/get-messages/${waCurrentUserId}`).then(r=>r.json());if(!data.messages?.length)return;const container=document.getElementById('chat-messages');if(!container||document.getElementById('messages').className.indexOf('active')===-1)return;const rendered=new Set([...container.querySelectorAll('.wa-msg-row[data-msg-id]')].map(el=>el.dataset.msgId));const empty=container.querySelector('.empty-state');if(empty&&data.messages.length)empty.remove();let newMsgs=false;data.messages.forEach((msg,idx)=>{const id=String(msg.id);if(!rendered.has(id)&&!id.startsWith('tmp-')){container.appendChild(buildDMBubble(msg,idx,data.current_user_id||_myUserId));newMsgs=true;}});if(newMsgs){const el=document.getElementById('chat-messages');if(el.scrollHeight-el.scrollTop-el.clientHeight<150)scrollToBottom('chat-messages');}}catch{}},8000);
 
 // ═══════════════════════════════════════════════════════════
 //  EMOJI PICKER
@@ -2204,7 +2206,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 setTimeout(()=>loadNotifications(),500);
 setInterval(loadNotifications,30000);
     // Resolve current user ID early
-    fetch('/api/dashboard-stats').then(r=>r.json()).then(d=>{if(d.success)bsCurrentUserId=d.user_id;}).catch(()=>{});
+    fetch('/api/dashboard-stats').then(r=>r.json()).then(d=>{if(d.success){bsCurrentUserId=d.user_id;_myUserId=d.user_id;}}).catch(()=>{});
     const params=new URLSearchParams(window.location.search);const joinId=params.get('join');
     if(joinId){document.querySelector('[data-tab="my-groups"]').click();setTimeout(()=>showToast(`Opening group ${joinId}…`,'info'),500);}
     // ESC to close BS overlay
