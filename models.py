@@ -14,12 +14,10 @@ class TokenTransaction(db.Model):
     tokens_added = db.Column(db.Integer, nullable=False)
     receipt_path = db.Column(db.String(500))
     status = db.Column(db.String(20), default='pending')  # pending, approved, rejected
-    verified_by = db.Column(db.Integer, nullable=True)
+    verified_by = db.Column(db.Integer, nullable=True)  # 0 = auto, user_id = admin
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     verified_at = db.Column(db.DateTime, nullable=True)
     reference_code = db.Column(db.String(20), nullable=True)
-    verified_at = db.Column(db.DateTime, nullable=True)
-    verified_by = db.Column(db.Integer, nullable=True)  # 0 = auto, user_id = admin
 
     user = db.relationship('User', backref='token_transactions')
 
