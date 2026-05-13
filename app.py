@@ -3462,7 +3462,13 @@ def submit_payment():
         db.session.rollback()
         logger.error(f"Payment submission error: {e}", exc_info=True)
         return jsonify({'success': False, 'error': str(e)[:200]}), 500
-
+@app.route('/api/generate-payment-ref', methods=['POST'])
+def generate_payment_ref():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    import random, string
+    ref = 'BSP-' + ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+    return jsonify({'success': True, 'reference_code': ref})
 
 @app.route('/api/my-token-stats')
 def my_token_stats():

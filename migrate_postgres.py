@@ -150,6 +150,7 @@ all_migrations = [
         verified_by INTEGER,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         verified_at TIMESTAMP
+        reference_code VARCHAR(20)
     )
     """,
 
