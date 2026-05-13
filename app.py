@@ -3019,11 +3019,23 @@ def serve_db_file(filename):
     
 @app.route('/run-migration-xyz123')
 def run_migration():
+    results = []
+    migrations = [
+        "ALTER TABLE token_transaction ADD COLUMN IF NOT EXISTS reference_code VARCHAR(20)",
+        "ALTER TABLE message ADD COLUMN IF NOT EXISTS image_path VARCHAR(500)",
+        "ALTER TABLE token_transaction ADD COLUMN IF NOT EXISTS verified_by INTEGER",
+        "ALTER TABLE token_transaction ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP",
+    ]
     try:
         with db.engine.connect() as conn:
-            conn.execute(db.text("ALTER TABLE token_transaction ADD COLUMN IF NOT EXISTS reference_code VARCHAR(20)"))
+            for sql in migrations:
+                try:
+                    conn.execute(db.text(sql))
+                    results.append(f'OK: {sql[:60]}')
+                except Exception as e:
+                    results.append(f'SKIP: {str(e)[:80]}')
             conn.commit()
-        return 'Migration successful!'
+        return '<br>'.join(results) + '<br><strong>Done!</strong>'
     except Exception as e:
         return f'Error: {str(e)}'
 @app.route('/legal')
@@ -3495,8 +3507,178 @@ def generate_payment_ref():
     if 'user_id' not in session:
         return jsonify({'success': False, 'error': 'Unauthorized'}), 401
     import random, string
+    data = request.get_json(silent=True) or {}
+    password = data.get('password', '')
+    amount = data.get('amount', 0)
+    user = User.query.get(session['user_id'])
+    if not user or not user.check_password(password):
+        return jsonify({'success': False, 'error': 'Incorrect password.'}), 403
+    try:
+        amount = float(amount)
+    except Exception:
+        return jsonify({'success': False, 'error': 'Invalid amount.'}), 400
+    if amount < MIN_PAYMENT or amount > MAX_PAYMENT:
+        return jsonify({'success': False, 'error': f'Amount must be ₦{MIN_PAYMENT:,}–₦{MAX_PAYMENT:,}.'}), 400
     ref = 'BSP-' + ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
-    return jsonify({'success': True, 'reference_code': ref})
+    tokens_added = int(amount - PLATFORM_FEE)
+    txn = TokenTransaction(
+        user_id=session['user_id'],
+        amount_paid=amount,
+        platform_fee=PLATFORM_FEE,
+        tokens_added=tokens_added,
+        receipt_path='',
+        status='pending',
+        reference_code=ref
+    )
+    db.session.add(txn)
+    db.session.commit()
+    return jsonify({'success': True, 'reference': ref, 'transaction_id': txn.id})
+
+@app.route('/api/expire-payment-ref', methods=['POST'])
+def expire_payment_ref():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    data = request.get_json(silent=True) or {}
+    txn_id = data.get('transaction_id')
+    if txn_id:
+        txn = TokenTransaction.query.filter_by(id=txn_id, user_id=session['user_id'], status='pending').first()
+        if txn:
+            txn.status = 'rejected'
+            db.session.commit()
+    return jsonify({'success': True})
+
+@app.route('/api/verify-payment-receipt', methods=['POST'])
+def verify_payment_receipt():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    txn_id = request.form.get('transaction_id')
+    receipt = request.files.get('receipt')
+    if not txn_id or not receipt:
+        return jsonify({'success': False, 'error': 'Missing data.'}), 400
+    txn = TokenTransaction.query.filter_by(id=txn_id, user_id=session['user_id'], status='pending').first()
+    if not txn:
+        return jsonify({'success': False, 'error': 'Transaction not found or already processed.'}), 404
+    # Check 5-minute window
+    elapsed = (datetime.utcnow() - txn.created_at).total_seconds()
+    if elapsed > 360:  # 6 min grace (5 min + 1 min buffer)
+        txn.status = 'rejected'
+        db.session.commit()
+        return jsonify({'success': False, 'error': 'Payment window expired. Please start a new transaction.'}), 400
+    if not allowed_file(receipt.filename):
+        return jsonify({'success': False, 'error': 'Invalid file type.'}), 400
+    try:
+        ext = receipt.filename.rsplit('.', 1)[1].lower()
+        ts = int(datetime.utcnow().timestamp() * 1000)
+        filename = f"receipt_{session['user_id']}_{ts}.{ext}"
+        receipt_path = os.path.join('uploads', 'receipts', filename)
+        os.makedirs(os.path.join('uploads', 'receipts'), exist_ok=True)
+        receipt_bytes = receipt.read()
+        with open(receipt_path, 'wb') as f:
+            f.write(receipt_bytes)
+        txn.receipt_path = filename
+        db.session.flush()
+        # AI verification using Gemini vision
+        user = User.query.get(session['user_id'])
+        verification_prompt = (
+            f"You are a payment verification system. Analyse this bank transfer receipt image carefully.\n\n"
+            f"Expected details to verify:\n"
+            f"- Account Number: {ACCOUNT_NUMBER}\n"
+            f"- Account Name: {ACCOUNT_NAME}\n"
+            f"- Bank: {BANK_NAME}\n"
+            f"- Amount: ₦{txn.amount_paid:,.0f}\n"
+            f"- Reference/Narration must contain: {txn.reference_code}\n"
+            f"- Transfer must be dated today or yesterday (current UTC date: {datetime.utcnow().strftime('%Y-%m-%d')})\n\n"
+            f"Check the receipt image and respond ONLY with valid JSON:\n"
+            f'{{"verified": true/false, "reason": "brief explanation", '
+            f'"found_amount": "amount seen", "found_reference": "reference seen", '
+            f'"found_account": "account number seen", "found_date": "date seen"}}'
+        )
+        try:
+            mime_map = {'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png',
+                        'gif': 'image/gif', 'webp': 'image/webp', 'pdf': 'application/pdf'}
+            mime_type = mime_map.get(ext, 'image/jpeg')
+            if ext == 'pdf':
+                # For PDFs extract text and verify textually
+                pdf_text = extract_pdf_text_simple(receipt_path)
+                text_prompt = (
+                    f"You are a payment verification system. Analyse this bank transfer receipt text.\n\n"
+                    f"Receipt text:\n{pdf_text[:3000]}\n\n"
+                    f"Expected details:\n"
+                    f"- Account Number: {ACCOUNT_NUMBER}\n"
+                    f"- Account Name: {ACCOUNT_NAME}\n"
+                    f"- Amount: ₦{txn.amount_paid:,.0f}\n"
+                    f"- Reference/Narration must contain: {txn.reference_code}\n"
+                    f"- Transfer must be dated today or yesterday (current UTC date: {datetime.utcnow().strftime('%Y-%m-%d')})\n\n"
+                    f"Respond ONLY with valid JSON:\n"
+                    f'{{"verified": true, "reason": "brief explanation", '
+                    f'"found_amount": "amount seen", "found_reference": "reference seen", '
+                    f'"found_account": "account seen", "found_date": "date seen"}}'
+                )
+                ai_resp = model.generate_content(text_prompt)
+            else:
+                with open(receipt_path, 'rb') as img_f:
+                    img_bytes = img_f.read()
+                ai_resp = vision_model.generate_content([
+                    verification_prompt,
+                    {'mime_type': mime_type, 'data': img_bytes}
+                ])
+            resp_text = ai_resp.text.strip()
+            resp_text = resp_text.replace('```json', '').replace('```', '').strip()
+            s_idx = resp_text.find('{')
+            e_idx = resp_text.rfind('}') + 1
+            if s_idx == -1 or e_idx <= s_idx:
+                raise ValueError('No JSON in AI response')
+            result = json.loads(resp_text[s_idx:e_idx])
+            verified = result.get('verified', False)
+        except Exception as ai_err:
+            logger.error(f"AI verification error: {ai_err}", exc_info=True)
+            # Fall back to manual review if AI fails
+            verified = False
+            result = {'reason': 'AI verification unavailable — your payment has been queued for manual review.'}
+        if verified:
+            txn.status = 'approved'
+            txn.verified_by = 0  # 0 = auto-verified
+            txn.verified_at = datetime.utcnow()
+            user.spark_tokens = (getattr(user, 'spark_tokens', 0) or 0) + txn.tokens_added
+            user.total_tokens_purchased = (getattr(user, 'total_tokens_purchased', 0) or 0) + txn.tokens_added
+            user.total_spent = (getattr(user, 'total_spent', 0) or 0) + txn.amount_paid
+            db.session.commit()
+            _create_notification(session['user_id'], 'payment',
+                                 f'✅ {txn.tokens_added:,} Spark Tokens added!',
+                                 f'Your payment of ₦{txn.amount_paid:,.0f} was verified automatically.',
+                                 'tokens', txn.id)
+            # Also notify admin
+            admin = User.query.filter_by(username=ADMIN_USERNAME).first()
+            if admin:
+                _create_notification(admin.id, 'payment',
+                                     f'Auto-verified: {user.name}',
+                                     f'₦{txn.amount_paid:,.0f} — {txn.tokens_added} tokens added.',
+                                     'admin', txn.id)
+            return jsonify({
+                'success': True,
+                'tokens_added': txn.tokens_added,
+                'message': f'{txn.tokens_added:,} Spark Tokens added to your account!'
+            })
+        else:
+            # Keep as pending for manual admin review
+            db.session.commit()
+            reason = result.get('reason', 'Could not verify payment details.')
+            # Notify admin for manual check
+            admin = User.query.filter_by(username=ADMIN_USERNAME).first()
+            if admin:
+                _create_notification(admin.id, 'payment',
+                                     f'Manual review needed: {user.name}',
+                                     f'₦{txn.amount_paid:,.0f} — AI could not verify. Reason: {reason[:80]}',
+                                     'admin', txn.id)
+            return jsonify({
+                'success': False,
+                'error': f'Verification failed: {reason}\n\nYour payment has been queued for manual review. You will be notified within 30 minutes.',
+                'queued': True
+            })
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Receipt verification error: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': f'Verification error: {str(e)[:200]}'}), 500
 
 @app.route('/api/my-token-stats')
 def my_token_stats():

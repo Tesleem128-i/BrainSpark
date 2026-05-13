@@ -235,6 +235,27 @@
                 </div>
             </div>
 
+            <!-- STEP 2b: Password confirmation -->
+            <div id="step-password" style="display:none;">
+                <div class="alert alert-info" style="margin-bottom:16px;">
+                    <i class="fas fa-lock"></i>
+                    Confirm your identity before we generate your unique payment reference.
+                </div>
+                <div style="padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;">
+                    <div style="font-size:.78rem;color:var(--muted);margin-bottom:4px;">Amount to pay</div>
+                    <div id="pw-amount-display" style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.5rem;color:var(--spark);"></div>
+                </div>
+                <label style="font-size:.78rem;font-weight:600;color:var(--muted);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">Your Account Password</label>
+                <input type="password" id="payment-password" class="inp" placeholder="Enter your password to continue…"
+                       onkeydown="if(event.key==='Enter')confirmPassword()">
+                <button class="btn btn-spark" id="confirm-pw-btn" onclick="confirmPassword()" style="margin-bottom:10px;">
+                    <i class="fas fa-lock-open"></i> Confirm & Get Reference
+                </button>
+                <button class="btn btn-ghost" onclick="cancelFlow()">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            </div>
+
             <!-- STEP 3: Upload receipt -->
             <div id="step-upload">
                 <div class="alert alert-info">
@@ -278,7 +299,27 @@
             </div>
         </div>
 
-        <!-- Right column: history + usage -->
+        <!-- Right column: history + usage + contact -->
+        <div style="display:flex;flex-direction:column;gap:20px;">
+        <div class="card">
+            <div class="card-title" style="cursor:pointer;" onclick="showContactForm()">
+                <i class="fas fa-headset" style="color:var(--accent);"></i> Having trouble? <span style="color:var(--accent);font-size:.82rem;margin-left:auto;">Contact Support →</span>
+            </div>
+        </div>
+        <div class="card" id="contact-section" style="display:none;">
+            <div class="card-title"><i class="fas fa-envelope" style="color:var(--accent);"></i> Contact Support</div>
+            <p style="font-size:.82rem;color:var(--muted);margin-bottom:14px;line-height:1.6;">
+                Having issues with your payment? Send us a message and we'll resolve it within a few hours.
+            </p>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+                <input type="text" id="support-name" class="inp" placeholder="Your name" style="margin-bottom:0;">
+                <input type="email" id="support-email" class="inp" placeholder="Your email address" style="margin-bottom:0;">
+                <textarea id="support-msg" class="inp" rows="4" placeholder="Describe your issue (include transaction reference if you have one)…" style="margin-bottom:0;resize:none;"></textarea>
+                <button class="btn btn-spark" id="support-send-btn" onclick="sendSupportEmail()">
+                    <i class="fas fa-paper-plane"></i> Send Message
+                </button>
+            </div>
+        </div>
         <div class="card">
             <div class="card-title"><i class="fas fa-history" style="color:var(--muted);"></i> Transaction History</div>
             <div id="txn-list" style="display:flex;flex-direction:column;gap:8px;max-height:400px;overflow-y:auto;">
@@ -290,6 +331,7 @@
                 <div id="usage-list" style="max-height:200px;overflow-y:auto;"></div>
             </div>
         </div>
+        </div><!-- closes flex column wrapper -->
     </div>
 </div>
 
@@ -298,20 +340,20 @@ let selectedFile = null;
 let currentRef   = null;
 let currentAmt   = null;
 let timerInterval= null;
-let timerSeconds = 300; // 5 minutes
+let timerSeconds = 300;
 let txnId        = null;
 
-// ── Helpers ──────────────────────────────────────────────────────
 function showToast(msg, type='success'){
     const t=document.createElement('div');
     const c={success:'var(--green)',error:'var(--accent)',info:'var(--blue)',warn:'var(--gold)'};
-    t.style.cssText=`position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 20px;background:${c[type]||c.info};color:#fff;border-radius:12px;font-weight:600;font-size:.875rem;font-family:'DM Sans',sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.3);max-width:320px;`;
-    t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3500);
+    t.style.cssText=`position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 20px;background:${c[type]||c.info};color:#fff;border-radius:12px;font-weight:600;font-size:.875rem;font-family:'DM Sans',sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.3);max-width:340px;line-height:1.5;`;
+    t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),4000);
 }
 
 function showStep(name){
-    ['step-amount','step-payment','step-upload','step-verifying','step-done'].forEach(id=>{
-        document.getElementById(id).style.display = id===name ? '' : 'none';
+    ['step-amount','step-password','step-payment','step-upload','step-verifying','step-done'].forEach(id=>{
+        const el=document.getElementById(id);
+        if(el) el.style.display = id===name ? '' : 'none';
     });
 }
 
@@ -322,7 +364,6 @@ function copyRef(){
     if(currentRef) navigator.clipboard?.writeText(currentRef).then(()=>showToast('Reference copied!','success'));
 }
 
-// ── Amount selection ─────────────────────────────────────────────
 function selectTier(amt, el){
     document.querySelectorAll('.tier-btn').forEach(b=>b.classList.remove('active'));
     el.classList.add('active');
@@ -336,35 +377,48 @@ function updatePreview(){
         preview.textContent=amt>0?`Amount must be ₦{{ '{:,}'.format(min_payment) }}–₦{{ '{:,}'.format(max_payment) }}`:'';
         preview.style.color='var(--accent)';return;
     }
-    preview.textContent=`✅ You will receive ${amt.toLocaleString()} Spark Tokens`;
+    const tokens=amt-{{ platform_fee }};
+    preview.textContent=`✅ You will receive ${tokens.toLocaleString()} Spark Tokens (₦{{ platform_fee }} platform fee deducted)`;
     preview.style.color='var(--spark)';
 }
 
-// ── Start flow ───────────────────────────────────────────────────
-async function startPaymentFlow(){
+function startPaymentFlow(){
     const amt=parseFloat(document.getElementById('amount-input').value)||0;
     if(amt<{{ min_payment }}||amt>{{ max_payment }}){
-        showToast('Please enter a valid amount first','warn');return;
+        showToast('Please select or enter a valid amount first','warn');return;
     }
     currentAmt=amt;
-    // Generate reference on server
+    document.getElementById('pw-amount-display').textContent=`₦${amt.toLocaleString()}`;
+    document.getElementById('payment-password').value='';
+    showStep('step-password');
+    setTimeout(()=>document.getElementById('payment-password').focus(),100);
+}
+
+async function confirmPassword(){
+    const pw=document.getElementById('payment-password').value;
+    if(!pw){showToast('Please enter your password','warn');return;}
+    const btn=document.getElementById('confirm-pw-btn');
+    btn.disabled=true;btn.textContent='Checking…';
     try{
         const res=await fetch('/api/generate-payment-ref',{
             method:'POST',
             headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({amount:amt})
+            body:JSON.stringify({password:pw,amount:currentAmt})
         }).then(r=>r.json());
-        if(!res.success){showToast(res.error||'Error generating reference','error');return;}
+        btn.disabled=false;btn.textContent='Confirm & Get Reference';
+        if(!res.success){showToast(res.error||'Incorrect password','error');return;}
         currentRef=res.reference;
         txnId=res.transaction_id;
         document.getElementById('ref-code').textContent=currentRef;
-        document.getElementById('display-amount').textContent=`₦${amt.toLocaleString()}`;
+        document.getElementById('display-amount').textContent=`₦${currentAmt.toLocaleString()}`;
         showStep('step-payment');
         startTimer();
-    }catch(e){showToast('Network error. Please try again.','error');}
+    }catch(e){
+        btn.disabled=false;btn.textContent='Confirm & Get Reference';
+        showToast('Network error. Please try again.','error');
+    }
 }
 
-// ── Timer ────────────────────────────────────────────────────────
 function startTimer(){
     timerSeconds=300;
     updateTimerDisplay();
@@ -372,13 +426,8 @@ function startTimer(){
     timerInterval=setInterval(()=>{
         timerSeconds--;
         updateTimerDisplay();
-        if(timerSeconds<=60){
-            document.getElementById('timer-wrap').classList.add('urgent');
-        }
-        if(timerSeconds<=0){
-            clearInterval(timerInterval);
-            expirePayment();
-        }
+        if(timerSeconds<=60) document.getElementById('timer-wrap').classList.add('urgent');
+        if(timerSeconds<=0){clearInterval(timerInterval);expirePayment();}
     },1000);
 }
 function updateTimerDisplay(){
@@ -393,31 +442,28 @@ async function expirePayment(){
     cancelFlow();
 }
 
-// ── Proceed to upload ────────────────────────────────────────────
 function proceedToUpload(){
     clearInterval(timerInterval);
     showStep('step-upload');
 }
 function cancelFlow(){
     clearInterval(timerInterval);
-    selectedFile=null;
-    currentRef=null;
-    currentAmt=null;
-    txnId=null;
-    document.getElementById('receipt-label').textContent='PDF or image (screenshot)';
-    document.getElementById('receipt-drop').style.borderColor='';
-    document.getElementById('amount-input').value='';
-    document.getElementById('token-preview').textContent='';
+    selectedFile=null;currentRef=null;currentAmt=null;txnId=null;
+    const rl=document.getElementById('receipt-label');
+    if(rl)rl.textContent='PDF or image (screenshot)';
+    const rd=document.getElementById('receipt-drop');
+    if(rd)rd.style.borderColor='';
+    const ai=document.getElementById('amount-input');
+    if(ai)ai.value='';
+    const tp=document.getElementById('token-preview');
+    if(tp)tp.textContent='';
     document.querySelectorAll('.tier-btn').forEach(b=>b.classList.remove('active'));
-    document.getElementById('verify-btn').disabled=true;
+    const vb=document.getElementById('verify-btn');
+    if(vb)vb.disabled=true;
     showStep('step-amount');
 }
-function resetFlow(){
-    cancelFlow();
-    loadStats();
-}
+function resetFlow(){cancelFlow();loadStats();}
 
-// ── Receipt handling ─────────────────────────────────────────────
 function handleReceiptSelect(e){
     const f=e.target.files[0];if(!f)return;
     selectedFile=f;
@@ -434,29 +480,15 @@ function handleDrop(e){
     document.getElementById('verify-btn').disabled=false;
 }
 
-// ── Submit and auto-verify ────────────────────────────────────────
 async function submitAndVerify(){
     if(!selectedFile||!currentRef||!txnId){showToast('Missing data. Please start again.','error');return;}
     showStep('step-verifying');
-    const msgs=[
-        'Reading receipt…',
-        'Extracting transfer details…',
-        'Checking account number…',
-        'Verifying reference code…',
-        'Confirming amount and date…',
-        'Finalising…'
-    ];
+    const msgs=['Reading receipt…','Extracting transfer details…','Checking account number…','Verifying reference code…','Confirming amount and date…','Finalising…'];
     let mi=0;
-    const msgInterval=setInterval(()=>{
-        if(mi<msgs.length-1){
-            document.getElementById('verify-progress-msg').textContent=msgs[mi++];
-        }
-    },1800);
-
+    const msgInterval=setInterval(()=>{if(mi<msgs.length-1)document.getElementById('verify-progress-msg').textContent=msgs[mi++];},2000);
     const fd=new FormData();
     fd.append('receipt',selectedFile);
     fd.append('transaction_id',txnId);
-
     try{
         const res=await fetch('/api/verify-payment-receipt',{method:'POST',body:fd}).then(r=>r.json());
         clearInterval(msgInterval);
@@ -464,7 +496,6 @@ async function submitAndVerify(){
         const doneIcon=document.getElementById('done-icon');
         const doneTitle=document.getElementById('done-title');
         const doneMsg=document.getElementById('done-msg');
-
         if(res.success){
             doneState.className='verify-state success';
             doneIcon.textContent='✅';
@@ -472,14 +503,24 @@ async function submitAndVerify(){
             doneMsg.textContent=`${res.tokens_added?.toLocaleString()} Spark Tokens have been added to your account.`;
             showStep('step-done');
             loadStats();
+        } else if(res.queued){
+            doneState.className='verify-state checking';
+            doneIcon.innerHTML='<i class="fas fa-clock" style="color:var(--gold);"></i>';
+            doneTitle.textContent='Under Manual Review';
+            doneMsg.textContent=res.error||'Your payment is being reviewed. You will be notified within 30 minutes.';
+            showStep('step-done');
+            document.querySelector('#step-done .btn-spark').textContent='OK, Got it';
+            document.querySelector('#step-done .btn-spark').onclick=resetFlow;
         } else {
             doneState.className='verify-state failed';
             doneIcon.textContent='❌';
             doneTitle.textContent='Verification Failed';
-            doneMsg.innerHTML=res.error||'Could not verify your payment. Please ensure:<br>• The reference matches exactly<br>• The amount is correct<br>• The receipt is clear and readable<br>• The transfer was made today';
+            doneMsg.style.whiteSpace='pre-line';
+            doneMsg.textContent=res.error||'Could not verify your payment.';
             showStep('step-done');
-            document.querySelector('#step-done .btn-spark').textContent='Try Again';
-            document.querySelector('#step-done .btn-spark').onclick=()=>{showStep('step-upload');};
+            const tryBtn=document.querySelector('#step-done .btn-spark');
+            tryBtn.innerHTML='<i class="fas fa-redo"></i> Try Again';
+            tryBtn.onclick=()=>{showStep('step-upload');};
         }
     }catch(e){
         clearInterval(msgInterval);
@@ -491,7 +532,39 @@ async function submitAndVerify(){
     }
 }
 
-// ── Stats ────────────────────────────────────────────────────────
+function showContactForm(){
+    document.getElementById('contact-section').style.display='';
+    document.getElementById('contact-section').scrollIntoView({behavior:'smooth'});
+}
+
+async function sendSupportEmail(){
+    const name=document.getElementById('support-name').value.trim();
+    const email=document.getElementById('support-email').value.trim();
+    const msg=document.getElementById('support-msg').value.trim();
+    if(!name||!email||!msg){showToast('Please fill in all fields','warn');return;}
+    const btn=document.getElementById('support-send-btn');
+    btn.disabled=true;btn.textContent='Sending…';
+    try{
+        const res=await fetch('/send_email',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({name,email,message:`[Token Support]\n${msg}`})
+        }).then(r=>r.json());
+        btn.disabled=false;btn.textContent='Send Message';
+        if(res.message&&res.message.includes('success')){
+            showToast('Message sent! We will reply within 24 hours.','success');
+            document.getElementById('support-name').value='';
+            document.getElementById('support-email').value='';
+            document.getElementById('support-msg').value='';
+        } else {
+            showToast('Failed to send. Please email us directly.','error');
+        }
+    }catch{
+        btn.disabled=false;btn.textContent='Send Message';
+        showToast('Network error. Please try again.','error');
+    }
+}
+
 let usageChart=null;
 async function loadStats(){
     try{
@@ -500,7 +573,6 @@ async function loadStats(){
         document.getElementById('token-balance').textContent=(data.spark_tokens||0).toLocaleString();
         document.getElementById('total-purchased').textContent=(data.total_purchased||0).toLocaleString();
         document.getElementById('total-spent').textContent='₦'+(data.total_spent||0).toLocaleString();
-
         const labels=data.daily_usage.map(d=>d.day);
         const values=data.daily_usage.map(d=>d.tokens);
         const ctx=document.getElementById('usage-chart').getContext('2d');
@@ -510,7 +582,6 @@ async function loadStats(){
             data:{labels,datasets:[{label:'Tokens Used',data:values,backgroundColor:'rgba(168,85,247,0.4)',borderColor:'rgba(168,85,247,1)',borderWidth:2,borderRadius:6}]},
             options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#5a5a70'}},x:{grid:{display:false},ticks:{color:'#5a5a70'}}}}
         });
-
         const txnList=document.getElementById('txn-list');
         if(!data.transactions.length){
             txnList.innerHTML='<div style="color:var(--muted);font-size:.875rem;text-align:center;padding:24px;">No transactions yet.</div>';
@@ -528,7 +599,6 @@ async function loadStats(){
                 </div>
             `).join('');
         }
-
         const usageList=document.getElementById('usage-list');
         if(!data.recent_logs.length){
             usageList.innerHTML='<div style="font-size:.8rem;color:var(--muted);padding:8px 0;">No usage yet.</div>';
