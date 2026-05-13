@@ -489,11 +489,17 @@ async function generateSimilar(){
     try{
         const res = await fetch('/api/generate-similar-questions',{method:'POST',body:fd});
         clearInterval(statusTimer);
-        if (!res.ok) {
-            const txt = await res.text();
-            throw new Error(`Server ${res.status}: ${txt.slice(0,200)}`);
+        let data;
+        try { data = await res.json(); } catch(je) {
+            throw new Error(`Server ${res.status}: Could not parse response`);
         }
-        const data = await res.json();
+        if(!res.ok){
+            if(res.status===402||data.error==='NO_TOKENS'){
+                if(confirm('⚡ You need Spark Tokens to use this feature.\n\nClick OK to buy tokens.')){window.location.href='/tokens';}
+                return;
+            }
+            throw new Error(data.error||`Server error ${res.status}`);
+        }
         if(data.success){
             lastPaperData = data;
             renderFingerprint(data.fingerprint, data.source_files);

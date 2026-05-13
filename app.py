@@ -2849,7 +2849,7 @@ def generate_similar_questions():
         return jsonify({'success': False, 'error': 'No readable text found in your PDFs. Make sure they are not scanned image PDFs — use text-based PDFs only.'}), 400
 
     combined_text = '\n\n---NEXT PDF---\n\n'.join(
-        f"[PDF {i+1}: {file_names[i]}]\n{t[:3000]}" for i, t in enumerate(all_texts)
+        f"[PDF {i+1}: {file_names[i]}]\n{t[:2000]}" for i, t in enumerate(all_texts)
     )
 
     # Step 1: Fingerprint analysis with safe fallback
