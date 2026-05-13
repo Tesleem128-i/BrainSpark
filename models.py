@@ -153,7 +153,14 @@ class Message(db.Model):
     def __repr__(self):
         return f'<Message from {self.sender.username} to {self.receiver.username}>'
 
-
+class GroupFile(db.Model):
+    __tablename__ = 'group_file'
+    id         = db.Column(db.Integer, primary_key=True)
+    filename   = db.Column(db.String(500), nullable=False, unique=True)
+    file_data  = db.Column(db.Text, nullable=False)  # base64
+    mime_type  = db.Column(db.String(100), nullable=False)
+    file_type  = db.Column(db.String(50), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 class ChatGroup(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(150), nullable=False)
@@ -198,13 +205,7 @@ class ChatGroupMember(db.Model):
 
     def __repr__(self):
         return f'<ChatGroupMember {self.user.username} in {self.group.name}>'
-class GroupFile(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    filename = db.Column(db.String(300), nullable=False)
-    file_data = db.Column(db.Text, nullable=False)
-    mime_type = db.Column(db.String(100))
-    file_type = db.Column(db.String(20))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
 
 class GroupMessage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
