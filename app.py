@@ -594,6 +594,9 @@ def get_quiz_topics():
 def generate_questions():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    token_check = require_tokens('quiz_generation', 1)
+    if token_check:
+        return jsonify({'error': token_check['error']}), token_check['code']
 
     data            = request.json or {}
     selected_topics = data.get('selected_topics', 'all')
@@ -1870,6 +1873,9 @@ def react_group_message():
 def ask_ai_group():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    token_check = require_tokens('ai_chat', 1)
+    if token_check:
+        return jsonify({'error': token_check['error']}), token_check['code']
     if request.content_type and 'multipart/form-data' in request.content_type:
         question = request.form.get('question', '')
         group_id = request.form.get('group_id')
@@ -1906,6 +1912,7 @@ def ask_ai_group():
                 response = model.generate_content(prompt)
         else:
             response = model.generate_content(prompt)
+        deduct_token(session['user_id'], 'ai_chat', 1)
         return jsonify({'success': True, 'explanation': response.text})
     except Exception as e:
         return jsonify({'error': f'Error: {str(e)}'}), 500
@@ -2763,6 +2770,9 @@ def similar_questions_page():
 def generate_similar_questions():
     if 'user_id' not in session:
         return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    token_check = require_tokens('similar_questions', 1)
+    if token_check:
+        return jsonify({'success': False, 'error': token_check['error']}), token_check['code']
 
     uploaded_pdfs = []
     for key in request.files:
@@ -2789,65 +2799,166 @@ def generate_similar_questions():
         try:
             text = extract_pdf_text(f)
             if text and len(text.strip()) > 30:
-                all_texts.append(text.strip()[:3000])  # limit per PDF to avoid timeout
+                all_texts.append(text.strip()[:3000])
                 file_names.append(f.filename)
+            else:
+                # try the simple extractor as fallback
+                f.seek(0)
+                import tempfile as _tf
+                suffix = '.' + (f.filename.rsplit('.', 1)[-1] if '.' in f.filename else 'pdf')
+                with _tf.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+                    tmp_path = tmp.name
+                    f.save(tmp_path)
+                fallback_text = extract_pdf_text_simple(tmp_path)
+                try:
+                    os.remove(tmp_path)
+                except Exception:
+                    pass
+                if fallback_text and len(fallback_text.strip()) > 30:
+                    all_texts.append(fallback_text.strip()[:3000])
+                    file_names.append(f.filename)
+                else:
+                    logger.warning(f"PDF {f.filename} yielded no text from either extractor")
         except Exception as e:
             logger.warning(f"Could not read PDF {f.filename}: {e}")
 
     if not all_texts:
-        return jsonify({'success': False, 'error': 'No readable text found. Make sure PDFs are not scanned images.'}), 400
+        return jsonify({'success': False, 'error': 'No readable text found in your PDFs. Make sure they are not scanned image PDFs — use text-based PDFs only.'}), 400
 
     combined_text = '\n\n---NEXT PDF---\n\n'.join(
-        f"[PDF {i+1}: {file_names[i]}]\n{t[:4000]}" for i, t in enumerate(all_texts)
+        f"[PDF {i+1}: {file_names[i]}]\n{t[:3000]}" for i, t in enumerate(all_texts)
     )
 
-    analysis_prompt = f"""Analyse these exam papers and extract their structural pattern.
-PAPERS:
-{combined_text[:6000]}
-Return ONLY valid JSON:
-{{"detected_format":"objective|theory|mixed","option_style":"A B C D","avg_question_length":"short|medium|long","difficulty_level":"easy|medium|hard","main_topics":["topic1"],"question_styles":["definition"],"subject_domain":"string"}}"""
-
+    # Step 1: Fingerprint analysis with safe fallback
+    fingerprint = {
+        'detected_format': 'objective',
+        'option_style': 'A B C D',
+        'avg_question_length': 'medium',
+        'difficulty_level': 'medium',
+        'main_topics': ['General'],
+        'question_styles': ['definition'],
+        'subject_domain': subject_title or 'General'
+    }
     try:
+        analysis_prompt = (
+            f"Analyse these exam papers and extract their structural pattern.\n"
+            f"PAPERS:\n{combined_text[:5000]}\n"
+            f"Return ONLY valid JSON, no markdown, no extra text:\n"
+            f'{{"detected_format":"objective","option_style":"A B C D","avg_question_length":"medium","difficulty_level":"medium","main_topics":["Topic1","Topic2"],"question_styles":["MCQ"],"subject_domain":"Subject Name"}}'
+        )
         ar = model.generate_content(analysis_prompt).text.strip()
-        s, e = ar.find('{'), ar.rfind('}') + 1
-        fingerprint = json.loads(ar[s:e] if s != -1 and e > s else '{}')
-    except Exception:
-        fingerprint = {'detected_format': 'objective', 'option_style': 'A B C D',
-                       'avg_question_length': 'medium', 'difficulty_level': 'medium',
-                       'main_topics': ['General'], 'question_styles': ['definition'],
-                       'subject_domain': subject_title}
+        # strip markdown code fences if present
+        ar = ar.replace('```json', '').replace('```', '').strip()
+        s_idx = ar.find('{')
+        e_idx = ar.rfind('}') + 1
+        if s_idx != -1 and e_idx > s_idx:
+            parsed = json.loads(ar[s_idx:e_idx])
+            # only overwrite keys that are present and non-empty
+            for key in ('detected_format', 'option_style', 'avg_question_length',
+                        'difficulty_level', 'main_topics', 'question_styles', 'subject_domain'):
+                val = parsed.get(key)
+                if val and (not isinstance(val, list) or len(val) > 0):
+                    fingerprint[key] = val
+    except Exception as fp_err:
+        logger.warning(f"Fingerprint analysis failed (using defaults): {fp_err}")
 
     effective_difficulty = fingerprint.get('difficulty_level', 'medium') if hardness == 'same' else hardness
     detected_format = fingerprint.get('detected_format', 'objective')
-    topics_str      = ', '.join(fingerprint.get('main_topics', ['General Content']))
-    q_styles_str    = ', '.join(fingerprint.get('question_styles', ['definition']))
+    # flatten lists safely
+    raw_topics = fingerprint.get('main_topics', ['General Content'])
+    topics_str = ', '.join(raw_topics) if isinstance(raw_topics, list) else str(raw_topics)
+    raw_styles = fingerprint.get('question_styles', ['MCQ'])
+    q_styles_str = ', '.join(raw_styles) if isinstance(raw_styles, list) else str(raw_styles)
+    domain = fingerprint.get('subject_domain', subject_title or 'General')
 
+    # Step 2: Generate paper
     if detected_format == 'theory':
-        gen_prompt = f"""Generate a NEW theory exam mirroring the analysed papers.
-Subject:{fingerprint.get('subject_domain',subject_title)} Topics:{topics_str} Styles:{q_styles_str} Difficulty:{effective_difficulty} Count:{question_count}
-Return ONLY valid JSON:
-{{"paper_title":"string","subject":"string","difficulty":"{effective_difficulty}","format":"theory","instructions":"string","questions":[{{"number":1,"question":"...","marks":5,"type":"short_answer","model_answer":"...","topic":"..."}}]}}"""
+        gen_prompt = (
+            f"You are an expert exam setter. Generate a NEW theory exam paper.\n"
+            f"Subject: {domain}\n"
+            f"Topics: {topics_str}\n"
+            f"Question styles: {q_styles_str}\n"
+            f"Difficulty: {effective_difficulty}\n"
+            f"Number of questions: {question_count}\n\n"
+            f"Return ONLY valid JSON with NO markdown fences and NO extra text:\n"
+            f'{{"paper_title":"Exam Title","subject":"{domain}","difficulty":"{effective_difficulty}","format":"theory","instructions":"Answer all questions.","questions":[{{"number":1,"question":"Question text here","marks":5,"type":"short_answer","model_answer":"Model answer here","topic":"Topic name"}}]}}'
+        )
     else:
-        gen_prompt = f"""Generate a NEW MCQ exam mirroring the analysed papers.
-Subject:{fingerprint.get('subject_domain',subject_title)} Topics:{topics_str} Styles:{q_styles_str} Difficulty:{effective_difficulty} Count:{question_count}
-Return ONLY valid JSON:
-{{"paper_title":"string","subject":"string","difficulty":"{effective_difficulty}","format":"objective","instructions":"Answer ALL questions.","questions":[{{"number":1,"question":"...","options":["A. text","B. text","C. text","D. text"],"answer":"A","explanation":"...","topic":"...","marks":1}}]}}"""
+        gen_prompt = (
+            f"You are an expert exam setter. Generate a NEW multiple choice exam paper.\n"
+            f"Subject: {domain}\n"
+            f"Topics: {topics_str}\n"
+            f"Question styles: {q_styles_str}\n"
+            f"Difficulty: {effective_difficulty}\n"
+            f"Number of questions: {question_count}\n\n"
+            f"Rules:\n"
+            f"- Every question must have exactly 4 options labelled A, B, C, D\n"
+            f"- The 'answer' field must be exactly one letter: A, B, C, or D\n"
+            f"- All questions must be unique\n\n"
+            f"Return ONLY valid JSON with NO markdown fences and NO extra text:\n"
+            f'{{"paper_title":"Exam Title","subject":"{domain}","difficulty":"{effective_difficulty}","format":"objective","instructions":"Answer ALL questions. Each question carries equal marks.","questions":[{{"number":1,"question":"Question text","options":["A. option one","B. option two","C. option three","D. option four"],"answer":"A","explanation":"Why A is correct","topic":"Topic name","marks":1}}]}}'
+        )
 
-    try:
-        gr = model.generate_content(gen_prompt).text.strip()
-        s2, e2 = gr.find('{'), gr.rfind('}') + 1
-        paper_data = json.loads(gr[s2:e2] if s2 != -1 and e2 > s2 else gr)
-    except Exception as ex:
-        return jsonify({'success': False, 'error': f'AI generation failed: {str(ex)[:200]}'}), 500
+    paper_data = None
+    last_error = 'AI did not return valid JSON.'
+    for attempt in range(2):  # try twice before giving up
+        try:
+            gr = model.generate_content(gen_prompt).text.strip()
+            gr = gr.replace('```json', '').replace('```', '').strip()
+            s2 = gr.find('{')
+            e2 = gr.rfind('}') + 1
+            if s2 == -1 or e2 <= s2:
+                last_error = 'AI response contained no JSON object.'
+                logger.warning(f"Attempt {attempt+1}: no JSON braces found. Raw: {gr[:300]}")
+                continue
+            paper_data = json.loads(gr[s2:e2])
+            if paper_data.get('questions'):
+                break
+            else:
+                last_error = 'AI returned JSON but questions list was empty.'
+                paper_data = None
+        except json.JSONDecodeError as jde:
+            last_error = f'JSON parse error: {str(jde)[:120]}'
+            logger.warning(f"Attempt {attempt+1} JSON decode error: {jde}. Raw snippet: {gr[:300] if 'gr' in dir() else 'N/A'}")
+        except Exception as gen_err:
+            last_error = f'AI call failed: {str(gen_err)[:150]}'
+            logger.error(f"Attempt {attempt+1} generation error: {gen_err}", exc_info=True)
+            break
 
-    questions = paper_data.get('questions', [])
-    if not questions:
-        return jsonify({'success': False, 'error': 'AI returned no questions.'}), 500
+    if not paper_data or not paper_data.get('questions'):
+        return jsonify({'success': False, 'error': f'Could not generate paper. {last_error} Please try again.'}), 500
+
+    questions = paper_data['questions']
+
+    # Sanitise questions — ensure required fields exist
+    clean_questions = []
+    for i, q in enumerate(questions):
+        if not q.get('question'):
+            continue
+        q.setdefault('number', i + 1)
+        q.setdefault('marks', 1)
+        q.setdefault('topic', 'General')
+        if detected_format != 'theory':
+            q.setdefault('options', ['A. Option A', 'B. Option B', 'C. Option C', 'D. Option D'])
+            q.setdefault('answer', 'A')
+            q.setdefault('explanation', '')
+        else:
+            q.setdefault('model_answer', '')
+            q.setdefault('type', 'short_answer')
+        clean_questions.append(q)
+
+    if not clean_questions:
+        return jsonify({'success': False, 'error': 'AI generated questions were all malformed. Please try again.'}), 500
+
+    paper_data['questions'] = clean_questions
 
     return jsonify({
-        'success': True, 'paper': paper_data,
-        'source_files': file_names, 'fingerprint': fingerprint,
-        'question_count': len(questions), 'include_answers': include_ans
+        'success': True,
+        'paper': paper_data,
+        'source_files': file_names,
+        'fingerprint': fingerprint,
+        'question_count': len(clean_questions),
+        'include_answers': include_ans
     })
 
 
@@ -3245,8 +3356,219 @@ def tokens_page():
                            platform_fee=PLATFORM_FEE)
 
 
+@app.route('/api/generate-payment-ref', methods=['POST'])
+def generate_payment_ref():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    data = request.get_json(silent=True) or {}
+    amount = data.get('amount')
+    try:
+        amount = float(amount)
+    except (TypeError, ValueError):
+        return jsonify({'success': False, 'error': 'Invalid amount'}), 400
+    if amount < MIN_PAYMENT or amount > MAX_PAYMENT:
+        return jsonify({'success': False, 'error': f'Amount must be ₦{MIN_PAYMENT:,}–₦{MAX_PAYMENT:,}'}), 400
+
+    import string
+    chars = string.ascii_uppercase + string.digits
+    ref = ''.join(random.choices(chars, k=10))  # e.g. "BRN4X2K7P9"
+
+    user_id = session['user_id']
+    try:
+        txn = TokenTransaction(
+            user_id=user_id,
+            amount_paid=amount,
+            platform_fee=PLATFORM_FEE,
+            tokens_added=int(amount),   # full amount as tokens (fee absorbed silently)
+            receipt_path=None,
+            status='pending',
+            reference_code=ref
+        )
+        db.session.add(txn)
+        db.session.commit()
+        return jsonify({'success': True, 'reference': ref, 'transaction_id': txn.id})
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"generate_payment_ref error: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)[:200]}), 500
+
+
+@app.route('/api/expire-payment-ref', methods=['POST'])
+def expire_payment_ref():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    data = request.get_json(silent=True) or {}
+    txn_id = data.get('transaction_id')
+    txn = TokenTransaction.query.filter_by(id=txn_id, user_id=session['user_id'], status='pending').first()
+    if txn:
+        txn.status = 'expired'
+        db.session.commit()
+    return jsonify({'success': True})
+
+
+@app.route('/api/verify-payment-receipt', methods=['POST'])
+def verify_payment_receipt():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+
+    txn_id = request.form.get('transaction_id')
+    receipt = request.files.get('receipt')
+
+    if not txn_id or not receipt or not receipt.filename:
+        return jsonify({'success': False, 'error': 'Missing transaction ID or receipt file.'}), 400
+
+    txn = TokenTransaction.query.filter_by(
+        id=txn_id, user_id=session['user_id'], status='pending'
+    ).first()
+    if not txn:
+        return jsonify({'success': False, 'error': 'Transaction not found or already processed.'}), 404
+
+    if not txn.reference_code:
+        return jsonify({'success': False, 'error': 'No reference code for this transaction.'}), 400
+
+    if not allowed_file(receipt.filename):
+        return jsonify({'success': False, 'error': 'Receipt must be a PDF or image file.'}), 400
+
+    # Save receipt
+    try:
+        os.makedirs('uploads/receipts', exist_ok=True)
+        ext = receipt.filename.rsplit('.', 1)[1].lower()
+        ts = int(datetime.utcnow().timestamp() * 1000)
+        filename = f"receipt_{session['user_id']}_{ts}.{ext}"
+        filepath = os.path.join('uploads/receipts', filename)
+        receipt.save(filepath)
+        txn.receipt_path = filename
+        db.session.flush()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': f'Could not save receipt: {str(e)[:100]}'}), 500
+
+    # Build AI verification prompt
+    try:
+        expected_amount = txn.amount_paid
+        expected_ref = txn.reference_code
+        expected_account = ACCOUNT_NUMBER
+        expected_account_name = ACCOUNT_NAME.lower()
+        today_str = datetime.utcnow().strftime('%Y-%m-%d')
+        today_display = datetime.utcnow().strftime('%d/%m/%Y')
+
+        prompt = f"""You are a payment verification system. Analyse this bank transfer receipt image/document carefully.
+
+You MUST check ALL of the following and respond with ONLY valid JSON:
+
+1. Reference/Narration/Description contains: "{expected_ref}" (exact match, case-insensitive)
+2. Amount transferred is exactly: ₦{expected_amount:,.0f} (or {expected_amount:,.0f} without symbol)
+3. Recipient account number contains: "{expected_account}"
+4. Recipient name contains words from: "{expected_account_name}" (partial match acceptable)
+5. Transfer date is today: {today_str} or {today_display} or close variant
+
+Respond ONLY with this JSON (no markdown, no extra text):
+{{"reference_found": true_or_false, "amount_correct": true_or_false, "account_number_correct": true_or_false, "account_name_correct": true_or_false, "date_correct": true_or_false, "extracted_reference": "what you found", "extracted_amount": "what you found", "extracted_account": "what you found", "extracted_date": "what you found", "all_checks_passed": true_or_false, "failure_reason": "short explanation if any check failed or empty string if all passed"}}"""
+
+        # Read file for vision model
+        with open(filepath, 'rb') as f_in:
+            file_bytes = f_in.read()
+
+        if ext == 'pdf':
+            # Extract text from PDF and pass as text
+            pdf_text = extract_pdf_text_simple(filepath)
+            if not pdf_text:
+                return jsonify({'success': False, 'error': 'Could not read the PDF receipt. Please upload a clear image instead.'}), 400
+            full_prompt = prompt + f"\n\nReceipt text content:\n{pdf_text[:3000]}"
+            ai_response = model.generate_content(full_prompt)
+        else:
+            # Image — use vision model
+            mime_map = {'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png',
+                        'gif': 'image/gif', 'webp': 'image/webp'}
+            mime_type = mime_map.get(ext, 'image/jpeg')
+            ai_response = vision_model.generate_content([
+                prompt,
+                {'mime_type': mime_type, 'data': file_bytes}
+            ])
+
+        raw = ai_response.text.strip()
+        raw = raw.replace('```json', '').replace('```', '').strip()
+        s = raw.find('{')
+        e = raw.rfind('}') + 1
+        if s == -1 or e <= s:
+            raise ValueError('AI returned no JSON')
+
+        result = json.loads(raw[s:e])
+
+    except Exception as ai_err:
+        logger.error(f"Receipt AI verification error: {ai_err}", exc_info=True)
+        # Mark as pending for manual review rather than failing
+        txn.status = 'pending'
+        db.session.commit()
+        return jsonify({
+            'success': False,
+            'error': 'Could not read your receipt automatically. Please ensure the image is clear and try again.'
+        }), 400
+
+    # Evaluate result
+    all_passed = result.get('all_checks_passed', False)
+
+    # Also do a manual string check on critical fields as safety net
+    ref_ok = result.get('reference_found', False)
+    amt_ok = result.get('amount_correct', False)
+    acct_ok = result.get('account_number_correct', False)
+    date_ok = result.get('date_correct', False)
+
+    if all_passed and ref_ok and amt_ok and acct_ok and date_ok:
+        # All checks passed — approve immediately
+        try:
+            user = User.query.get(session['user_id'])
+            tokens_to_add = int(txn.amount_paid) - PLATFORM_FEE  # silently deduct fee
+            txn.status = 'approved'
+            txn.tokens_added = tokens_to_add
+            txn.verified_at = datetime.utcnow()
+            txn.verified_by = 0  # 0 = auto-verified
+            user.spark_tokens = (getattr(user, 'spark_tokens', 0) or 0) + tokens_to_add
+            user.total_tokens_purchased = (getattr(user, 'total_tokens_purchased', 0) or 0) + tokens_to_add
+            user.total_spent = (getattr(user, 'total_spent', 0) or 0) + txn.amount_paid
+            db.session.commit()
+
+            # Notify admin silently for record-keeping
+            admin = User.query.filter_by(username=ADMIN_USERNAME).first()
+            if admin:
+                _create_notification(admin.id, 'payment',
+                                     f'Auto-verified payment from {user.name}',
+                                     f'₦{txn.amount_paid:,.0f} → {tokens_to_add:,} tokens. Ref: {txn.reference_code}',
+                                     'admin', txn.id)
+
+            return jsonify({
+                'success': True,
+                'tokens_added': tokens_to_add,
+                'message': f'{tokens_to_add:,} Spark Tokens added to your account!'
+            })
+        except Exception as approve_err:
+            db.session.rollback()
+            logger.error(f"Auto-approve error: {approve_err}", exc_info=True)
+            return jsonify({'success': False, 'error': 'Verification passed but could not credit tokens. Please contact support.'}), 500
+    else:
+        # Checks failed
+        failure = result.get('failure_reason', '')
+        failed_checks = []
+        if not ref_ok:
+            failed_checks.append(f"Reference not found (expected: {expected_ref}, found: {result.get('extracted_reference','?')})")
+        if not amt_ok:
+            failed_checks.append(f"Amount mismatch (expected: ₦{expected_amount:,.0f}, found: {result.get('extracted_amount','?')})")
+        if not acct_ok:
+            failed_checks.append(f"Account number not matched (found: {result.get('extracted_account','?')})")
+        if not date_ok:
+            failed_checks.append(f"Date appears incorrect (found: {result.get('extracted_date','?')}, expected today)")
+
+        txn.status = 'rejected'
+        db.session.commit()
+
+        error_msg = 'Payment verification failed:\n• ' + '\n• '.join(failed_checks) if failed_checks else (failure or 'Receipt did not match expected payment details.')
+        return jsonify({'success': False, 'error': error_msg})
+
+
 @app.route('/api/submit-payment', methods=['POST'])
 def submit_payment():
+    # Legacy route kept for backward compatibility — redirects to new flow
+    return jsonify({'success': False, 'error': 'Please use the new payment flow.'}), 400
     if 'user_id' not in session:
         return jsonify({'success': False, 'error': 'Unauthorized'}), 401
 

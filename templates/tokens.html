@@ -25,40 +25,97 @@
         .card-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
         .token-balance{font-family:'Syne',sans-serif;font-weight:800;font-size:3rem;color:var(--spark);line-height:1;}
         .token-sub{font-size:.875rem;color:var(--muted);margin-top:4px;}
-        .bank-box{background:linear-gradient(135deg,rgba(168,85,247,.12),rgba(59,107,255,.08));border:1px solid rgba(168,85,247,.3);border-radius:12px;padding:20px;margin-bottom:20px;}
-        .bank-label{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;}
-        .bank-value{font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;color:var(--ink);}
-        .bank-value.accent{color:var(--spark);font-size:1.5rem;letter-spacing:.05em;}
-        .copy-btn{background:none;border:1px solid var(--border);border-radius:8px;padding:4px 10px;color:var(--muted);cursor:pointer;font-size:.75rem;margin-left:8px;transition:all .2s;}
+
+        /* Steps */
+        .steps{display:flex;flex-direction:column;gap:0;}
+        .step{display:flex;gap:16px;position:relative;}
+        .step:not(:last-child)::after{content:'';position:absolute;left:19px;top:40px;bottom:-8px;width:2px;background:var(--border);}
+        .step-num{width:38px;height:38px;border-radius:50%;background:rgba(168,85,247,.15);border:2px solid rgba(168,85,247,.4);color:var(--spark);font-family:'Syne',sans-serif;font-weight:800;font-size:.875rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;}
+        .step-body{flex:1;padding-bottom:24px;}
+        .step-title{font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem;margin-bottom:6px;color:var(--ink);}
+        .step-desc{font-size:.82rem;color:var(--muted);line-height:1.6;}
+
+        /* Ref box */
+        .ref-box{background:linear-gradient(135deg,rgba(168,85,247,.15),rgba(59,107,255,.1));border:2px solid rgba(168,85,247,.5);border-radius:14px;padding:20px;margin:12px 0;text-align:center;}
+        .ref-label{font-size:.7rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+        .ref-code{font-family:'Syne',sans-serif;font-weight:800;font-size:2rem;color:var(--spark);letter-spacing:.15em;}
+        .ref-sub{font-size:.78rem;color:var(--muted);margin-top:6px;}
+
+        /* Timer */
+        .timer-wrap{display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;background:rgba(245,200,66,.08);border:1px solid rgba(245,200,66,.25);border-radius:10px;margin:10px 0;}
+        .timer-display{font-family:'Syne',sans-serif;font-weight:800;font-size:1.6rem;color:var(--gold);}
+        .timer-label{font-size:.78rem;color:var(--muted);}
+        .timer-wrap.urgent{background:rgba(255,79,48,.1);border-color:rgba(255,79,48,.3);}
+        .timer-wrap.urgent .timer-display{color:var(--accent);}
+
+        /* Bank info */
+        .bank-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);}
+        .bank-row:last-child{border-bottom:none;}
+        .bank-key{font-size:.78rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;}
+        .bank-val{font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem;color:var(--ink);}
+        .copy-btn{background:none;border:1px solid var(--border);border-radius:8px;padding:3px 10px;color:var(--muted);cursor:pointer;font-size:.72rem;margin-left:8px;transition:all .2s;font-family:'DM Sans',sans-serif;}
         .copy-btn:hover{border-color:var(--spark);color:var(--spark);}
-        .inp{width:100%;padding:11px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--ink);font-size:.875rem;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s;margin-bottom:12px;}
-        .inp:focus{border-color:var(--spark);}
-        .btn{display:inline-flex;align-items:center;gap:6px;padding:11px 22px;border-radius:50px;border:none;font-family:'DM Sans',sans-serif;font-weight:600;font-size:.875rem;cursor:pointer;transition:all .2s;width:100%;justify-content:center;}
-        .btn-spark{background:var(--spark);color:#fff;}
-        .btn-spark:hover{filter:brightness(1.1);transform:translateY(-1px);}
-        .btn:disabled{opacity:.4;cursor:not-allowed;}
+
+        /* Amount tiers */
         .tier-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;}
         @media(max-width:500px){.tier-grid{grid-template-columns:1fr 1fr;}}
         .tier-btn{padding:12px 8px;border-radius:12px;border:1px solid var(--border);background:var(--surface);cursor:pointer;text-align:center;transition:all .2s;font-family:'DM Sans',sans-serif;}
         .tier-btn:hover,.tier-btn.active{border-color:var(--spark);background:rgba(168,85,247,.1);}
         .tier-btn .amount{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;color:var(--ink);}
         .tier-btn .tokens{font-size:.75rem;color:var(--spark);font-weight:600;margin-top:2px;}
-        .tier-btn .fee{font-size:.68rem;color:var(--muted);}
+
+        /* Upload area */
         .receipt-drop{border:2px dashed var(--border);border-radius:12px;padding:28px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:12px;}
         .receipt-drop:hover,.receipt-drop.drag{border-color:var(--spark);background:rgba(168,85,247,.05);}
         .receipt-drop i{font-size:2rem;opacity:.25;display:block;margin-bottom:8px;}
+
+        /* Inputs */
+        .inp{width:100%;padding:11px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--ink);font-size:.875rem;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s;margin-bottom:12px;}
+        .inp:focus{border-color:var(--spark);}
+
+        /* Buttons */
+        .btn{display:inline-flex;align-items:center;gap:6px;padding:11px 22px;border-radius:50px;border:none;font-family:'DM Sans',sans-serif;font-weight:600;font-size:.875rem;cursor:pointer;transition:all .2s;width:100%;justify-content:center;}
+        .btn-spark{background:var(--spark);color:#fff;}
+        .btn-spark:hover{filter:brightness(1.1);transform:translateY(-1px);}
+        .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted);}
+        .btn-ghost:hover{border-color:var(--spark);color:var(--spark);}
+        .btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important;}
+
+        /* Verification states */
+        .verify-state{padding:20px;border-radius:12px;text-align:center;margin-bottom:16px;}
+        .verify-state.checking{background:rgba(59,107,255,.08);border:1px solid rgba(59,107,255,.2);}
+        .verify-state.success{background:rgba(0,201,141,.08);border:1px solid rgba(0,201,141,.3);}
+        .verify-state.failed{background:rgba(255,79,48,.08);border:1px solid rgba(255,79,48,.2);}
+        .verify-icon{font-size:2.5rem;margin-bottom:8px;}
+        .verify-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;margin-bottom:4px;}
+        .verify-msg{font-size:.82rem;color:var(--muted);line-height:1.6;}
+
+        /* Status badges */
         .status-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:.72rem;font-weight:700;}
         .status-pending{background:rgba(245,200,66,.15);color:var(--gold);}
         .status-approved{background:rgba(0,201,141,.15);color:var(--green);}
         .status-rejected{background:rgba(224,48,48,.12);color:#e03030;}
+        .status-expired{background:rgba(90,90,112,.15);color:var(--muted);}
+
+        /* Usage */
         .usage-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:.85rem;}
         .usage-row:last-child{border-bottom:none;}
-        .modal-overlay{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:16px;}
-        .modal-box{background:var(--surface);border:1px solid var(--border);border-radius:20px;width:100%;max-width:420px;padding:28px;}
-        .modal-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;margin-bottom:16px;}
+
+        /* Alert */
         .alert{padding:12px 16px;border-radius:10px;font-size:.85rem;margin-bottom:12px;}
         .alert-info{background:rgba(59,107,255,.1);border:1px solid rgba(59,107,255,.2);color:var(--blue);}
         .alert-warn{background:rgba(245,200,66,.1);border:1px solid rgba(245,200,66,.2);color:var(--gold);}
+        .alert-error{background:rgba(255,79,48,.08);border:1px solid rgba(255,79,48,.2);color:var(--accent);}
+        .alert-success{background:rgba(0,201,141,.08);border:1px solid rgba(0,201,141,.3);color:var(--green);}
+
+        /* Sections */
+        #step-amount{} 
+        #step-payment{display:none;}
+        #step-upload{display:none;}
+        #step-verifying{display:none;}
+        #step-done{display:none;}
+
+        .section-divider{height:1px;background:var(--border);margin:20px 0;}
     </style>
 </head>
 <body>
@@ -69,7 +126,7 @@
 
 <div class="wrap">
     <div class="page-title">⚡ <span>Spark</span> Tokens</div>
-    <div class="subtitle">Power your AI features with Spark Tokens. Pay once, use anytime.</div>
+    <div class="subtitle">Power your AI features. Buy once, use anytime.</div>
 
     <div class="grid2" style="margin-bottom:20px;">
         <!-- Balance card -->
@@ -83,7 +140,7 @@
                     <div id="total-purchased" style="font-family:'Syne',sans-serif;font-weight:700;color:var(--spark);">—</div>
                 </div>
                 <div style="flex:1;padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:10px;text-align:center;">
-                    <div style="font-size:.72rem;color:var(--muted);margin-bottom:2px;">Total Spent</div>
+                    <div style="font-size:.72rem;color:var(--muted);margin-bottom:2px;">Amount Spent</div>
                     <div id="total-spent" style="font-family:'Syne',sans-serif;font-weight:700;color:var(--green);">—</div>
                 </div>
             </div>
@@ -97,67 +154,138 @@
     </div>
 
     <div class="grid2">
-        <!-- Buy tokens -->
+        <!-- BUY FLOW -->
         <div class="card">
             <div class="card-title"><i class="fas fa-shopping-cart" style="color:var(--spark);"></i> Buy Spark Tokens</div>
 
-            <div class="bank-box">
-                <div class="bank-label">Bank Name</div>
-                <div class="bank-value" style="margin-bottom:12px;">{{ bank_name }}</div>
-                <div class="bank-label">Account Name</div>
-                <div class="bank-value" style="margin-bottom:12px;">{{ account_name }}</div>
-                <div class="bank-label">Account Number</div>
-                <div class="bank-value accent">
-                    {{ account_number }}
-                    <button class="copy-btn" onclick="copyAcct()"><i class="fas fa-copy"></i> Copy</button>
+            <!-- STEP 1: Choose amount -->
+            <div id="step-amount">
+                <div class="step-title" style="margin-bottom:12px;">Choose how many tokens you want</div>
+
+                <div class="tier-grid">
+                    {% set tiers = [1500, 2000, 3000, 4000, 5000, 6000] %}
+                    {% for amt in tiers %}
+                    <div class="tier-btn" onclick="selectTier({{ amt }}, this)">
+                        <div class="amount">₦{{ '{:,}'.format(amt) }}</div>
+                        <div class="tokens">{{ '{:,}'.format(amt) }} tokens</div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <input type="number" id="amount-input" class="inp" placeholder="Or enter amount (₦{{ '{:,}'.format(min_payment) }} – ₦{{ '{:,}'.format(max_payment) }})"
+                       min="{{ min_payment }}" max="{{ max_payment }}" oninput="updatePreview()">
+                <div id="token-preview" style="font-size:.85rem;color:var(--spark);margin-bottom:14px;min-height:20px;"></div>
+
+                <button class="btn btn-spark" onclick="startPaymentFlow()">
+                    <i class="fas fa-bolt"></i> Continue to Payment
+                </button>
+            </div>
+
+            <!-- STEP 2: Show bank details + narration + timer -->
+            <div id="step-payment">
+                <div class="alert alert-warn" style="margin-bottom:16px;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Important:</strong> You must use the exact narration/reference below when making your transfer. Do not change it.
+                </div>
+
+                <div class="ref-box">
+                    <div class="ref-label">Your Transfer Narration / Reference</div>
+                    <div class="ref-code" id="ref-code">—</div>
+                    <div class="ref-sub">Use this exactly as the payment description</div>
+                    <button class="copy-btn" style="margin-top:8px;" onclick="copyRef()"><i class="fas fa-copy"></i> Copy Reference</button>
+                </div>
+
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;">
+                    <div class="bank-row">
+                        <span class="bank-key">Bank</span>
+                        <span class="bank-val">{{ bank_name }}</span>
+                    </div>
+                    <div class="bank-row">
+                        <span class="bank-key">Account Name</span>
+                        <span class="bank-val">{{ account_name }}</span>
+                    </div>
+                    <div class="bank-row">
+                        <span class="bank-key">Account Number</span>
+                        <span class="bank-val">
+                            {{ account_number }}
+                            <button class="copy-btn" onclick="copyAcct()"><i class="fas fa-copy"></i> Copy</button>
+                        </span>
+                    </div>
+                    <div class="bank-row">
+                        <span class="bank-key">Amount to Transfer</span>
+                        <span class="bank-val" id="display-amount" style="color:var(--spark);">—</span>
+                    </div>
+                </div>
+
+                <div class="timer-wrap" id="timer-wrap">
+                    <i class="fas fa-clock" style="color:var(--gold);"></i>
+                    <div>
+                        <div class="timer-display" id="timer-display">05:00</div>
+                        <div class="timer-label">Time remaining to make payment</div>
+                    </div>
+                </div>
+
+                <div style="display:flex;gap:10px;margin-top:14px;">
+                    <button class="btn btn-spark" style="flex:2;" onclick="proceedToUpload()">
+                        <i class="fas fa-upload"></i> I've Paid — Upload Receipt
+                    </button>
+                    <button class="btn btn-ghost" style="flex:1;" onclick="cancelFlow()">
+                        Cancel
+                    </button>
                 </div>
             </div>
 
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle"></i>
-                Transfer between ₦{{ '{:,}'.format(min_payment) }} and ₦{{ '{:,}'.format(max_payment) }}.
-                ₦{{ '{:,}'.format(platform_fee) }} is the platform fee — the rest converts 1:1 to Spark Tokens.
-            </div>
-
-            <div class="alert alert-warn">
-                <i class="fas fa-exclamation-triangle"></i>
-                Examples: ₦1,500 → 1,000 tokens &nbsp;|&nbsp; ₦3,000 → 2,500 tokens &nbsp;|&nbsp; ₦6,000 → 5,500 tokens
-            </div>
-
-            <div class="tier-grid">
-                {% for amt in [1500, 2000, 3000, 4000, 5000, 6000] %}
-                <div class="tier-btn" onclick="selectTier({{ amt }}, this)">
-                    <div class="amount">₦{{ '{:,}'.format(amt) }}</div>
-                    <div class="tokens">{{ '{:,}'.format(amt - platform_fee) }} tokens</div>
-                    <div class="fee">₦{{ '{:,}'.format(platform_fee) }} fee</div>
+            <!-- STEP 3: Upload receipt -->
+            <div id="step-upload">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    Upload a clear screenshot or PDF of your bank transfer receipt. Our system will verify the amount, reference, account details, and date automatically.
                 </div>
-                {% endfor %}
+
+                <div class="receipt-drop" id="receipt-drop" onclick="document.getElementById('receipt-file').click()"
+                     ondrop="handleDrop(event)" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')">
+                    <i class="fas fa-file-upload"></i>
+                    <div style="font-weight:600;font-size:.875rem;margin-bottom:4px;">Upload Transfer Receipt</div>
+                    <div style="font-size:.78rem;color:var(--muted);" id="receipt-label">PDF or image (screenshot)</div>
+                </div>
+                <input type="file" id="receipt-file" accept=".pdf,image/*" style="display:none;" onchange="handleReceiptSelect(event)">
+
+                <button class="btn btn-spark" id="verify-btn" onclick="submitAndVerify()" disabled>
+                    <i class="fas fa-search"></i> Verify Payment
+                </button>
+                <button class="btn btn-ghost" style="margin-top:8px;" onclick="cancelFlow()">Cancel</button>
             </div>
 
-            <input type="number" id="amount-input" class="inp" placeholder="Or enter amount (₦1,500 – ₦6,000)"
-                   min="{{ min_payment }}" max="{{ max_payment }}" oninput="updatePreview()">
-            <div id="token-preview" style="font-size:.85rem;color:var(--spark);margin-bottom:14px;min-height:20px;"></div>
-
-            <div class="receipt-drop" id="receipt-drop" onclick="document.getElementById('receipt-file').click()"
-                 ondrop="handleDrop(event)" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')">
-                <i class="fas fa-file-upload"></i>
-                <div style="font-weight:600;font-size:.875rem;margin-bottom:4px;">Upload Transfer Receipt</div>
-                <div style="font-size:.78rem;color:var(--muted);" id="receipt-label">PDF or image (screenshot)</div>
+            <!-- STEP 4: Verifying -->
+            <div id="step-verifying">
+                <div class="verify-state checking">
+                    <div class="verify-icon"><i class="fas fa-spinner fa-spin" style="color:var(--blue);"></i></div>
+                    <div class="verify-title">Verifying your payment…</div>
+                    <div class="verify-msg" id="verify-progress-msg">Reading receipt…</div>
+                </div>
             </div>
-            <input type="file" id="receipt-file" accept=".pdf,image/*" style="display:none;" onchange="handleReceiptSelect(event)">
 
-            <button class="btn btn-spark" onclick="openPasswordModal()">
-                <i class="fas fa-bolt"></i> Submit Payment
-            </button>
+            <!-- STEP 5: Done -->
+            <div id="step-done">
+                <div class="verify-state" id="done-state">
+                    <div class="verify-icon" id="done-icon">✅</div>
+                    <div class="verify-title" id="done-title">Payment Verified!</div>
+                    <div class="verify-msg" id="done-msg">Your tokens have been added.</div>
+                </div>
+                <button class="btn btn-spark" style="margin-top:12px;" onclick="resetFlow()">
+                    <i class="fas fa-plus"></i> Buy More Tokens
+                </button>
+            </div>
         </div>
 
-        <!-- Transaction history -->
+        <!-- Right column: history + usage -->
         <div class="card">
             <div class="card-title"><i class="fas fa-history" style="color:var(--muted);"></i> Transaction History</div>
             <div id="txn-list" style="display:flex;flex-direction:column;gap:8px;max-height:400px;overflow-y:auto;">
                 <div style="color:var(--muted);font-size:.875rem;text-align:center;padding:24px;">Loading…</div>
             </div>
-            <div style="margin-top:20px;">
+            <div class="section-divider"></div>
+            <div>
                 <div class="card-title" style="margin-bottom:10px;"><i class="fas fa-list" style="color:var(--muted);"></i> Recent Usage</div>
                 <div id="usage-list" style="max-height:200px;overflow-y:auto;"></div>
             </div>
@@ -165,160 +293,261 @@
     </div>
 </div>
 
-<!-- Password modal -->
-<div id="password-modal" class="modal-overlay" style="display:none;">
-    <div class="modal-box">
-        <div class="modal-title">🔒 Confirm Your Identity</div>
-        <p style="font-size:.875rem;color:var(--muted);margin-bottom:16px;">Enter your Brainspark password to submit this payment.</p>
-        <input type="password" id="confirm-password" class="inp" placeholder="Your password…">
-        <div id="pw-error" style="color:#e03030;font-size:.8rem;margin-bottom:10px;display:none;"></div>
-        <div style="display:flex;gap:10px;">
-            <button class="btn btn-spark" onclick="submitPayment()" style="flex:1;">
-                <i class="fas fa-check"></i> Confirm & Submit
-            </button>
-            <button onclick="document.getElementById('password-modal').style.display='none'"
-                    style="flex:1;padding:11px;border-radius:50px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;">
-                Cancel
-            </button>
-        </div>
-    </div>
-</div>
-
 <script>
 let selectedFile = null;
+let currentRef   = null;
+let currentAmt   = null;
+let timerInterval= null;
+let timerSeconds = 300; // 5 minutes
+let txnId        = null;
 
-function copyAcct(){
-    navigator.clipboard?.writeText('{{ account_number }}').then(()=>showToast('Account number copied!'));
-}
-
+// ── Helpers ──────────────────────────────────────────────────────
 function showToast(msg, type='success'){
     const t=document.createElement('div');
     const c={success:'var(--green)',error:'var(--accent)',info:'var(--blue)',warn:'var(--gold)'};
-    t.style.cssText=`position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 20px;background:${c[type]||c.info};color:#fff;border-radius:12px;font-weight:600;font-size:.875rem;font-family:'DM Sans',sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.3);`;
-    t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3000);
+    t.style.cssText=`position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 20px;background:${c[type]||c.info};color:#fff;border-radius:12px;font-weight:600;font-size:.875rem;font-family:'DM Sans',sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.3);max-width:320px;`;
+    t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3500);
 }
 
+function showStep(name){
+    ['step-amount','step-payment','step-upload','step-verifying','step-done'].forEach(id=>{
+        document.getElementById(id).style.display = id===name ? '' : 'none';
+    });
+}
+
+function copyAcct(){
+    navigator.clipboard?.writeText('{{ account_number }}').then(()=>showToast('Account number copied!','success'));
+}
+function copyRef(){
+    if(currentRef) navigator.clipboard?.writeText(currentRef).then(()=>showToast('Reference copied!','success'));
+}
+
+// ── Amount selection ─────────────────────────────────────────────
 function selectTier(amt, el){
     document.querySelectorAll('.tier-btn').forEach(b=>b.classList.remove('active'));
     el.classList.add('active');
     document.getElementById('amount-input').value=amt;
     updatePreview();
 }
-
 function updatePreview(){
     const amt=parseFloat(document.getElementById('amount-input').value)||0;
-    const fee={{ platform_fee }};
     const preview=document.getElementById('token-preview');
     if(amt<{{ min_payment }}||amt>{{ max_payment }}){
-        preview.textContent=amt>0?`Amount must be between ₦{{ '{:,}'.format(min_payment) }} and ₦{{ '{:,}'.format(max_payment) }}`:'';
+        preview.textContent=amt>0?`Amount must be ₦{{ '{:,}'.format(min_payment) }}–₦{{ '{:,}'.format(max_payment) }}`:'';
         preview.style.color='var(--accent)';return;
     }
-    const tokens=Math.floor(amt-fee);
-    preview.textContent=`✅ You will receive ${tokens.toLocaleString()} Spark Tokens (₦${fee.toLocaleString()} platform fee)`;
+    preview.textContent=`✅ You will receive ${amt.toLocaleString()} Spark Tokens`;
     preview.style.color='var(--spark)';
 }
 
+// ── Start flow ───────────────────────────────────────────────────
+async function startPaymentFlow(){
+    const amt=parseFloat(document.getElementById('amount-input').value)||0;
+    if(amt<{{ min_payment }}||amt>{{ max_payment }}){
+        showToast('Please enter a valid amount first','warn');return;
+    }
+    currentAmt=amt;
+    // Generate reference on server
+    try{
+        const res=await fetch('/api/generate-payment-ref',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({amount:amt})
+        }).then(r=>r.json());
+        if(!res.success){showToast(res.error||'Error generating reference','error');return;}
+        currentRef=res.reference;
+        txnId=res.transaction_id;
+        document.getElementById('ref-code').textContent=currentRef;
+        document.getElementById('display-amount').textContent=`₦${amt.toLocaleString()}`;
+        showStep('step-payment');
+        startTimer();
+    }catch(e){showToast('Network error. Please try again.','error');}
+}
+
+// ── Timer ────────────────────────────────────────────────────────
+function startTimer(){
+    timerSeconds=300;
+    updateTimerDisplay();
+    clearInterval(timerInterval);
+    timerInterval=setInterval(()=>{
+        timerSeconds--;
+        updateTimerDisplay();
+        if(timerSeconds<=60){
+            document.getElementById('timer-wrap').classList.add('urgent');
+        }
+        if(timerSeconds<=0){
+            clearInterval(timerInterval);
+            expirePayment();
+        }
+    },1000);
+}
+function updateTimerDisplay(){
+    const m=Math.floor(timerSeconds/60),s=timerSeconds%60;
+    document.getElementById('timer-display').textContent=`0${m}:${s<10?'0':''}${s}`;
+}
+async function expirePayment(){
+    showToast('Payment window expired. Please start again.','warn');
+    if(txnId){
+        await fetch('/api/expire-payment-ref',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transaction_id:txnId})}).catch(()=>{});
+    }
+    cancelFlow();
+}
+
+// ── Proceed to upload ────────────────────────────────────────────
+function proceedToUpload(){
+    clearInterval(timerInterval);
+    showStep('step-upload');
+}
+function cancelFlow(){
+    clearInterval(timerInterval);
+    selectedFile=null;
+    currentRef=null;
+    currentAmt=null;
+    txnId=null;
+    document.getElementById('receipt-label').textContent='PDF or image (screenshot)';
+    document.getElementById('receipt-drop').style.borderColor='';
+    document.getElementById('amount-input').value='';
+    document.getElementById('token-preview').textContent='';
+    document.querySelectorAll('.tier-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById('verify-btn').disabled=true;
+    showStep('step-amount');
+}
+function resetFlow(){
+    cancelFlow();
+    loadStats();
+}
+
+// ── Receipt handling ─────────────────────────────────────────────
 function handleReceiptSelect(e){
     const f=e.target.files[0];if(!f)return;
     selectedFile=f;
     document.getElementById('receipt-label').textContent=f.name;
     document.getElementById('receipt-drop').style.borderColor='var(--spark)';
+    document.getElementById('verify-btn').disabled=false;
 }
-
 function handleDrop(e){
     e.preventDefault();document.getElementById('receipt-drop').classList.remove('drag');
     const f=e.dataTransfer.files[0];if(!f)return;
     selectedFile=f;
     document.getElementById('receipt-label').textContent=f.name;
     document.getElementById('receipt-drop').style.borderColor='var(--spark)';
+    document.getElementById('verify-btn').disabled=false;
 }
 
-function openPasswordModal(){
-    const amt=parseFloat(document.getElementById('amount-input').value)||0;
-    if(amt<{{ min_payment }}||amt>{{ max_payment }}){showToast('Enter a valid amount first','warn');return;}
-    if(!selectedFile){showToast('Please upload your receipt first','warn');return;}
-    document.getElementById('confirm-password').value='';
-    document.getElementById('pw-error').style.display='none';
-    document.getElementById('password-modal').style.display='flex';
-    setTimeout(()=>document.getElementById('confirm-password').focus(),100);
-}
+// ── Submit and auto-verify ────────────────────────────────────────
+async function submitAndVerify(){
+    if(!selectedFile||!currentRef||!txnId){showToast('Missing data. Please start again.','error');return;}
+    showStep('step-verifying');
+    const msgs=[
+        'Reading receipt…',
+        'Extracting transfer details…',
+        'Checking account number…',
+        'Verifying reference code…',
+        'Confirming amount and date…',
+        'Finalising…'
+    ];
+    let mi=0;
+    const msgInterval=setInterval(()=>{
+        if(mi<msgs.length-1){
+            document.getElementById('verify-progress-msg').textContent=msgs[mi++];
+        }
+    },1800);
 
-async function submitPayment(){
-    const pw=document.getElementById('confirm-password').value;
-    if(!pw){document.getElementById('pw-error').textContent='Password required.';document.getElementById('pw-error').style.display='';return;}
-    const amt=document.getElementById('amount-input').value;
     const fd=new FormData();
-    fd.append('amount',amt);
-    fd.append('password',pw);
     fd.append('receipt',selectedFile);
+    fd.append('transaction_id',txnId);
+
     try{
-        const res=await fetch('/api/submit-payment',{method:'POST',body:fd}).then(r=>r.json());
+        const res=await fetch('/api/verify-payment-receipt',{method:'POST',body:fd}).then(r=>r.json());
+        clearInterval(msgInterval);
+        const doneState=document.getElementById('done-state');
+        const doneIcon=document.getElementById('done-icon');
+        const doneTitle=document.getElementById('done-title');
+        const doneMsg=document.getElementById('done-msg');
+
         if(res.success){
-            document.getElementById('password-modal').style.display='none';
-            showToast('Payment submitted! Verification in progress.','success');
-            document.getElementById('amount-input').value='';
-            document.getElementById('receipt-label').textContent='PDF or image (screenshot)';
-            document.getElementById('receipt-drop').style.borderColor='';
-            selectedFile=null;
-            document.querySelectorAll('.tier-btn').forEach(b=>b.classList.remove('active'));
-            document.getElementById('token-preview').textContent='';
+            doneState.className='verify-state success';
+            doneIcon.textContent='✅';
+            doneTitle.textContent='Payment Verified!';
+            doneMsg.textContent=`${res.tokens_added?.toLocaleString()} Spark Tokens have been added to your account.`;
+            showStep('step-done');
             loadStats();
         } else {
-            document.getElementById('pw-error').textContent=res.error||'Submission failed.';
-            document.getElementById('pw-error').style.display='';
+            doneState.className='verify-state failed';
+            doneIcon.textContent='❌';
+            doneTitle.textContent='Verification Failed';
+            doneMsg.innerHTML=res.error||'Could not verify your payment. Please ensure:<br>• The reference matches exactly<br>• The amount is correct<br>• The receipt is clear and readable<br>• The transfer was made today';
+            showStep('step-done');
+            document.querySelector('#step-done .btn-spark').textContent='Try Again';
+            document.querySelector('#step-done .btn-spark').onclick=()=>{showStep('step-upload');};
         }
-    }catch{document.getElementById('pw-error').textContent='Network error. Try again.';document.getElementById('pw-error').style.display='';}
+    }catch(e){
+        clearInterval(msgInterval);
+        document.getElementById('done-state').className='verify-state failed';
+        document.getElementById('done-icon').textContent='⚠️';
+        document.getElementById('done-title').textContent='Connection Error';
+        document.getElementById('done-msg').textContent='Could not connect. Please try again.';
+        showStep('step-done');
+    }
 }
 
+// ── Stats ────────────────────────────────────────────────────────
 let usageChart=null;
 async function loadStats(){
-    const data=await fetch('/api/my-token-stats').then(r=>r.json());
-    if(!data.success)return;
-    document.getElementById('token-balance').textContent=(data.spark_tokens||0).toLocaleString();
-    document.getElementById('total-purchased').textContent=(data.total_purchased||0).toLocaleString();
-    document.getElementById('total-spent').textContent='₦'+(data.total_spent||0).toLocaleString();
+    try{
+        const data=await fetch('/api/my-token-stats').then(r=>r.json());
+        if(!data.success)return;
+        document.getElementById('token-balance').textContent=(data.spark_tokens||0).toLocaleString();
+        document.getElementById('total-purchased').textContent=(data.total_purchased||0).toLocaleString();
+        document.getElementById('total-spent').textContent='₦'+(data.total_spent||0).toLocaleString();
 
-    // Chart
-    const labels=data.daily_usage.map(d=>d.day);
-    const values=data.daily_usage.map(d=>d.tokens);
-    const ctx=document.getElementById('usage-chart').getContext('2d');
-    if(usageChart)usageChart.destroy();
-    usageChart=new Chart(ctx,{
-        type:'bar',
-        data:{labels,datasets:[{label:'Tokens Used',data:values,backgroundColor:'rgba(168,85,247,0.4)',borderColor:'rgba(168,85,247,1)',borderWidth:2,borderRadius:6}]},
-        options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#5a5a70'}},x:{grid:{display:false},ticks:{color:'#5a5a70'}}}}
-    });
+        const labels=data.daily_usage.map(d=>d.day);
+        const values=data.daily_usage.map(d=>d.tokens);
+        const ctx=document.getElementById('usage-chart').getContext('2d');
+        if(usageChart)usageChart.destroy();
+        usageChart=new Chart(ctx,{
+            type:'bar',
+            data:{labels,datasets:[{label:'Tokens Used',data:values,backgroundColor:'rgba(168,85,247,0.4)',borderColor:'rgba(168,85,247,1)',borderWidth:2,borderRadius:6}]},
+            options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#5a5a70'}},x:{grid:{display:false},ticks:{color:'#5a5a70'}}}}
+        });
 
-    // Transactions
-    const txnList=document.getElementById('txn-list');
-    if(!data.transactions.length){txnList.innerHTML='<div style="color:var(--muted);font-size:.875rem;text-align:center;padding:24px;">No transactions yet.</div>';return;}
-    txnList.innerHTML=data.transactions.map(t=>`
-        <div style="padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-                <span style="font-family:'Syne',sans-serif;font-weight:700;">₦${t.amount.toLocaleString()}</span>
-                <span class="status-badge status-${t.status}">${t.status}</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;font-size:.78rem;color:var(--muted);">
-                <span>${t.tokens.toLocaleString()} tokens</span>
-                <span>${new Date(t.date).toLocaleDateString()}</span>
-            </div>
-        </div>
-    `).join('');
+        const txnList=document.getElementById('txn-list');
+        if(!data.transactions.length){
+            txnList.innerHTML='<div style="color:var(--muted);font-size:.875rem;text-align:center;padding:24px;">No transactions yet.</div>';
+        } else {
+            txnList.innerHTML=data.transactions.map(t=>`
+                <div style="padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                        <span style="font-family:'Syne',sans-serif;font-weight:700;">₦${t.amount.toLocaleString()}</span>
+                        <span class="status-badge status-${t.status}">${t.status}</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:.78rem;color:var(--muted);">
+                        <span>${t.tokens.toLocaleString()} tokens</span>
+                        <span>${new Date(t.date).toLocaleDateString()}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
 
-    // Usage log
-    const usageList=document.getElementById('usage-list');
-    if(!data.recent_logs.length){usageList.innerHTML='<div style="font-size:.8rem;color:var(--muted);padding:8px 0;">No usage yet.</div>';return;}
-    usageList.innerHTML=data.recent_logs.slice(0,10).map(l=>`
-        <div class="usage-row">
-            <span>${l.feature.replace(/_/g,' ')}</span>
-            <span style="color:var(--spark);font-weight:600;">-${l.tokens} token${l.tokens>1?'s':''}</span>
-            <span style="color:var(--muted);font-size:.75rem;">${new Date(l.date).toLocaleDateString()}</span>
-        </div>
-    `).join('');
+        const usageList=document.getElementById('usage-list');
+        if(!data.recent_logs.length){
+            usageList.innerHTML='<div style="font-size:.8rem;color:var(--muted);padding:8px 0;">No usage yet.</div>';
+        } else {
+            usageList.innerHTML=data.recent_logs.slice(0,10).map(l=>`
+                <div class="usage-row">
+                    <span>${l.feature.replace(/_/g,' ')}</span>
+                    <span style="color:var(--spark);font-weight:600;">-${l.tokens} token${l.tokens>1?'s':''}</span>
+                    <span style="color:var(--muted);font-size:.75rem;">${new Date(l.date).toLocaleDateString()}</span>
+                </div>
+            `).join('');
+        }
+    }catch(e){console.error('Stats error:',e);}
 }
 
-document.addEventListener('DOMContentLoaded', loadStats);
-document.getElementById('confirm-password').addEventListener('keydown',e=>{if(e.key==='Enter')submitPayment();});
+document.addEventListener('DOMContentLoaded',()=>{
+    showStep('step-amount');
+    loadStats();
+});
 </script>
 </body>
 </html>

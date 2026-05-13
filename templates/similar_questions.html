@@ -454,6 +454,16 @@ let lastPaperData        = null;
 async function generateSimilar(){
     const filled = getFilledSlots();
     if(!filled.length){ alert('Please upload at least one PDF.'); return; }
+    // Token gate
+    try {
+        const td = await fetch('/api/my-token-stats').then(r=>r.json());
+        if(td.success && (td.spark_tokens||0) < 1) {
+            if(confirm('⚡ You need Spark Tokens to generate a paper.\n\nClick OK to get tokens.')) {
+                window.location.href='/tokens';
+            }
+            return;
+        }
+    } catch(e) {}
 
     const btn = document.getElementById('generate-btn');
     btn.disabled = true;
@@ -462,9 +472,11 @@ async function generateSimilar(){
     document.getElementById('gen-status').style.display='block';
 
     const statusEl = document.getElementById('gen-status');
-    const stages   = ['📖 Reading PDFs…','🔍 Fingerprinting structure…','✍️ Generating questions…','✅ Finalising paper…'];
+    const stages   = ['📖 Reading PDFs…','🔍 Fingerprinting structure…','✍️ Generating questions…','⏳ Almost done…'];
     let si=0;
-    const statusTimer = setInterval(()=>{ statusEl.textContent=stages[Math.min(si++,stages.length-1)]; },1800);
+    const statusTimer = setInterval(()=>{
+        if(si < stages.length - 1) { statusEl.textContent=stages[si++]; }
+    },2500);
     animateProgressBar('gen-progress-fill');
 
     const fd = new FormData();
@@ -495,12 +507,20 @@ async function generateSimilar(){
     } catch(e){
         clearInterval(statusTimer);
         console.error('Generate error:', e);
-        alert('❌ ' + e.message);
+        if(e.message && e.message.includes('NO_TOKENS') || (e.message && e.message.includes('402'))) {
+            if(confirm('⚡ You need Spark Tokens to use this feature.\n\nClick OK to buy tokens.')) {
+                window.location.href = '/tokens';
+            }
+        } else {
+            alert('❌ ' + (e.message || 'Generation failed. Please try again.'));
+        }
     } finally {
+        clearInterval(statusTimer); // ensure cleared even if try block threw
         btn.disabled=false;
         btn.innerHTML='<i class="fas fa-wand-magic-sparkles"></i> Analyse & Generate Paper';
         document.getElementById('gen-progress').style.display='none';
         document.getElementById('gen-status').style.display='none';
+        document.getElementById('gen-status').textContent='';
         document.getElementById('gen-progress-fill').style.width='0%';
     }
 }

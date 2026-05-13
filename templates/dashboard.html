@@ -450,8 +450,8 @@
         <a href="/" class="nav-logo" style="display:none;"></a>
     </div>
     <ul class="nav-links">
-        <li><a href="#upload-section">Upload Notes</a></li>
-        <li><a href="#performance-section">Analytics</a></li>
+        <li><a href="/study-buddies">Study Buddies</a></li>
+        <li><a href="/similar-questions">Similar Questions</a></li>
     </ul>
     <div class="nav-right">
         <button class="icon-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">
@@ -481,8 +481,6 @@
 <div class="sidebar" id="sidebar">
     <div class="sidebar-label">Main</div>
     <button class="sidebar-link active" onclick="scrollTo('top')"><i class="fas fa-house"></i> Dashboard</button>
-    <button class="sidebar-link" onclick="scrollTo('upload-section')"><i class="fas fa-file-upload"></i> Upload Notes</button>
-    <button class="sidebar-link" onclick="scrollTo('performance-section')"><i class="fas fa-chart-line"></i> Analytics</button>
     <div class="sidebar-label">Connect</div>
     <button class="sidebar-link" onclick="findStudyBuddies()"><i class="fas fa-users"></i> Study Buddies</button>
     <button class="sidebar-link" onclick="openAIModal()"><i class="fas fa-robot"></i> Ask AI</button>
@@ -577,23 +575,10 @@
 
 
   
-<!-- SIMILAR QUESTIONS PROMO CARD -->
-<div class="panel reveal" style="margin-bottom:1.5rem;margin-left:clamp(0px,240px,240px);margin-right:0;padding:0 clamp(1rem,2.5rem,2.5rem);">
-    <div class="panel-header">
-        <div>
-            <div class="panel-eyebrow">AI Paper Generator</div>
-            <div class="panel-title">Generate Similar Questions</div>
-        </div>
-    </div>
-    <div class="panel-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
-        <p style="font-size:0.875rem;color:var(--muted);max-width:500px;line-height:1.6;">
-            Upload 1–4 past exam PDFs. The AI fingerprints their structure — question style, topics, difficulty, option format — then generates a completely fresh paper in the same pattern. Download it as PDF instantly.
-        </p>
-        <button class="btn btn-primary" onclick="window.location.href='/similar-questions'">
-            <i class="fas fa-wand-magic-sparkles"></i> Try it now
-        </button>
-    </div>
-</div>
+<ul class="nav-links">
+        <li><a href="/study-buddies">Study Buddies</a></li>
+        <li><a href="/similar-questions">Similar Questions</a></li>
+    </ul>
 <!-- ════════════════════════════ AI CHAT MODAL ════════════════════════════ -->
 <div class="modal-overlay" id="ai-modal">
     <div class="ai-modal" id="ai-modal-inner">
@@ -1174,6 +1159,9 @@ async function submitAIQuestion() {
         const res  = await fetch('/api/ask-ai', { method:'POST', body:fd });
         const data = await res.json();
 
+        if (!data.success && (data.error === 'NO_TOKENS' || res.status === 402)) {
+            if (handleAIError('NO_TOKENS')) return;
+        }
         if (data.success) {
             const aiMsg = {
                 role: 'ai',
