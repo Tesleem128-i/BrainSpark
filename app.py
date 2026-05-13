@@ -9,6 +9,32 @@ from models import (db, User, Quiz, QuizResult, Connection, UserTag, Message,
                     GeneratedQuestion, TopicMastery, WrongAnswer, AppNotification,
                     HandRaise, TokenTransaction, TokenUsageLog)
 import hashlib
+import base64
+
+def save_file_to_db(file_storage, file_type):
+    """Save file to database as base64. Returns filename key."""
+    try:
+        file_bytes = file_storage.read()
+        file_storage.seek(0)
+        b64_data = base64.b64encode(file_bytes).decode('utf-8')
+        ext = file_storage.filename.rsplit('.', 1)[-1].lower() if '.' in file_storage.filename else 'bin'
+        ts = int(datetime.utcnow().timestamp() * 1000)
+        filename = f"{file_type}_{ts}.{ext}"
+        mime_map = {
+            'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png',
+            'gif': 'image/gif', 'webp': 'image/webp', 'pdf': 'application/pdf',
+            'webm': 'audio/webm', 'ogg': 'audio/ogg', 'mp3': 'audio/mp3',
+            'wav': 'audio/wav'
+        }
+        mime_type = mime_map.get(ext, 'application/octet-stream')
+        from models import GroupFile
+        gf = GroupFile(filename=filename, file_data=b64_data, mime_type=mime_type, file_type=file_type)
+        db.session.add(gf)
+        db.session.flush()
+        return filename
+    except Exception as e:
+        logger.error(f"save_file_to_db error: {e}")
+        return None
 import os
 import requests as req
 from dotenv import load_dotenv
@@ -1581,9 +1607,9 @@ def _serialize_group_message(msg, current_user_id):
         'is_deleted':     msg.is_deleted,
         'is_edited':      msg.is_edited,
         'is_sent':        msg.sender_id == current_user_id,
-        'image_url':      f'/uploads/group_chat/{msg.image_path}' if msg.image_path else None,
-        'pdf_url':        f'/uploads/group_chat/{msg.pdf_path}'   if msg.pdf_path   else None,
-        'voice_url':      f'/uploads/voice_notes/{msg.voice_path}' if msg.voice_path else None,
+        'image_url':      f'/api/file/{msg.image_path}' if msg.image_path else None,
+        'pdf_url':        f'/api/file/{msg.pdf_path}'   if msg.pdf_path   else None,
+        'voice_url':      f'/api/file/{msg.voice_path}' if msg.voice_path else None,
         'reply_to':       reply_data,
         'mentions':       mentions,
         'reactions':      reactions,
@@ -1642,24 +1668,21 @@ def send_group_message():
             if f and f.filename and allowed_file(f.filename):
                 ts  = int(datetime.utcnow().timestamp() * 1000)
                 ext = f.filename.rsplit('.', 1)[1].lower()
-                image_path = f"group_{group_id}_{user_id}_{ts}.{ext}"
-                f.save(os.path.join('uploads/group_chat', image_path))
+                image_path = save_file_to_db(f, 'image')
 
         if message_type == 'pdf' and 'pdf' in request.files:
             f = request.files['pdf']
             if f and f.filename and allowed_file(f.filename):
                 ts  = int(datetime.utcnow().timestamp() * 1000)
                 ext = f.filename.rsplit('.', 1)[1].lower()
-                pdf_path = f"group_{group_id}_{user_id}_{ts}.{ext}"
-                f.save(os.path.join('uploads/group_chat', pdf_path))
+                pdf_path = save_file_to_db(f, 'pdf')
 
         if message_type == 'voice' and 'voice' in request.files:
             f = request.files['voice']
             if f and f.filename:
                 ts  = int(datetime.utcnow().timestamp() * 1000)
                 ext = f.filename.rsplit('.', 1)[-1].lower() or 'webm'
-                voice_path = f"voice_{group_id}_{user_id}_{ts}.{ext}"
-                f.save(os.path.join('uploads/voice_notes', voice_path))
+                voice_path = save_file_to_db(f, 'voice')
                 message_type = 'voice'
 
         msg = GroupMessage(
@@ -2974,7 +2997,28 @@ def uploaded_file(filename):
     os.makedirs(os.path.join(uploads_dir, 'profiles'), exist_ok=True)
     os.makedirs(os.path.join(uploads_dir, 'ai_chat'), exist_ok=True)
     return send_from_directory(uploads_dir, filename)
-
+@app.route('/api/file/<path:filename>')
+def serve_db_file(filename):
+    try:
+        from models import GroupFile
+        gf = GroupFile.query.filter_by(filename=filename).first()
+        if not gf:
+            return jsonify({'error': 'File not found'}), 404
+        file_bytes = base64.b64decode(gf.file_data)
+        from flask import Response
+        return Response(file_bytes, mimetype=gf.mime_type)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/run-migration-xyz123')
+def run_migration():
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(db.text("ALTER TABLE token_transaction ADD COLUMN IF NOT EXISTS reference_code VARCHAR(20)"))
+            conn.commit()
+        return 'Migration successful!'
+    except Exception as e:
+        return f'Error: {str(e)}'
 @app.route('/legal')
 def legal():
     return render_template('legal.html')
@@ -3356,219 +3400,8 @@ def tokens_page():
                            platform_fee=PLATFORM_FEE)
 
 
-@app.route('/api/generate-payment-ref', methods=['POST'])
-def generate_payment_ref():
-    if 'user_id' not in session:
-        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
-    data = request.get_json(silent=True) or {}
-    amount = data.get('amount')
-    try:
-        amount = float(amount)
-    except (TypeError, ValueError):
-        return jsonify({'success': False, 'error': 'Invalid amount'}), 400
-    if amount < MIN_PAYMENT or amount > MAX_PAYMENT:
-        return jsonify({'success': False, 'error': f'Amount must be ₦{MIN_PAYMENT:,}–₦{MAX_PAYMENT:,}'}), 400
-
-    import string
-    chars = string.ascii_uppercase + string.digits
-    ref = ''.join(random.choices(chars, k=10))  # e.g. "BRN4X2K7P9"
-
-    user_id = session['user_id']
-    try:
-        txn = TokenTransaction(
-            user_id=user_id,
-            amount_paid=amount,
-            platform_fee=PLATFORM_FEE,
-            tokens_added=int(amount),   # full amount as tokens (fee absorbed silently)
-            receipt_path=None,
-            status='pending',
-            reference_code=ref
-        )
-        db.session.add(txn)
-        db.session.commit()
-        return jsonify({'success': True, 'reference': ref, 'transaction_id': txn.id})
-    except Exception as e:
-        db.session.rollback()
-        logger.error(f"generate_payment_ref error: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': str(e)[:200]}), 500
-
-
-@app.route('/api/expire-payment-ref', methods=['POST'])
-def expire_payment_ref():
-    if 'user_id' not in session:
-        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
-    data = request.get_json(silent=True) or {}
-    txn_id = data.get('transaction_id')
-    txn = TokenTransaction.query.filter_by(id=txn_id, user_id=session['user_id'], status='pending').first()
-    if txn:
-        txn.status = 'expired'
-        db.session.commit()
-    return jsonify({'success': True})
-
-
-@app.route('/api/verify-payment-receipt', methods=['POST'])
-def verify_payment_receipt():
-    if 'user_id' not in session:
-        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
-
-    txn_id = request.form.get('transaction_id')
-    receipt = request.files.get('receipt')
-
-    if not txn_id or not receipt or not receipt.filename:
-        return jsonify({'success': False, 'error': 'Missing transaction ID or receipt file.'}), 400
-
-    txn = TokenTransaction.query.filter_by(
-        id=txn_id, user_id=session['user_id'], status='pending'
-    ).first()
-    if not txn:
-        return jsonify({'success': False, 'error': 'Transaction not found or already processed.'}), 404
-
-    if not txn.reference_code:
-        return jsonify({'success': False, 'error': 'No reference code for this transaction.'}), 400
-
-    if not allowed_file(receipt.filename):
-        return jsonify({'success': False, 'error': 'Receipt must be a PDF or image file.'}), 400
-
-    # Save receipt
-    try:
-        os.makedirs('uploads/receipts', exist_ok=True)
-        ext = receipt.filename.rsplit('.', 1)[1].lower()
-        ts = int(datetime.utcnow().timestamp() * 1000)
-        filename = f"receipt_{session['user_id']}_{ts}.{ext}"
-        filepath = os.path.join('uploads/receipts', filename)
-        receipt.save(filepath)
-        txn.receipt_path = filename
-        db.session.flush()
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'error': f'Could not save receipt: {str(e)[:100]}'}), 500
-
-    # Build AI verification prompt
-    try:
-        expected_amount = txn.amount_paid
-        expected_ref = txn.reference_code
-        expected_account = ACCOUNT_NUMBER
-        expected_account_name = ACCOUNT_NAME.lower()
-        today_str = datetime.utcnow().strftime('%Y-%m-%d')
-        today_display = datetime.utcnow().strftime('%d/%m/%Y')
-
-        prompt = f"""You are a payment verification system. Analyse this bank transfer receipt image/document carefully.
-
-You MUST check ALL of the following and respond with ONLY valid JSON:
-
-1. Reference/Narration/Description contains: "{expected_ref}" (exact match, case-insensitive)
-2. Amount transferred is exactly: ₦{expected_amount:,.0f} (or {expected_amount:,.0f} without symbol)
-3. Recipient account number contains: "{expected_account}"
-4. Recipient name contains words from: "{expected_account_name}" (partial match acceptable)
-5. Transfer date is today: {today_str} or {today_display} or close variant
-
-Respond ONLY with this JSON (no markdown, no extra text):
-{{"reference_found": true_or_false, "amount_correct": true_or_false, "account_number_correct": true_or_false, "account_name_correct": true_or_false, "date_correct": true_or_false, "extracted_reference": "what you found", "extracted_amount": "what you found", "extracted_account": "what you found", "extracted_date": "what you found", "all_checks_passed": true_or_false, "failure_reason": "short explanation if any check failed or empty string if all passed"}}"""
-
-        # Read file for vision model
-        with open(filepath, 'rb') as f_in:
-            file_bytes = f_in.read()
-
-        if ext == 'pdf':
-            # Extract text from PDF and pass as text
-            pdf_text = extract_pdf_text_simple(filepath)
-            if not pdf_text:
-                return jsonify({'success': False, 'error': 'Could not read the PDF receipt. Please upload a clear image instead.'}), 400
-            full_prompt = prompt + f"\n\nReceipt text content:\n{pdf_text[:3000]}"
-            ai_response = model.generate_content(full_prompt)
-        else:
-            # Image — use vision model
-            mime_map = {'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png',
-                        'gif': 'image/gif', 'webp': 'image/webp'}
-            mime_type = mime_map.get(ext, 'image/jpeg')
-            ai_response = vision_model.generate_content([
-                prompt,
-                {'mime_type': mime_type, 'data': file_bytes}
-            ])
-
-        raw = ai_response.text.strip()
-        raw = raw.replace('```json', '').replace('```', '').strip()
-        s = raw.find('{')
-        e = raw.rfind('}') + 1
-        if s == -1 or e <= s:
-            raise ValueError('AI returned no JSON')
-
-        result = json.loads(raw[s:e])
-
-    except Exception as ai_err:
-        logger.error(f"Receipt AI verification error: {ai_err}", exc_info=True)
-        # Mark as pending for manual review rather than failing
-        txn.status = 'pending'
-        db.session.commit()
-        return jsonify({
-            'success': False,
-            'error': 'Could not read your receipt automatically. Please ensure the image is clear and try again.'
-        }), 400
-
-    # Evaluate result
-    all_passed = result.get('all_checks_passed', False)
-
-    # Also do a manual string check on critical fields as safety net
-    ref_ok = result.get('reference_found', False)
-    amt_ok = result.get('amount_correct', False)
-    acct_ok = result.get('account_number_correct', False)
-    date_ok = result.get('date_correct', False)
-
-    if all_passed and ref_ok and amt_ok and acct_ok and date_ok:
-        # All checks passed — approve immediately
-        try:
-            user = User.query.get(session['user_id'])
-            tokens_to_add = int(txn.amount_paid) - PLATFORM_FEE  # silently deduct fee
-            txn.status = 'approved'
-            txn.tokens_added = tokens_to_add
-            txn.verified_at = datetime.utcnow()
-            txn.verified_by = 0  # 0 = auto-verified
-            user.spark_tokens = (getattr(user, 'spark_tokens', 0) or 0) + tokens_to_add
-            user.total_tokens_purchased = (getattr(user, 'total_tokens_purchased', 0) or 0) + tokens_to_add
-            user.total_spent = (getattr(user, 'total_spent', 0) or 0) + txn.amount_paid
-            db.session.commit()
-
-            # Notify admin silently for record-keeping
-            admin = User.query.filter_by(username=ADMIN_USERNAME).first()
-            if admin:
-                _create_notification(admin.id, 'payment',
-                                     f'Auto-verified payment from {user.name}',
-                                     f'₦{txn.amount_paid:,.0f} → {tokens_to_add:,} tokens. Ref: {txn.reference_code}',
-                                     'admin', txn.id)
-
-            return jsonify({
-                'success': True,
-                'tokens_added': tokens_to_add,
-                'message': f'{tokens_to_add:,} Spark Tokens added to your account!'
-            })
-        except Exception as approve_err:
-            db.session.rollback()
-            logger.error(f"Auto-approve error: {approve_err}", exc_info=True)
-            return jsonify({'success': False, 'error': 'Verification passed but could not credit tokens. Please contact support.'}), 500
-    else:
-        # Checks failed
-        failure = result.get('failure_reason', '')
-        failed_checks = []
-        if not ref_ok:
-            failed_checks.append(f"Reference not found (expected: {expected_ref}, found: {result.get('extracted_reference','?')})")
-        if not amt_ok:
-            failed_checks.append(f"Amount mismatch (expected: ₦{expected_amount:,.0f}, found: {result.get('extracted_amount','?')})")
-        if not acct_ok:
-            failed_checks.append(f"Account number not matched (found: {result.get('extracted_account','?')})")
-        if not date_ok:
-            failed_checks.append(f"Date appears incorrect (found: {result.get('extracted_date','?')}, expected today)")
-
-        txn.status = 'rejected'
-        db.session.commit()
-
-        error_msg = 'Payment verification failed:\n• ' + '\n• '.join(failed_checks) if failed_checks else (failure or 'Receipt did not match expected payment details.')
-        return jsonify({'success': False, 'error': error_msg})
-
-
 @app.route('/api/submit-payment', methods=['POST'])
 def submit_payment():
-    # Legacy route kept for backward compatibility — redirects to new flow
-    return jsonify({'success': False, 'error': 'Please use the new payment flow.'}), 400
     if 'user_id' not in session:
         return jsonify({'success': False, 'error': 'Unauthorized'}), 401
 
