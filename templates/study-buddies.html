@@ -1125,7 +1125,7 @@ function buildDMBubble(msg,idx){
     const isSent=msg.sender_id!==waCurrentUserId;const row=document.createElement('div');row.className=`wa-msg-row ${isSent?'sent':'received'}`;row.dataset.msgId=msg.id;
     const time=formatTime(msg.created_at);
     let replyHtml='';if(msg.reply_to_content)replyHtml=`<div class="wa-reply-block"><div class="rb-name">${escHtml(msg.reply_to_sender||'Message')}</div><div class="rb-text">${escHtml(msg.reply_to_content)}</div></div>`;
-    let contentHtml='';if(msg.image_url){const _src=msg.image_url.startsWith('http')?msg.image_url:('/'+msg.image_url.replace(/^\/+/,''));contentHtml+=`<img src="${_src}" class="wa-msg-img" onclick="openLightbox('${_src}')" alt="Image">`;}if(msg.content)contentHtml+=`<div>${escHtml(msg.content)}</div>`;
+    let contentHtml='';if(msg.image_url){const _src=msg.image_url;contentHtml+=`<img src="${_src}" class="wa-msg-img" onclick="openLightbox('${_src}')" alt="Image">`;}else if(msg.content&&msg.content!=='📷 Image'){contentHtml+=`<div>${escHtml(msg.content)}</div>`;}else if(msg.content){contentHtml+=`<div>${escHtml(msg.content)}</div>`;}
     const tick=isSent?`<span class="wa-read-tick ${msg.is_read?'read':''}"><i class="fas fa-check${msg.is_read?'-double':''}"></i></span>`:'';
     row.innerHTML=`<div class="wa-bubble" oncontextmenu="showDMCtxMenu(event,${msg.id},${idx},'${encodeURIComponent(msg.content||'')}',${isSent})">${replyHtml}${contentHtml}<div class="wa-bubble-footer"><span class="wa-bubble-time">${time}</span>${tick}</div></div>`;
     row.querySelector('.wa-bubble').addEventListener('dblclick',()=>setDMReply(msg.id,isSent?'You':waCurrentUserName,msg.content||'📷 Image'));

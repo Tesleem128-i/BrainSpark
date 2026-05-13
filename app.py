@@ -1060,7 +1060,13 @@ def send_message_api():
     if not is_connected:
         return jsonify({'error': 'You must be connected to message this user'}), 403
     try:
-        message = Message(sender_id=sender_id, receiver_id=receiver_id, content=content)
+        image_path = None
+        if 'image' in request.files:
+            f = request.files['image']
+            if f and f.filename and allowed_file(f.filename):
+                image_path = save_file_to_db(f, 'image')
+
+        message = Message(sender_id=sender_id, receiver_id=receiver_id, content=content, image_path=image_path)
         db.session.add(message)
         db.session.flush()
         # Notify receiver
@@ -1093,6 +1099,7 @@ def get_messages(buddy_id):
     return jsonify({'success': True, 'messages': [{
         'id': m.id, 'sender_id': m.sender_id, 'sender_name': m.sender.name,
         'receiver_id': m.receiver_id, 'content': m.content,
+        'image_url': f'/api/file/{m.image_path}' if getattr(m, 'image_path', None) else None,
         'is_read': m.is_read, 'created_at': m.created_at.isoformat()
     } for m in messages]})
 
