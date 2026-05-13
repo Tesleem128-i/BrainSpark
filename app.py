@@ -3951,7 +3951,318 @@ def receipt_file(filename):
     receipts_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads', 'receipts')
     return send_from_directory(receipts_dir, os.path.basename(filename))
 
+# ═══════════════════════════════════════════════════════════════════════════
+#  REVISED SPARK TOKEN ROUTES  (replace/add these in app.py)
+# ═══════════════════════════════════════════════════════════════════════════
 
+# ── /api/token-pool  ─────────────────────────────────────────────────────────
+# Returns how many tokens are currently available to sell (admin's own balance
+# acts as the pool — adjust this to however you store the pool).
+
+@app.route('/api/token-pool')
+def token_pool():
+    """Return the number of tokens available for purchase."""
+    try:
+        admin = User.query.filter_by(username=ADMIN_USERNAME).first()
+        # We use a dedicated column on the admin user; fall back to a hard-coded
+        # value so the page always works even before the column exists.
+        available = getattr(admin, 'token_pool', 0) or 0
+        return jsonify({'success': True, 'available': available})
+    except Exception as e:
+        logger.error(f"token_pool error: {e}", exc_info=True)
+        return jsonify({'success': True, 'available': 0})
+
+
+# ── /api/validate-password  ──────────────────────────────────────────────────
+# Step 2 of the new buy flow: just checks the password, returns success/fail.
+
+@app.route('/api/validate-password', methods=['POST'])
+def validate_password():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    data = request.get_json(silent=True) or {}
+    pw = data.get('password', '')
+    user = User.query.get(session['user_id'])
+    if not user:
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+    if not user.check_password(pw):
+        return jsonify({'success': False, 'error': 'Incorrect password. Please try again.'}), 200
+    return jsonify({'success': True})
+
+
+# ── /api/generate-payment-ref  (UPDATED) ─────────────────────────────────────
+# Step 3→4: no longer requires password (already validated in step 2).
+# Now also stores user_bank and user_account for receipt matching.
+# Reference format: 3 random words + 5 random digits, e.g. "BLUE-SPARK-NOVA-38271"
+
+@app.route('/api/generate-payment-ref', methods=['POST'])
+def generate_payment_ref():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+
+    data = request.get_json(silent=True) or {}
+    amount = data.get('amount', 0)
+    user_bank = data.get('user_bank', '').strip()
+    user_account = data.get('user_account', '').strip()
+
+    try:
+        amount = float(amount)
+    except Exception:
+        return jsonify({'success': False, 'error': 'Invalid amount.'}), 400
+
+    if amount < MIN_PAYMENT or amount > MAX_PAYMENT:
+        return jsonify({'success': False, 'error': f'Amount must be ₦{MIN_PAYMENT:,}–₦{MAX_PAYMENT:,}.'}), 400
+
+    if not user_bank or not user_account:
+        return jsonify({'success': False, 'error': 'Bank name and account number are required.'}), 400
+
+    # Check pool availability
+    admin = User.query.filter_by(username=ADMIN_USERNAME).first()
+    pool_available = getattr(admin, 'token_pool', 0) or 0
+    tokens_requested = int(amount - PLATFORM_FEE)
+    if tokens_requested > pool_available:
+        return jsonify({'success': False, 'error': 'Not enough tokens available in the pool right now. Please contact support.'}), 400
+
+    import random, string as _string
+    WORD_LIST = [
+        'SPARK','NOVA','BLAZE','SWIFT','LUNAR','ASTRO','PIXEL','FLAME','BOLT',
+        'STORM','WAVE','NEON','GHOST','SOLAR','PULSE','ORBIT','FLASH','COMET',
+        'RIDGE','FROST','PRIME','DELTA','SIGMA','ALPHA','ZETA','ECHO','ZENITH',
+        'VENOM','TIGER','OCEAN','NIGHT','LIGHT','EMBER','PRISM','QUARTZ'
+    ]
+    words = random.sample(WORD_LIST, 3)
+    digits = ''.join(random.choices(_string.digits, k=5))
+    ref = '-'.join(words) + '-' + digits   # e.g. SPARK-NOVA-BOLT-38271
+
+    tokens_added = int(amount - PLATFORM_FEE)
+    txn = TokenTransaction(
+        user_id=session['user_id'],
+        amount_paid=amount,
+        platform_fee=PLATFORM_FEE,
+        tokens_added=tokens_added,
+        receipt_path='',
+        status='pending',
+        reference_code=ref
+    )
+    # Store user bank details on the transaction if the model supports it
+    # (add user_bank / user_account columns to TokenTransaction if not present)
+    if hasattr(txn, 'user_bank'):
+        txn.user_bank = user_bank
+    if hasattr(txn, 'user_account'):
+        txn.user_account = user_account
+
+    db.session.add(txn)
+    db.session.commit()
+
+    return jsonify({'success': True, 'reference': ref, 'transaction_id': txn.id})
+
+
+# ── /api/verify-payment-receipt  (UPDATED) ───────────────────────────────────
+# Now validates:  amount · reference code · destination account · date (today or yesterday)
+
+@app.route('/api/verify-payment-receipt', methods=['POST'])
+def verify_payment_receipt():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+
+    txn_id = request.form.get('transaction_id')
+    receipt = request.files.get('receipt')
+    if not txn_id or not receipt:
+        return jsonify({'success': False, 'error': 'Missing data.'}), 400
+
+    txn = TokenTransaction.query.filter_by(id=txn_id, user_id=session['user_id'], status='pending').first()
+    if not txn:
+        return jsonify({'success': False, 'error': 'Transaction not found or already processed.'}), 404
+
+    # Enforce 6-minute window
+    elapsed = (datetime.utcnow() - txn.created_at).total_seconds()
+    if elapsed > 360:
+        txn.status = 'rejected'
+        db.session.commit()
+        return jsonify({'success': False, 'error': 'Payment window expired. Please start a new transaction.'}), 400
+
+    if not allowed_file(receipt.filename):
+        return jsonify({'success': False, 'error': 'Invalid file type.'}), 400
+
+    try:
+        ext = receipt.filename.rsplit('.', 1)[1].lower() if '.' in receipt.filename else 'jpg'
+        ts = int(datetime.utcnow().timestamp() * 1000)
+        filename = f"receipt_{session['user_id']}_{ts}.{ext}"
+
+        receipt_bytes = receipt.read()
+
+        # Store receipt in DB (Render filesystem is ephemeral)
+        from models import GroupFile
+        mime_map_r = {
+            'jpg':'image/jpeg','jpeg':'image/jpeg','png':'image/png',
+            'gif':'image/gif','webp':'image/webp','pdf':'application/pdf'
+        }
+        gf = GroupFile(
+            filename=filename,
+            file_data=base64.b64encode(receipt_bytes).decode('utf-8'),
+            mime_type=mime_map_r.get(ext, 'image/jpeg'),
+            file_type='receipt'
+        )
+        db.session.add(gf)
+        db.session.flush()
+        txn.receipt_path = filename
+        db.session.flush()
+
+        user = User.query.get(session['user_id'])
+        today_utc = datetime.utcnow().strftime('%Y-%m-%d')
+        yesterday_utc = (datetime.utcnow() - timedelta(days=1)).strftime('%Y-%m-%d')
+
+        verification_prompt = (
+            f"You are a Nigerian bank payment verification system.\n"
+            f"Analyse this transfer receipt image carefully.\n\n"
+            f"=== EXPECTED PAYMENT DETAILS ===\n"
+            f"Destination Account Number : {ACCOUNT_NUMBER}\n"
+            f"Destination Account Name   : {ACCOUNT_NAME}\n"
+            f"Destination Bank           : {BANK_NAME}\n"
+            f"Amount                     : ₦{txn.amount_paid:,.0f}\n"
+            f"Reference / Narration must contain : {txn.reference_code}\n"
+            f"Transfer date must be today ({today_utc}) or yesterday ({yesterday_utc}) [UTC]\n\n"
+            f"=== YOUR TASK ===\n"
+            f"1. Find the destination account number in the receipt.\n"
+            f"2. Find the destination account name.\n"
+            f"3. Find the transfer amount.\n"
+            f"4. Find the transfer date.\n"
+            f"5. Find the narration / reference / description field.\n"
+            f"6. Verify ALL five fields match the expected values above.\n"
+            f"   - The narration MUST contain the exact reference: {txn.reference_code}\n"
+            f"   - The amount MUST be ₦{txn.amount_paid:,.0f} (or very close, within ₦1)\n"
+            f"   - The date MUST be {today_utc} or {yesterday_utc}\n"
+            f"   - The destination account number MUST be {ACCOUNT_NUMBER}\n\n"
+            f"RESPOND ONLY WITH VALID JSON (no markdown, no extra text):\n"
+            f'{{"verified":true,"reason":"brief reason","found_amount":"X","found_reference":"X","found_account":"X","found_account_name":"X","found_date":"X","field_mismatches":[]}}'
+        )
+
+        verified = False
+        result = {}
+
+        try:
+            if ext == 'pdf':
+                # Extract PDF text and use text model
+                import io as _io, PyPDF2 as _PyPDF2
+                pdf_stream = _io.BytesIO(receipt_bytes)
+                pdf_reader = _PyPDF2.PdfReader(pdf_stream)
+                pdf_text = ''
+                for page in pdf_reader.pages[:10]:
+                    try: pdf_text += page.extract_text() or ''
+                    except: continue
+
+                text_prompt = (
+                    f"You are a Nigerian bank payment verification system.\n"
+                    f"Analyse this transfer receipt text:\n\n{pdf_text[:4000]}\n\n"
+                    f"=== EXPECTED PAYMENT DETAILS ===\n"
+                    f"Destination Account Number : {ACCOUNT_NUMBER}\n"
+                    f"Destination Account Name   : {ACCOUNT_NAME}\n"
+                    f"Amount                     : ₦{txn.amount_paid:,.0f}\n"
+                    f"Reference / Narration must contain : {txn.reference_code}\n"
+                    f"Transfer date must be {today_utc} or {yesterday_utc}\n\n"
+                    f"Verify all fields and respond ONLY with valid JSON:\n"
+                    f'{{"verified":true,"reason":"brief reason","found_amount":"X","found_reference":"X","found_account":"X","found_account_name":"X","found_date":"X","field_mismatches":[]}}'
+                )
+                ai_resp = model.generate_content(text_prompt)
+            else:
+                ai_resp = vision_model.generate_content([
+                    verification_prompt,
+                    {'mime_type': mime_map_r.get(ext, 'image/jpeg'), 'data': receipt_bytes}
+                ])
+
+            resp_text = ai_resp.text.strip().replace('```json','').replace('```','').strip()
+            s = resp_text.find('{'); e = resp_text.rfind('}') + 1
+            if s == -1 or e <= s:
+                raise ValueError('No JSON in AI response')
+            result = json.loads(resp_text[s:e])
+            verified = result.get('verified', False)
+
+        except Exception as ai_err:
+            logger.error(f"AI verification error: {ai_err}", exc_info=True)
+            verified = False
+            result = {'reason': 'AI verification unavailable — queued for manual review.'}
+
+        if verified:
+            txn.status = 'approved'
+            txn.verified_by = 0   # 0 = auto-verified
+            txn.verified_at = datetime.utcnow()
+            user.spark_tokens = (getattr(user, 'spark_tokens', 0) or 0) + txn.tokens_added
+            user.total_tokens_purchased = (getattr(user, 'total_tokens_purchased', 0) or 0) + txn.tokens_added
+            user.total_spent = (getattr(user, 'total_spent', 0) or 0) + txn.amount_paid
+
+            # Deduct from admin pool
+            admin = User.query.filter_by(username=ADMIN_USERNAME).first()
+            if admin and hasattr(admin, 'token_pool'):
+                admin.token_pool = max(0, (getattr(admin, 'token_pool', 0) or 0) - txn.tokens_added)
+
+            db.session.commit()
+
+            _create_notification(session['user_id'], 'payment',
+                                 f'✅ {txn.tokens_added:,} Spark Tokens added!',
+                                 f'Your payment of ₦{txn.amount_paid:,.0f} was verified automatically.',
+                                 'tokens', txn.id)
+
+            admin2 = User.query.filter_by(username=ADMIN_USERNAME).first()
+            if admin2:
+                _create_notification(admin2.id, 'payment',
+                                     f'Auto-verified: {user.name}',
+                                     f'₦{txn.amount_paid:,.0f} — {txn.tokens_added} tokens added.',
+                                     'admin', txn.id)
+
+            return jsonify({'success': True, 'tokens_added': txn.tokens_added,
+                            'message': f'{txn.tokens_added:,} Spark Tokens added to your account!'})
+        else:
+            db.session.commit()
+            reason = result.get('reason', 'Could not verify payment details.')
+
+            admin3 = User.query.filter_by(username=ADMIN_USERNAME).first()
+            if admin3:
+                _create_notification(admin3.id, 'payment',
+                                     f'Manual review: {user.name}',
+                                     f'₦{txn.amount_paid:,.0f} — Reason: {reason[:80]}',
+                                     'admin', txn.id)
+
+            return jsonify({
+                'success': False, 'queued': True,
+                'error': (
+                    f'Verification failed: {reason}\n\n'
+                    'Your payment has been queued for manual review. '
+                    'You will be notified within 30 minutes.'
+                )
+            })
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Receipt verification error: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': f'Verification error: {str(e)[:200]}'}), 500
+
+
+# ── Migration helper (run once to add new columns) ───────────────────────────
+# Visit /run-token-migration to add the new DB columns.
+
+@app.route('/run-token-migration')
+def run_token_migration():
+    results = []
+    migrations = [
+        "ALTER TABLE token_transaction ADD COLUMN IF NOT EXISTS user_bank VARCHAR(100)",
+        "ALTER TABLE token_transaction ADD COLUMN IF NOT EXISTS user_account VARCHAR(20)",
+        "ALTER TABLE token_transaction ADD COLUMN IF NOT EXISTS reference_code VARCHAR(40)",
+        "ALTER TABLE token_transaction ADD COLUMN IF NOT EXISTS verified_by INTEGER",
+        "ALTER TABLE token_transaction ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP",
+        "ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS token_pool INTEGER DEFAULT 0",
+    ]
+    try:
+        with db.engine.connect() as conn:
+            for sql in migrations:
+                try:
+                    conn.execute(db.text(sql))
+                    results.append(f'OK: {sql[:70]}')
+                except Exception as e:
+                    results.append(f'SKIP ({str(e)[:60]}): {sql[:50]}')
+            conn.commit()
+        return '<br>'.join(results) + '<br><strong>Done!</strong>'
+    except Exception as e:
+        return f'Error: {str(e)}'
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=app.debug)
