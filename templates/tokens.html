@@ -517,15 +517,28 @@ async function submitAndVerify(){
             document.querySelector('#step-done .btn-spark').textContent='OK, Got it';
             document.querySelector('#step-done .btn-spark').onclick=resetFlow;
         } else {
-            doneState.className='verify-state failed';
-            doneIcon.textContent='❌';
-            doneTitle.textContent='Verification Failed';
-            doneMsg.style.whiteSpace='pre-line';
-            doneMsg.textContent=res.error||'Could not verify your payment.';
-            showStep('step-done');
-            const tryBtn=document.querySelector('#step-done .btn-spark');
+        const isNoTokens = res.error && res.error.includes('NO_TOKENS');
+        doneState.className='verify-state failed';
+        doneIcon.textContent= isNoTokens ? '⚠️' : '❌';
+        doneTitle.textContent= isNoTokens ? 'Tokens Not Available Right Now' : 'Verification Failed';
+        doneMsg.style.whiteSpace='pre-line';
+        doneMsg.textContent= isNoTokens
+            ? 'We are currently out of Spark Tokens. Please contact support and we will resolve this as soon as possible.'
+            : (res.error||'Could not verify your payment.');
+        showStep('step-done');
+        const tryBtn=document.querySelector('#step-done .btn-spark');
+        if(isNoTokens){
+            tryBtn.innerHTML='<i class="fas fa-envelope"></i> Contact Support';
+            tryBtn.onclick=()=>{
+                document.getElementById('contact-section').style.display='';
+                document.getElementById('contact-section').scrollIntoView({behavior:'smooth'});
+                showStep('step-amount');
+            };
+        } else {
             tryBtn.innerHTML='<i class="fas fa-redo"></i> Try Again';
             tryBtn.onclick=()=>{showStep('step-upload');};
+        }
+    }
         }
     }catch(e){
         clearInterval(msgInterval);

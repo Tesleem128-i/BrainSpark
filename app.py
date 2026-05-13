@@ -3794,6 +3794,10 @@ def admin_stats():
         db.func.sum(TokenTransaction.tokens_added)
     ).filter_by(status='approved').scalar() or 0
 
+    total_tokens_available = db.session.query(
+        db.func.sum(User.spark_tokens)
+    ).scalar() or 0
+
     pending_txns = TokenTransaction.query.filter_by(status='pending')\
         .order_by(TokenTransaction.created_at.desc()).all()
 
@@ -3815,6 +3819,7 @@ def admin_stats():
         'total_profit': total_profit,
         'total_api_cost': total_api_cost,
         'total_tokens_issued': total_tokens_issued,
+        'total_tokens_available': total_tokens_available,
         'pending_count': len(pending_txns),
         'pending_transactions': [{
             'id': t.id, 'user_id': t.user_id,
@@ -3877,7 +3882,8 @@ def receipt_file(filename):
     user = User.query.get(session['user_id'])
     if not user or user.username != ADMIN_USERNAME:
         return jsonify({'error': 'Forbidden'}), 403
-    return send_from_directory(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads', 'receipts'), filename)
+    receipts_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads', 'receipts')
+    return send_from_directory(receipts_dir, os.path.basename(filename))
 
 
 

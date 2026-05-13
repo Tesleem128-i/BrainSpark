@@ -89,8 +89,16 @@ async function loadStats(){
     document.getElementById('stat-revenue').textContent='₦'+data.total_revenue.toLocaleString();
     document.getElementById('stat-profit').textContent='₦'+data.total_profit.toLocaleString();
     document.getElementById('stat-api').textContent='₦'+data.total_api_cost.toLocaleString();
-    document.getElementById('stat-tokens').textContent=data.total_tokens_issued.toLocaleString();
-    document.getElementById('stat-pending').textContent=data.pending_count;
+    <div class="stat-card">
+            <div class="stat-label">Tokens Available</div>
+            <div class="stat-value" id="stat-available" style="color:var(--spark);">—</div>
+            <div style="font-size:.72rem;color:var(--muted);margin-top:4px;">Across all users</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Pending Payments</div>
+            <div class="stat-value" id="stat-pending" style="color:var(--accent);">—</div>
+        </div>
+    </div>
 
     const pendingList=document.getElementById('pending-list');
     if(!data.pending_transactions.length){pendingList.innerHTML='<div style="color:var(--muted);font-size:.875rem;padding:16px 0;">No pending payments 🎉</div>';} 
