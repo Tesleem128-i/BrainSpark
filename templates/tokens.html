@@ -108,12 +108,8 @@
         .alert-error{background:rgba(255,79,48,.08);border:1px solid rgba(255,79,48,.2);color:var(--accent);}
         .alert-success{background:rgba(0,201,141,.08);border:1px solid rgba(0,201,141,.3);color:var(--green);}
 
-        /* Sections — all hidden by default except step-amount, JS controls visibility */
-        #step-password{display:none;}
-        #step-payment{display:none;}
-        #step-upload{display:none;}
-        #step-verifying{display:none;}
-        #step-done{display:none;}
+        /* Sections — JS controls visibility via showStep() */
+        #step-password,#step-payment,#step-upload,#step-verifying,#step-done{display:none;}
 
         .section-divider{height:1px;background:var(--border);margin:20px 0;}
     </style>
@@ -236,7 +232,7 @@
             </div>
 
             <!-- STEP 2b: Password confirmation -->
-            <div id="step-password" style="display:none;">
+            <div id="step-password">
                 <div class="alert alert-info" style="margin-bottom:16px;">
                     <i class="fas fa-lock"></i>
                     Confirm your identity before we generate your unique payment reference.
@@ -355,6 +351,9 @@ function showStep(name){
         if(!el) return;
         el.style.display = id===name ? 'block' : 'none';
     });
+    // force remove any lingering CSS class interference
+    const active=document.getElementById(name);
+    if(active) active.style.setProperty('display','block','important');
 }
 
 function copyAcct(){
@@ -633,6 +632,11 @@ async function loadStats(){
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
+    // Force all steps hidden first, then show step-amount
+    ['step-password','step-payment','step-upload','step-verifying','step-done'].forEach(id=>{
+        const el=document.getElementById(id);
+        if(el) el.style.display='none';
+    });
     showStep('step-amount');
     loadStats();
 });
