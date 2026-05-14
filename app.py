@@ -8,6 +8,7 @@ from models import (db, User, Quiz, QuizResult, Connection, UserTag, Message,
                     BrainstormNote, GroupJoinRequest, Poll, PollOption, PollVote,
                     GeneratedQuestion, TopicMastery, WrongAnswer, AppNotification,
                     HandRaise, TokenTransaction, TokenUsageLog)
+import os
 import hashlib
 import base64
 # ── Maintenance Mode ──────────────────────────────────────────────────────────
