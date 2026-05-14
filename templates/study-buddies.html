@@ -2345,7 +2345,9 @@ setInterval(loadNotifications,30000);
     document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('bs-overlay').style.display!=='none'){if(confirm('Leave the brainstorm session?'))leaveBSSession();}});
 });
   (function() {
-    document.body.classList.add('loading');
+    const bar    = document.getElementById('bsl-bar');
+    const msg    = document.getElementById('bsl-msg');
+    const loader = document.getElementById('bs-loader');
     const msgs = [
       [0,   'Initialising…'],
       [20,  'Loading AI engine…'],
@@ -2354,9 +2356,6 @@ setInterval(loadNotifications,30000);
       [90,  'Sparking up…'],
       [100, 'Welcome to Brainspark ✦'],
     ];
-    const bar    = document.getElementById('bsl-bar');
-    const msg    = document.getElementById('bsl-msg');
-    const loader = document.getElementById('bs-loader');
     let step = 0;
     function tick() {
       if (step >= msgs.length) return;
@@ -2365,16 +2364,18 @@ setInterval(loadNotifications,30000);
       msg.style.opacity = '0';
       setTimeout(() => { msg.textContent = text; msg.style.opacity = '1'; }, 150);
       step++;
-      if (step < msgs.length) setTimeout(tick, step === 1 ? 200 : 320);
+      if (step < msgs.length) setTimeout(tick, 320);
     }
     setTimeout(tick, 100);
     setTimeout(() => {
       bar.style.width = '100%';
       setTimeout(() => {
-        loader.classList.add('hide');
-        document.body.classList.remove('loading');
+        loader.style.opacity = '0';
+        loader.style.visibility = 'hidden';
+        loader.style.pointerEvents = 'none';
+        document.body.style.overflow = '';
       }, 400);
-    }, 2000);
+    }, 2200);
   })();
 // ═══════════════════════════════════════════════════════════
 //  CHAT BACKGROUNDS
