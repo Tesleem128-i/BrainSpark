@@ -740,6 +740,13 @@ function showStep(n) {
 }
 
 // ── Tier grid ──────────────────────────────────────────────────────
+
+// TOKEN_RATE injected from server
+const TOKEN_RATE = {{ token_rate }};
+function calcTokens(amount) {
+    return Math.floor(amount * 0.5 * TOKEN_RATE);
+}
+
 function renderTiers(poolAvailable) {
     const tiers = [2000, 3000, 4000, 5000, 6000];
     const grid = document.getElementById('tier-grid');
@@ -752,6 +759,18 @@ function renderTiers(poolAvailable) {
         return;
     }
 
+    grid.innerHTML = tiers.map(amt => {
+        const tokens = calcTokens(amt);
+        const unavail = tokens > poolAvailable;
+        return `<div class="tier-btn ${unavail ? 'opacity-30' : ''}" 
+                     style="${unavail ? 'opacity:.3;cursor:not-allowed;' : ''}"
+                     onclick="${unavail ? '' : `selectTier(${amt}, this)`}">
+            <div class="tier-amt">₦${amt.toLocaleString()}</div>
+            <div class="tier-tok">${tokens.toLocaleString()} tokens</div>
+            ${unavail ? '<div style="font-size:.65rem;color:var(--accent);margin-top:3px;">Unavailable</div>' : ''}
+        </div>`;
+    }).join('');
+}
     grid.innerHTML = tiers.map(amt => {
         const tokens = amt - 500;
         const unavail = tokens > poolAvailable;
@@ -781,13 +800,13 @@ function onAmountInput() {
         preview.style.color = 'var(--accent)';
         return;
     }
-    const tokens = amt - 500;
+    const tokens = calcTokens(amt);
     if (tokens > poolTotal) {
         preview.textContent = `⚠ Only ${poolTotal.toLocaleString()} tokens currently available`;
         preview.style.color = 'var(--accent)';
         return;
     }
-    preview.textContent = `✓ You will receive ${tokens.toLocaleString()} Spark Tokens (₦500 platform fee)`;
+    preview.textContent = `✓ You will receive ${tokens.toLocaleString()} Spark Tokens`;
     preview.style.color = 'var(--spark)';
     document.querySelectorAll('.tier-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.tier-btn').forEach(b => {
@@ -800,7 +819,7 @@ function onAmountInput() {
 function goToStep2() {
     const amt = parseFloat(document.getElementById('amount-input').value) || 0;
     if (amt < 2000 || amt > 6000) { toast('Please select or enter a valid amount (₦2,000–₦6,000)', 'warn'); return; }
-    const tokens = amt - 500;
+    const tokens = calcTokens(amt);
     if (tokens > poolTotal) { toast('Not enough tokens in the pool. Please contact support.', 'error'); return; }
     selectedAmt = amt;
     document.getElementById('pw-preview').textContent = `₦${amt.toLocaleString()} → ${tokens.toLocaleString()} Spark Tokens`;

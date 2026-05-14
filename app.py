@@ -3501,13 +3501,28 @@ def check_my_hand(session_id):
 #  SPARK TOKEN SYSTEM
 # ═════════════════════════════════════════════════════════════════════════════
 
-BANK_NAME     = "Moniepoint MFB"
-ACCOUNT_NAME  = "Brainspark Technologies"
-ACCOUNT_NUMBER = "1234567890"  # replace with your real account number
-PLATFORM_FEE  = 500
-MIN_PAYMENT   = 1500
-MAX_PAYMENT   = 6000
+BANK_NAME      = "Moniepoint MFB"
+ACCOUNT_NAME   = "Brainspark Technologies"
+ACCOUNT_NUMBER = "1234567890"   # ← your real account number
+PROFIT_PERCENT = 0.50           # 50% of every payment is your profit; 50% goes to API budget
+MIN_PAYMENT    = 1500
+MAX_PAYMENT    = 6000
 ADMIN_USERNAME = "Peace1"
+
+# ── TOKEN RATE ──────────────────────────────────────────────────────────────
+# How many Spark Tokens does ₦1 of API budget buy?
+# Example: you paid ₦10,000 for an API key that gives 1,000,000 AI tokens
+#          → TOKEN_RATE = 1,000,000 / 10,000 = 100
+# Change only this number whenever you top up.
+TOKEN_RATE = 100   # Spark Tokens per ₦1 of API budget
+
+def naira_to_tokens(naira: float) -> int:
+    """Convert naira of API budget → Spark Tokens."""
+    return int(naira * TOKEN_RATE)
+
+def tokens_to_naira(tokens: int) -> float:
+    """Convert Spark Tokens → equivalent naira of API budget."""
+    return round(tokens / TOKEN_RATE, 2)
 
 os.makedirs('uploads/receipts', exist_ok=True)
 
@@ -3555,7 +3570,7 @@ def tokens_page():
                            bank_name=BANK_NAME, account_name=ACCOUNT_NAME,
                            account_number=ACCOUNT_NUMBER,
                            min_payment=MIN_PAYMENT, max_payment=MAX_PAYMENT,
-                           platform_fee=PLATFORM_FEE)
+                           token_rate=TOKEN_RATE)
 
 
 @app.route('/api/submit-payment', methods=['POST'])
@@ -3592,12 +3607,14 @@ def submit_payment():
         filename = f"receipt_{session['user_id']}_{ts}.{ext}"
         receipt.save(os.path.join('uploads/receipts', filename))
 
-        tokens_added = int(amount - PLATFORM_FEE)
+        api_budget   = amount * (1 - PROFIT_PERCENT)   # 50% goes to API
+        profit_taken = amount * PROFIT_PERCENT           # 50% is your profit
+        tokens_added = naira_to_tokens(api_budget)
 
         txn = TokenTransaction(
             user_id=session['user_id'],
             amount_paid=amount,
-            platform_fee=PLATFORM_FEE,
+            platform_fee=profit_taken,
             tokens_added=tokens_added,
             receipt_path=filename,
             status='pending'
@@ -3678,6 +3695,33 @@ def my_token_stats():
 
 # ── ADMIN ROUTES ─────────────────────────────────────────────────────────────
 
+@app.route('/api/admin/fund-pool', methods=['POST'])
+def admin_fund_pool():
+    """Admin enters how much they paid for the API key → converts to tokens and adds to pool."""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    user = User.query.get(session['user_id'])
+    if not user or user.username != ADMIN_USERNAME:
+        return jsonify({'error': 'Forbidden'}), 403
+    data = request.get_json(silent=True) or {}
+    try:
+        amount_paid = float(data.get('amount_paid', 0))
+    except Exception:
+        return jsonify({'error': 'Invalid amount'}), 400
+    if amount_paid <= 0:
+        return jsonify({'error': 'Amount must be positive'}), 400
+    tokens_to_add = naira_to_tokens(amount_paid)
+    admin = User.query.filter_by(username=ADMIN_USERNAME).first()
+    admin.token_pool = (getattr(admin, 'token_pool', 0) or 0) + tokens_to_add
+    db.session.commit()
+    return jsonify({
+        'success': True,
+        'tokens_added': tokens_to_add,
+        'new_pool': admin.token_pool,
+        'message': f'₦{amount_paid:,.0f} → {tokens_to_add:,} tokens added to pool'
+    })
+
+
 @app.route('/admin')
 def admin_panel():
     if 'user_id' not in session:
@@ -3711,9 +3755,8 @@ def admin_stats():
         db.func.sum(TokenTransaction.tokens_added)
     ).filter_by(status='approved').scalar() or 0
 
-    total_tokens_available = db.session.query(
-        db.func.sum(User.spark_tokens)
-    ).scalar() or 0
+    admin_user = User.query.filter_by(username=ADMIN_USERNAME).first()
+    total_tokens_available = getattr(admin_user, 'token_pool', 0) or 0
 
     pending_txns = TokenTransaction.query.filter_by(status='pending')\
         .order_by(TokenTransaction.created_at.desc()).all()
@@ -3870,9 +3913,10 @@ def generate_payment_ref():
     # Check pool availability
     admin = User.query.filter_by(username=ADMIN_USERNAME).first()
     pool_available = getattr(admin, 'token_pool', 0) or 0
-    tokens_requested = int(amount - PLATFORM_FEE)
+    api_budget_requested = amount * (1 - PROFIT_PERCENT)
+    tokens_requested = naira_to_tokens(api_budget_requested)
     if tokens_requested > pool_available:
-        return jsonify({'success': False, 'error': 'Not enough tokens available in the pool right now. Please contact support.'}), 400
+        return jsonify({'success': False, 'error': 'Not enough tokens available right now. Please contact support.'}), 400
 
     import random, string as _string
     WORD_LIST = [
@@ -3885,11 +3929,13 @@ def generate_payment_ref():
     digits = ''.join(random.choices(_string.digits, k=5))
     ref = '-'.join(words) + '-' + digits   # e.g. SPARK-NOVA-BOLT-38271
 
-    tokens_added = int(amount - PLATFORM_FEE)
+    api_budget   = amount * (1 - PROFIT_PERCENT)
+    profit_taken = amount * PROFIT_PERCENT
+    tokens_added = naira_to_tokens(api_budget)
     txn = TokenTransaction(
         user_id=session['user_id'],
         amount_paid=amount,
-        platform_fee=PLATFORM_FEE,
+        platform_fee=profit_taken,
         tokens_added=tokens_added,
         receipt_path='',
         status='pending',

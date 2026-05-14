@@ -343,6 +343,31 @@ body.loading { overflow: hidden; }
         </div>
     </div>
 
+    <!-- ── FUND TOKEN POOL ── -->
+    <div class="card" style="margin-bottom:20px;">
+        <div class="card-title">
+            <i class="fas fa-coins" style="color:var(--gold);font-size:.85rem;"></i>
+            Fund Token Pool (API Top-Up)
+        </div>
+        <p style="font-size:.83rem;color:var(--ink-soft);margin-bottom:14px;line-height:1.6;">
+            Enter the amount you paid for the API key. Tokens will be added to the pool automatically at the current rate.
+        </p>
+        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+            <div style="flex:1;min-width:180px;">
+                <label style="font-size:.72rem;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:6px;">Amount Paid (₦)</label>
+                <input type="number" id="fund-amount" placeholder="e.g. 10000" min="100"
+                       style="width:100%;padding:10px 14px;border-radius:10px;border:1.5px solid var(--border-strong);background:var(--surface3);color:var(--ink);font-size:.9rem;outline:none;">
+            </div>
+            <button onclick="fundPool()" style="padding:10px 22px;border-radius:50px;background:var(--spark);color:#fff;border:none;font-weight:700;font-size:.875rem;cursor:pointer;white-space:nowrap;">
+                <i class="fas fa-plus"></i> Add to Pool
+            </button>
+        </div>
+        <div id="fund-result" style="margin-top:10px;font-size:.83rem;display:none;"></div>
+        <div style="margin-top:10px;font-size:.78rem;color:var(--muted);">
+            Pool remaining: <strong id="pool-remaining" style="color:var(--spark);">—</strong> tokens
+        </div>
+    </div>
+
     <div class="card">
         <div class="card-title">
             <i class="fas fa-clock" style="color:var(--gold);font-size:.85rem;"></i>
@@ -427,6 +452,8 @@ async function loadStats() {
     document.getElementById('stat-api').textContent      = '₦' + data.total_api_cost.toLocaleString();
     document.getElementById('stat-tokens').textContent   = data.total_tokens_issued?.toLocaleString() ?? '—';
     document.getElementById('stat-available').textContent = data.total_tokens_available?.toLocaleString() ?? '—';
+    const poolEl = document.getElementById('pool-remaining');
+    if (poolEl) poolEl.textContent = (data.total_tokens_available || 0).toLocaleString();
     document.getElementById('stat-pending').textContent  = data.pending_transactions.length;
 
     /* ── pending transactions ── */
@@ -496,6 +523,28 @@ function handleDoneState(res, doneState, doneIcon, doneTitle, doneMsg, showStep)
     } else {
         tryBtn.innerHTML = '<i class="fas fa-redo"></i> Try Again';
         tryBtn.onclick = () => { showStep('step-upload'); };
+    }
+}
+
+async function fundPool() {
+    const amt = parseFloat(document.getElementById('fund-amount').value);
+    if (!amt || amt <= 0) { showToast('Enter a valid amount', 'error'); return; }
+    const res = await fetch('/api/admin/fund-pool', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount_paid: amt })
+    }).then(r => r.json());
+    const resultEl = document.getElementById('fund-result');
+    resultEl.style.display = 'block';
+    if (res.success) {
+        showToast(`✅ ${res.tokens_added.toLocaleString()} tokens added to pool!`);
+        resultEl.style.color = 'var(--green)';
+        resultEl.textContent = `✓ ${res.message}  |  Pool now: ${res.new_pool.toLocaleString()} tokens`;
+        document.getElementById('fund-amount').value = '';
+        loadStats();
+    } else {
+        resultEl.style.color = 'var(--accent)';
+        resultEl.textContent = '✗ ' + (res.error || 'Failed');
     }
 }
 
