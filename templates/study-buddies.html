@@ -1220,14 +1220,6 @@ function buildDMBubble(msg,idx,myId){
     row.innerHTML=`<div class="wa-bubble" oncontextmenu="showDMCtxMenu(event,${msg.id},${idx},'${encodeURIComponent(msg.content||'')}',${isSent})">${replyHtml}${contentHtml}<div class="wa-bubble-footer"><span class="wa-bubble-time">${time}</span>${tick}</div></div>${reactHtml}`;
     row.querySelector('.wa-bubble').addEventListener('dblclick',()=>setDMReply(msg.id,isSent?'You':waCurrentUserName,msg.content||'📷 Image'));
     return row;
-    const isSent=msg.sender_id===(myId||_myUserId);const row=document.createElement('div');row.className=`wa-msg-row ${isSent?'sent':'received'}`;row.dataset.msgId=msg.id;
-    const time=formatTime(msg.created_at);
-    let replyHtml='';if(msg.reply_to_content)replyHtml=`<div class="wa-reply-block"><div class="rb-name">${escHtml(msg.reply_to_sender||'Message')}</div><div class="rb-text">${escHtml(msg.reply_to_content)}</div></div>`;
-    let contentHtml='';if(msg.image_url){const _src=msg.image_url;contentHtml+=`<img src="${_src}" class="wa-msg-img" onclick="openLightbox('${_src}')" alt="Image">`;}else if(msg.content&&msg.content!=='📷 Image'){contentHtml+=`<div>${escHtml(msg.content)}</div>`;}else if(msg.content){contentHtml+=`<div>${escHtml(msg.content)}</div>`;}
-    const tick=isSent?`<span class="wa-read-tick ${msg.is_read?'read':''}"><i class="fas fa-check${msg.is_read?'-double':''}"></i></span>`:'';
-    row.innerHTML=`<div class="wa-bubble" oncontextmenu="showDMCtxMenu(event,${msg.id},${idx},'${encodeURIComponent(msg.content||'')}',${isSent})">${replyHtml}${contentHtml}<div class="wa-bubble-footer"><span class="wa-bubble-time">${time}</span>${tick}</div></div>`;
-    row.querySelector('.wa-bubble').addEventListener('dblclick',()=>setDMReply(msg.id,isSent?'You':waCurrentUserName,msg.content||'📷 Image'));
-    return row;
 }
 async function sendMessage(){
     const input=document.getElementById('message-input');const content=input.value.trim();
@@ -2546,6 +2538,11 @@ document.addEventListener('DOMContentLoaded',()=>{
     }
     // Load backgrounds on DM open
     const origOpenDMChat=openDMChat;
+    window.openDMChat=async function(userId,name,pic,username){
+        await origOpenDMChat(userId,name,pic,username);
+        _bgTarget='dm';
+        _loadSavedBg();
+    };
     // Patch selectGCGroup to load group pic and bg
     const origSelectGCGroup=selectGCGroup;
     window.selectGCGroup=async function(groupId,groupName,isAdmin,creatorId,desc,element){
@@ -2681,7 +2678,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 </div>
 
 <!-- Group Picture Upload Progress -->
-<div id="group-pic-toast" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:.875rem;color:var(--ink);box-shadow:0 8px 24px rgba(0,0,0,.3);display:flex;align-items:center;gap:10px;"></div>
+<div id="group-pic-toast" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:.875rem;color:var(--ink);box-shadow:0 8px 24px rgba(0,0,0,.3);align-items:center;gap:10px;"></div>
 
 </body>
 </html>
