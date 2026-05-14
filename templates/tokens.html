@@ -771,19 +771,6 @@ function renderTiers(poolAvailable) {
         </div>`;
     }).join('');
 }
-    grid.innerHTML = tiers.map(amt => {
-        const tokens = amt - 500;
-        const unavail = tokens > poolAvailable;
-        return `<div class="tier-btn ${unavail ? 'opacity-30' : ''}" 
-                     style="${unavail ? 'opacity:.3;cursor:not-allowed;' : ''}"
-                     onclick="${unavail ? '' : `selectTier(${amt}, this)`}">
-            <div class="tier-amt">₦${amt.toLocaleString()}</div>
-            <div class="tier-tok">${tokens.toLocaleString()} tokens</div>
-            ${unavail ? '<div style="font-size:.65rem;color:var(--accent);margin-top:3px;">Unavailable</div>' : ''}
-        </div>`;
-    }).join('');
-}
-
 function selectTier(amt, el) {
     document.querySelectorAll('.tier-btn').forEach(b => b.classList.remove('active'));
     el.classList.add('active');
