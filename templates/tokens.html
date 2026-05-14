@@ -342,9 +342,86 @@
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
+        /* ===================== LOADER ===================== */
+#bs-loader {
+  position: fixed; inset: 0; z-index: 99999;
+  background: #080810;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2rem; transition: opacity 0.8s ease, visibility 0.8s ease;
+}
+#bs-loader.hide { opacity: 0; visibility: hidden; pointer-events: none; }
+body.loading { overflow: hidden; }
+
+.bsl-logo-wrap {
+  position: relative; display: flex; align-items: center; justify-content: center;
+}
+.bsl-ring {
+  position: absolute; border-radius: 50%;
+  border: 2px solid transparent;
+  animation: bsl-spin 1.4s linear infinite;
+}
+.bsl-ring-1 {
+  width: 130px; height: 130px;
+  border-top-color: #ff4f30; border-right-color: rgba(255,79,48,0.2);
+  animation-duration: 1.2s;
+}
+.bsl-ring-2 {
+  width: 150px; height: 150px;
+  border-bottom-color: #ff8c5a; border-left-color: rgba(255,140,90,0.15);
+  animation-duration: 1.8s; animation-direction: reverse;
+}
+@keyframes bsl-spin { to { transform: rotate(360deg); } }
+
+.bsl-logo {
+  width: 80px; height: 80px; border-radius: 50%;
+  background: #0d0d20; padding: 8px;
+  animation: bsl-pulse 1.4s ease-in-out infinite;
+}
+@keyframes bsl-pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
+
+.bsl-brand {
+  font-family: 'Syne', sans-serif; font-size: 2.2rem; font-weight: 800;
+  letter-spacing: -0.02em; color: #fff;
+  animation: bsl-fadein 0.6s 0.3s both;
+}
+.bsl-brand span { color: #ff4f30; }
+
+.bsl-tagline {
+  font-size: 0.78rem; letter-spacing: 0.18em; text-transform: uppercase;
+  color: rgba(255,255,255,0.35);
+  animation: bsl-fadein 0.6s 0.5s both;
+}
+.bsl-bar-wrap {
+  width: 220px; height: 3px; background: rgba(255,255,255,0.08);
+  border-radius: 2px; overflow: hidden;
+  animation: bsl-fadein 0.6s 0.6s both;
+}
+.bsl-bar {
+  height: 100%; width: 0%; border-radius: 2px;
+  background: linear-gradient(90deg, #ff4f30, #ff8c5a);
+  transition: width 0.35s ease;
+}
+.bsl-msg {
+  font-size: 0.8rem; color: rgba(255,255,255,0.3); letter-spacing: 0.05em;
+  min-height: 1.2em; transition: opacity 0.3s;
+  animation: bsl-fadein 0.6s 0.7s both;
+}
+@keyframes bsl-fadein { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
     </style>
 </head>
 <body>
+<!-- ======================== LOADER ======================== -->
+<div id="bs-loader">
+  <div class="bsl-logo-wrap">
+    <div class="bsl-ring bsl-ring-1"></div>
+    <div class="bsl-ring bsl-ring-2"></div>
+    <img class="bsl-logo" src="/static/image/KNOWITNOW.png" alt="Brainspark">
+  </div>
+  <div class="bsl-brand">Brain<span>Spark</span></div>
+  <div class="bsl-tagline">Learn Smarter. Ace Faster.</div>
+  <div class="bsl-bar-wrap"><div class="bsl-bar" id="bsl-bar"></div></div>
+  <div class="bsl-msg" id="bsl-msg">Initialising…</div>
+</div>
 
 <nav>
     <span class="nav-logo">Brainspark</span>
@@ -1029,6 +1106,38 @@ document.addEventListener('DOMContentLoaded', () => {
     showStep(1);
     loadStats();
 });
+  (function() {
+    document.body.classList.add('loading');
+    const msgs = [
+      [0,   'Initialising…'],
+      [20,  'Loading AI engine…'],
+      [45,  'Preparing your workspace…'],
+      [70,  'Almost ready…'],
+      [90,  'Sparking up…'],
+      [100, 'Welcome to Brainspark ✦'],
+    ];
+    const bar    = document.getElementById('bsl-bar');
+    const msg    = document.getElementById('bsl-msg');
+    const loader = document.getElementById('bs-loader');
+    let step = 0;
+    function tick() {
+      if (step >= msgs.length) return;
+      const [pct, text] = msgs[step];
+      bar.style.width = pct + '%';
+      msg.style.opacity = '0';
+      setTimeout(() => { msg.textContent = text; msg.style.opacity = '1'; }, 150);
+      step++;
+      if (step < msgs.length) setTimeout(tick, step === 1 ? 200 : 320);
+    }
+    setTimeout(tick, 100);
+    setTimeout(() => {
+      bar.style.width = '100%';
+      setTimeout(() => {
+        loader.classList.add('hide');
+        document.body.classList.remove('loading');
+      }, 400);
+    }, 2000);
+  })();
 </script>
 </body>
 </html>
