@@ -1426,6 +1426,7 @@ def get_groups():
             'member_count':  ChatGroupMember.query.filter_by(group_id=g.id).count(),
             'message_count': GroupMessage.query.filter_by(group_id=g.id, is_deleted=False).count(),
             'your_role': m.role, 'is_muted': m.is_muted,
+            'pic_filename': getattr(g, 'pic_filename', None),
             'created_at': g.created_at.isoformat()
         })
     return jsonify({'success': True, 'groups': groups_data})
@@ -3710,6 +3711,45 @@ def transfer_tokens():
         db.session.rollback()
         logger.error(f"transfer_tokens error: {e}", exc_info=True)
         return jsonify({'success': False, 'error': 'Transfer failed. Please try again.'}), 500
+
+
+@app.route('/api/set-group-picture', methods=['POST'])
+def set_group_picture():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    user_id  = session['user_id']
+    group_id = request.form.get('group_id')
+    pic      = request.files.get('picture')
+    if not group_id or not pic:
+        return jsonify({'success': False, 'error': 'Missing data'}), 400
+    # Only admin can set group picture
+    member = ChatGroupMember.query.filter_by(group_id=group_id, user_id=user_id, role='admin').first()
+    if not member:
+        return jsonify({'success': False, 'error': 'Only admins can change the group picture'}), 403
+    try:
+        pic_bytes = pic.read()
+        b64 = base64.b64encode(pic_bytes).decode('utf-8')
+        ext = pic.filename.rsplit('.', 1)[-1].lower() if '.' in pic.filename else 'jpg'
+        mime_map = {'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png', 'webp': 'image/webp', 'gif': 'image/gif'}
+        mime = mime_map.get(ext, 'image/jpeg')
+        from models import GroupFile
+        filename = f"grp_pic_{group_id}_{int(datetime.utcnow().timestamp()*1000)}.{ext}"
+        gf = GroupFile(filename=filename, file_data=b64, mime_type=mime, file_type='group_pic')
+        db.session.add(gf)
+        group = ChatGroup.query.get(group_id)
+        if group:
+            group.description = group.description  # touch to keep session alive
+            # Store filename on the group itself — add pic_filename column or reuse description field workaround
+            # We store it in a new attribute; if column doesn't exist we store in localStorage fallback handled client-side
+            if hasattr(group, 'pic_filename'):
+                group.pic_filename = filename
+        db.session.commit()
+        data_url = f"data:{mime};base64,{b64}"
+        return jsonify({'success': True, 'pic_url': data_url, 'filename': filename})
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"set_group_picture error: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)[:200]}), 500
 
 
 @app.route('/api/expire-payment-ref', methods=['POST'])

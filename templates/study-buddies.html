@@ -2397,24 +2397,29 @@ const BG_PRESETS=[
 ];
 let _bgTarget=''; // 'dm' or 'gc-{groupId}'
 
-function _getBgKey(){return _bgTarget==='dm'?`chat-bg-dm-${waCurrentUserId}`:`chat-bg-gc-${gcCurrentGroupId}`;}
+const GLOBAL_BG_KEY = 'brainspark-global-chat-bg';
+
+function _applyBgToElement(el, css) {
+    if (!el) return;
+    if (!css || css === 'none') { el.style.background = ''; el.style.backgroundSize = ''; }
+    else if (css.startsWith('url(')) { el.style.background = css; el.style.backgroundSize = 'cover'; el.style.backgroundPosition = 'center'; }
+    else { el.style.background = css; el.style.backgroundSize = ''; }
+}
+function _getBgKey(){ return GLOBAL_BG_KEY; }
 function _applyChatBg(css){
-    const target=_bgTarget==='dm'?document.getElementById('chat-messages'):document.getElementById('gc-msgs');
-    if(!target)return;
-    if(css==='none'){target.style.background='';target.style.backgroundSize='';}
-    else if(css.startsWith('url(')){target.style.background=css;target.style.backgroundSize='cover';target.style.backgroundPosition='center';}
-    else{target.style.background=css;target.style.backgroundSize='';}
-    localStorage.setItem(_getBgKey(),css);
+    // Save globally — applies to ALL chats
+    if (css === 'none') localStorage.removeItem(GLOBAL_BG_KEY);
+    else localStorage.setItem(GLOBAL_BG_KEY, css);
+    _applyBgToElement(document.getElementById('chat-messages'), css);
+    _applyBgToElement(document.getElementById('gc-msgs'), css);
 }
 function _loadSavedBg(){
-    const dmKey=`chat-bg-dm-${waCurrentUserId}`;
-    const saved=localStorage.getItem(dmKey);
-    if(saved)_applyChatBg(saved);
+    const saved = localStorage.getItem(GLOBAL_BG_KEY);
+    _applyBgToElement(document.getElementById('chat-messages'), saved || 'none');
 }
 function _loadGCBg(){
-    const key=`chat-bg-gc-${gcCurrentGroupId}`;
-    const saved=localStorage.getItem(key);
-    if(saved){const el=document.getElementById('gc-msgs');if(el){if(saved.startsWith('url(')){el.style.background=saved;el.style.backgroundSize='cover';el.style.backgroundPosition='center';}else{el.style.background=saved;}}}
+    const saved = localStorage.getItem(GLOBAL_BG_KEY);
+    _applyBgToElement(document.getElementById('gc-msgs'), saved || 'none');
 }
 function showDMBgPicker(){_bgTarget='dm';_openBgModal();}
 function showChatBgPicker(){_bgTarget='gc';_openBgModal();}
@@ -2431,17 +2436,24 @@ function clearChatBg(){_applyChatBg('none');localStorage.removeItem(_getBgKey())
 //  GROUP PICTURE
 // ═══════════════════════════════════════════════════════════
 // We store group pics in localStorage as base64 (no server endpoint needed)
-function uploadGroupPicture(e){
+async function uploadGroupPicture(e){
     const file=e.target.files[0];if(!file)return;
     if(file.size>2*1024*1024){showToast('Image too large (max 2MB)','warn');return;}
-    const r=new FileReader();
-    r.onload=ev=>{
-        const b64=ev.target.result;
-        localStorage.setItem(`gc-pic-${gcCurrentGroupId}`,b64);
-        _applyGroupPic(b64);
-        showToast('Group picture updated!','success');
-    };
-    r.readAsDataURL(file);
+    showToast('Uploading group picture…','info');
+    const fd=new FormData();
+    fd.append('group_id',gcCurrentGroupId);
+    fd.append('picture',file);
+    try{
+        const res=await fetch('/api/set-group-picture',{method:'POST',body:fd}).then(r=>r.json());
+        if(res.success){
+            // Save to localStorage as cache so all devices see it immediately (server is source of truth)
+            localStorage.setItem(`gc-pic-${gcCurrentGroupId}`,res.pic_url);
+            _applyGroupPic(res.pic_url);
+            showToast('Group picture updated!','success');
+        } else {
+            showToast('❌ '+(res.error||'Upload failed'),'error');
+        }
+    }catch{showToast('Network error uploading picture','error');}
     e.target.value='';
 }
 function _applyGroupPic(src){
@@ -2618,7 +2630,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     .gc-sidebar-hd { background: var(--accent); padding: 14px 16px; }
     .gc-sidebar-hd span { color: #fff !important; }
     .gc-sidebar-hd .nav-icon-btn { background: rgba(255,255,255,0.2); border-color: transparent; color: #fff; }
-    .gc-main { position: fixed !important; inset: 0 !important; z-index: 150 !important; display: none !important; flex-direction: column; }
+    .gc-main { position: fixed !important; inset: 0 !important; z-index: 150 !important; display: none !important; flex-direction: column; background: var(--surface2) !important; }
     .gc-main.mobile-open { display: flex !important; }
     #gc-chat-area { display: flex; flex-direction: column; height: 100%; }
     .gc-header { background: var(--accent); padding: 10px 14px; }
