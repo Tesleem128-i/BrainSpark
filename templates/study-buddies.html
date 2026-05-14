@@ -2370,12 +2370,21 @@ setInterval(loadNotifications,30000);
     setTimeout(() => {
       bar.style.width = '100%';
       setTimeout(() => {
+        loader.classList.add('hide');
         loader.style.opacity = '0';
         loader.style.visibility = 'hidden';
         loader.style.pointerEvents = 'none';
         document.body.style.overflow = '';
       }, 400);
     }, 2200);
+
+    // Safety fallback — force hide after 5 seconds no matter what
+    setTimeout(() => {
+      loader.style.opacity = '0';
+      loader.style.visibility = 'hidden';
+      loader.style.pointerEvents = 'none';
+      document.body.style.overflow = '';
+    }, 5000);
   })();
 // ═══════════════════════════════════════════════════════════
 //  CHAT BACKGROUNDS
