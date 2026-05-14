@@ -677,6 +677,29 @@ body.loading { overflow: hidden; }
                 </button>
             </div>
 
+            <!-- Token Transfer -->
+            <div class="card">
+                <div class="card-title"><i class="fas fa-paper-plane" style="color:var(--spark);"></i> Send Tokens</div>
+                <p style="font-size:.82rem;color:var(--ink-soft);margin-bottom:14px;line-height:1.6;">Send Spark Tokens to someone you're connected with.</p>
+
+                <label class="inp-label">Recipient</label>
+                <select id="transfer-recipient" class="inp" style="margin-bottom:12px;">
+                    <option value="">Loading connections…</option>
+                </select>
+
+                <label class="inp-label">Amount</label>
+                <input type="number" id="transfer-amount" class="inp" placeholder="e.g. 50" min="1" oninput="onTransferAmountInput()">
+                <div id="transfer-preview" style="font-size:.8rem;color:var(--spark);min-height:18px;margin-bottom:12px;"></div>
+
+                <label class="inp-label">Your Password</label>
+                <input type="password" id="transfer-password" class="inp" placeholder="Confirm with your password…">
+
+                <button class="btn btn-spark btn-full" id="transfer-btn" onclick="submitTransfer()">
+                    <i class="fas fa-paper-plane"></i> Send Tokens
+                </button>
+                <div id="transfer-result" style="margin-top:10px;font-size:.83rem;display:none;"></div>
+            </div>
+
             <!-- Transaction history -->
             <div class="card">
                 <div class="card-title"><i class="fas fa-history" style="color:var(--ink-soft);"></i> Transaction History</div>
@@ -993,6 +1016,85 @@ function resetFlow() {
     loadStats();
 }
 
+// ── Token Transfer ─────────────────────────────────────────────────
+async function loadConnections() {
+    try {
+        const res = await fetch('/api/get-connections').then(r => r.json());
+        const sel = document.getElementById('transfer-recipient');
+        if (!res.success || !res.connections.length) {
+            sel.innerHTML = '<option value="">No connections yet</option>';
+            return;
+        }
+        sel.innerHTML = '<option value="">Select a connection…</option>' +
+            res.connections.map(c =>
+                `<option value="${c.id}">${c.name} (@${c.username})</option>`
+            ).join('');
+    } catch {
+        document.getElementById('transfer-recipient').innerHTML = '<option value="">Failed to load</option>';
+    }
+}
+
+function onTransferAmountInput() {
+    const amt   = parseInt(document.getElementById('transfer-amount').value) || 0;
+    const prev  = document.getElementById('transfer-preview');
+    const bal   = parseInt(document.getElementById('token-balance').textContent.replace(/,/g, '')) || 0;
+    if (!amt) { prev.textContent = ''; return; }
+    if (amt > bal) {
+        prev.textContent = `⚠ You only have ${bal.toLocaleString()} tokens`;
+        prev.style.color = 'var(--accent)';
+    } else {
+        prev.textContent = `✓ You will have ${(bal - amt).toLocaleString()} tokens remaining`;
+        prev.style.color = 'var(--spark)';
+    }
+}
+
+async function submitTransfer() {
+    const toUserId  = document.getElementById('transfer-recipient').value;
+    const amount    = parseInt(document.getElementById('transfer-amount').value) || 0;
+    const password  = document.getElementById('transfer-password').value;
+    const resultEl  = document.getElementById('transfer-result');
+    const btn       = document.getElementById('transfer-btn');
+
+    if (!toUserId)  { toast('Please select a recipient', 'warn'); return; }
+    if (amount <= 0){ toast('Please enter a valid amount', 'warn'); return; }
+    if (!password)  { toast('Please enter your password', 'warn'); return; }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending…';
+    resultEl.style.display = 'none';
+
+    try {
+        const res = await fetch('/api/transfer-tokens', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ to_user_id: toUserId, amount, password })
+        }).then(r => r.json());
+
+        resultEl.style.display = 'block';
+        if (res.success) {
+            resultEl.style.color = 'var(--green)';
+            resultEl.textContent = '✓ ' + res.message;
+            document.getElementById('transfer-amount').value = '';
+            document.getElementById('transfer-password').value = '';
+            document.getElementById('transfer-preview').textContent = '';
+            toast(res.message, 'success');
+            loadStats();
+        } else {
+            resultEl.style.color = 'var(--accent)';
+            resultEl.textContent = '✗ ' + (res.error || 'Transfer failed.');
+            toast(res.error || 'Transfer failed.', 'error');
+        }
+    } catch {
+        resultEl.style.display = 'block';
+        resultEl.style.color = 'var(--accent)';
+        resultEl.textContent = '✗ Network error. Please try again.';
+        toast('Network error.', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Tokens';
+    }
+}
+
 // ── Contact ────────────────────────────────────────────────────────
 function toggleContact() {
     const s = document.getElementById('contact-section');
@@ -1111,6 +1213,7 @@ async function loadStats() {
 document.addEventListener('DOMContentLoaded', () => {
     showStep(1);
     loadStats();
+    loadConnections();
 });
   (function() {
     document.body.classList.add('loading');

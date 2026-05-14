@@ -3639,6 +3639,79 @@ def submit_payment():
         return jsonify({'success': False, 'error': str(e)[:200]}), 500
 
 
+@app.route('/api/transfer-tokens', methods=['POST'])
+def transfer_tokens():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+
+    data       = request.get_json(silent=True) or {}
+    password   = data.get('password', '')
+    to_user_id = data.get('to_user_id')
+    amount     = data.get('amount', 0)
+
+    try:
+        amount = int(amount)
+    except Exception:
+        return jsonify({'success': False, 'error': 'Invalid amount.'}), 400
+
+    if amount <= 0:
+        return jsonify({'success': False, 'error': 'Amount must be greater than 0.'}), 400
+
+    sender = User.query.get(session['user_id'])
+    if not sender:
+        return jsonify({'success': False, 'error': 'User not found.'}), 404
+
+    # Verify password
+    if not sender.check_password(password):
+        return jsonify({'success': False, 'error': 'Incorrect password.'}), 403
+
+    # Verify recipient exists and is connected
+    recipient = User.query.get(to_user_id)
+    if not recipient:
+        return jsonify({'success': False, 'error': 'Recipient not found.'}), 404
+
+    if recipient.id == sender.id:
+        return jsonify({'success': False, 'error': 'You cannot transfer tokens to yourself.'}), 400
+
+    is_connected = Connection.query.filter(
+        ((Connection.user_id == sender.id) & (Connection.connected_user_id == recipient.id)) |
+        ((Connection.user_id == recipient.id) & (Connection.connected_user_id == sender.id))
+    ).first()
+    if not is_connected:
+        return jsonify({'success': False, 'error': 'You can only transfer tokens to people you are connected with.'}), 403
+
+    # Check sender balance
+    sender_balance = getattr(sender, 'spark_tokens', 0) or 0
+    if sender_balance < amount:
+        return jsonify({'success': False, 'error': f'Insufficient balance. You only have {sender_balance:,} tokens.'}), 400
+
+    try:
+        sender.spark_tokens    = sender_balance - amount
+        recipient.spark_tokens = (getattr(recipient, 'spark_tokens', 0) or 0) + amount
+
+        # Log as usage for sender
+        log = TokenUsageLog(user_id=sender.id, feature='transfer_out', tokens_used=amount)
+        db.session.add(log)
+
+        db.session.commit()
+
+        # Notify recipient
+        _create_notification(recipient.id, 'payment',
+                             f'⚡ {amount:,} tokens received from {sender.name}!',
+                             f'{sender.name} sent you {amount:,} Spark Tokens.',
+                             'tokens', None)
+
+        return jsonify({
+            'success': True,
+            'new_balance': sender.spark_tokens,
+            'message': f'{amount:,} tokens sent to {recipient.name} successfully!'
+        })
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"transfer_tokens error: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Transfer failed. Please try again.'}), 500
+
+
 @app.route('/api/expire-payment-ref', methods=['POST'])
 def expire_payment_ref():
     if 'user_id' not in session:
