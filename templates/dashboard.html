@@ -507,6 +507,16 @@
         <div class="sidebar-label">Admin</div>
         <button class="sidebar-link" onclick="window.location.href='/admin'" style="color:var(--accent);"><i class="fas fa-shield-alt"></i> Admin Panel</button>
     </div>
+    <div id="maintenance-sidebar-section" style="display:none;">
+    <div style="background:rgba(255,79,48,0.1);border:1px solid rgba(255,79,48,0.3);border-radius:10px;padding:1rem;margin:0.5rem 0;">
+        <div style="font-size:0.78rem;font-weight:700;color:var(--accent);margin-bottom:0.6rem;">🔧 Maintenance Mode</div>
+        <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;">
+            <input type="checkbox" id="maintenanceToggle" onchange="toggleMaintenance(this.checked)"
+                   style="width:16px;height:16px;accent-color:#ff4f30;">
+            <span id="maintenanceLabel" style="font-size:0.8rem;color:var(--ink2);">Loading…</span>
+        </label>
+    </div>
+</div>
     <div style="flex:1"></div>
     <div class="sidebar-label">Account</div>
     <button class="sidebar-link" onclick="window.location.href='/settings'"><i class="fas fa-gear"></i> Settings</button>
@@ -1319,9 +1329,41 @@ function handleAIError(errorMsg) {
     return false;
 }
 
-if ('{{ session.get("username","") }}' === 'Peace1') {
+const isAdmin = '{{ session.get("username","") }}' === 'Peace1';
+if (isAdmin) {
     const adminItem = document.getElementById('admin-sidebar-item');
     if (adminItem) adminItem.style.display = '';
+
+    const maintenanceSection = document.getElementById('maintenance-sidebar-section');
+    if (maintenanceSection) maintenanceSection.style.display = '';
+
+    loadMaintenanceStatus();
+}
+
+async function loadMaintenanceStatus() {
+    try {
+        const res = await fetch('/api/admin/maintenance-status');
+        const data = await res.json();
+        if (!data.success) return;
+        document.getElementById('maintenanceToggle').checked = data.maintenance_mode;
+        document.getElementById('maintenanceLabel').textContent =
+            data.maintenance_mode ? '🔴 Maintenance ON' : '🟢 Site is LIVE';
+    } catch(e) {}
+}
+
+async function toggleMaintenance(enabled) {
+    try {
+        const res = await fetch('/api/admin/toggle-maintenance', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({enabled})
+        });
+        const data = await res.json();
+        document.getElementById('maintenanceLabel').textContent =
+            data.maintenance_mode ? '🔴 Maintenance ON' : '🟢 Site is LIVE';
+    } catch(e) {
+        alert('Failed to toggle maintenance mode.');
+    }
 }
   (function() {
     document.body.classList.add('loading');

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Brainspark — Maintenance</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+      font-family: 'Segoe UI', sans-serif;
+      color: #fff;
+      text-align: center;
+      padding: 2rem;
+    }
+    .container { max-width: 520px; }
+    .logo { font-size: 2.5rem; font-weight: 900; color: #ff4f30; margin-bottom: 1rem; }
+    .logo span { color: #fff; }
+    .icon { font-size: 5rem; margin-bottom: 1.5rem; animation: pulse 2s infinite; }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.1); opacity: 0.8; }
+    }
+    h1 { font-size: 1.8rem; margin-bottom: 1rem; font-weight: 700; }
+    p {
+      color: #aaa;
+      font-size: 1.05rem;
+      line-height: 1.7;
+      margin-bottom: 2rem;
+    }
+    .status-bar {
+      background: rgba(255,79,48,0.1);
+      border: 1px solid rgba(255,79,48,0.3);
+      border-radius: 12px;
+      padding: 1rem 1.5rem;
+      margin-bottom: 2rem;
+      font-size: 0.9rem;
+      color: #ff4f30;
+    }
+    .refresh-btn {
+      background: #ff4f30;
+      color: #fff;
+      border: none;
+      padding: 0.8rem 2rem;
+      border-radius: 50px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .refresh-btn:hover { background: #e03d1f; transform: translateY(-2px); }
+    .footer { margin-top: 3rem; color: #555; font-size: 0.85rem; }
+    .countdown { font-size: 0.9rem; color: #888; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">Brain<span>spark</span></div>
+    <div class="icon">🔧</div>
+    <h1>We'll be right back</h1>
+    <p>{{ message }}</p>
+    <div class="status-bar">
+      🟡 &nbsp; Maintenance in progress — estimated downtime: a few minutes
+    </div>
+    <button class="refresh-btn" onclick="location.reload()">Check Again</button>
+    <div class="countdown" id="countdown"></div>
+    <div class="footer">
+      Questions? Contact us at support@brainspark.app
+    </div>
+  </div>
+  <script>
+    // Auto-refresh every 60 seconds
+    let secs = 60;
+    const el = document.getElementById('countdown');
+    setInterval(() => {
+      secs--;
+      el.textContent = `Auto-refreshing in ${secs}s...`;
+      if (secs <= 0) { secs = 60; location.reload(); }
+    }, 1000);
+  </script>
+</body>
+</html>

@@ -10,6 +10,12 @@ from models import (db, User, Quiz, QuizResult, Connection, UserTag, Message,
                     HandRaise, TokenTransaction, TokenUsageLog)
 import hashlib
 import base64
+# ── Maintenance Mode ──────────────────────────────────────────────────────────
+MAINTENANCE_MODE = os.getenv('MAINTENANCE_MODE', 'false').lower() == 'true'
+MAINTENANCE_MESSAGE = os.getenv('MAINTENANCE_MESSAGE', 
+    'Brainspark is currently undergoing scheduled maintenance. We\'ll be back shortly!')
+
+
 
 def save_file_to_db(file_storage, file_type):
     """Save file to database as base64. Returns filename key."""
@@ -95,7 +101,32 @@ else:
     _db_path = os.path.join(_instance_path, 'knowitnow.db').replace('\\', '/')
     app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{_db_path}'
     print(f"Using SQLite at {_db_path}")
+# ── Maintenance Mode ──────────────────────────────────────────────────────────
+MAINTENANCE_MODE = os.getenv('MAINTENANCE_MODE', 'false').lower() == 'true'
+MAINTENANCE_MESSAGE = os.getenv('MAINTENANCE_MESSAGE', 
+    'Brainspark is currently undergoing scheduled maintenance. We\'ll be back shortly!')
 
+@app.before_request
+def check_maintenance():
+    # Allow admin and static files through
+    allowed_paths = ['/login', '/static', '/uploads', '/admin', 
+                     '/api/admin', '/toggle_mode']
+    if not MAINTENANCE_MODE:
+        return
+    # Let admin user through
+    if 'user_id' in session:
+        user = User.query.get(session['user_id'])
+        if user and user.username == ADMIN_USERNAME:
+            return
+    # Let allowed paths through
+    if any(request.path.startswith(p) for p in allowed_paths):
+        return
+    # API requests get JSON response
+    if request.path.startswith('/api/'):
+        return jsonify({'error': 'maintenance', 
+                        'message': MAINTENANCE_MESSAGE}), 503
+    # All other requests get maintenance page
+    return render_template('maintenance.html', message=MAINTENANCE_MESSAGE), 503
 app.secret_key = os.getenv('SECRET_KEY', 'knowitnow_super_secret_key_change_in_production')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER']         = 'uploads'
@@ -4082,6 +4113,25 @@ def run_token_migration():
         return '<br>'.join(results) + '<br><strong>Done!</strong>'
     except Exception as e:
         return f'Error: {str(e)}'
+@app.route('/api/admin/toggle-maintenance', methods=['POST'])
+def admin_toggle_maintenance():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    user = User.query.get(session['user_id'])
+    if not user or user.username != ADMIN_USERNAME:
+        return jsonify({'error': 'Forbidden'}), 403
+    global MAINTENANCE_MODE
+    data = request.json or {}
+    MAINTENANCE_MODE = data.get('enabled', not MAINTENANCE_MODE)
+    return jsonify({'success': True, 'maintenance_mode': MAINTENANCE_MODE})
 
+@app.route('/api/admin/maintenance-status')
+def admin_maintenance_status():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    user = User.query.get(session['user_id'])
+    if not user or user.username != ADMIN_USERNAME:
+        return jsonify({'error': 'Forbidden'}), 403
+    return jsonify({'success': True, 'maintenance_mode': MAINTENANCE_MODE})
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=app.debug)
