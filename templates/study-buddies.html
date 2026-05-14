@@ -624,9 +624,7 @@
         <div id="join-requests-section" style="margin-top:12px;display:none;flex-shrink:0;">
             <div class="card"><div class="section-label">Pending Join Requests</div><div id="pending-join-requests-list" style="display:flex;flex-direction:column;gap:10px;"></div></div>
         </div>
-        <div id="my-sent-requests-section" style="margin-top:12px;display:none;flex-shrink:0;">
-            <div class="card"><div class="section-label">My Sent Requests</div><div id="my-sent-requests-list" style="display:flex;flex-direction:column;gap:10px;"></div></div>
-        </div>
+        
     </div>
 </main>
 
@@ -988,7 +986,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
         else if(tab==='connections')loadConnections();
         else if(tab==='messages')loadChatList();
         else if(tab==='discover-groups')loadDiscoverGroups();
-        else if(tab==='my-groups'){loadMyGroups();loadPendingJoinRequests();loadMySentRequests();}
+        else if(tab==='my-groups'){loadMyGroups();loadPendingJoinRequests();}
     });
 });
 
@@ -1468,7 +1466,7 @@ async function votePoll(pollId,optionId){const data=await fetch('/api/vote-poll'
 //  JOIN REQUESTS
 // ═══════════════════════════════════════════════════════════
 async function loadPendingJoinRequests(){const data=await fetch('/api/get-pending-join-requests').then(r=>r.json());const section=document.getElementById('join-requests-section'),list=document.getElementById('pending-join-requests-list');if(!data.success||!data.requests?.length){section.style.display='none';return;}section.style.display='';list.innerHTML='';data.requests.forEach(req=>{const item=document.createElement('div');item.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;';item.innerHTML=`<div style="display:flex;align-items:center;gap:10px;"><img src="${req.user_pic||'/static/image/KNOWITNOW.png'}" style="width:36px;height:36px;border-radius:9px;object-fit:cover;"><div><div style="font-family:'Syne',sans-serif;font-weight:600;font-size:.875rem;color:var(--ink);">${escHtml(req.user_name)}</div><div style="font-size:.75rem;color:var(--muted);">wants to join <strong>${escHtml(req.group_name)}</strong></div></div></div><div style="display:flex;gap:6px;"><button onclick="acceptJoinRequest(${req.id})" class="btn btn-green btn-sm"><i class="fas fa-check"></i> Accept</button><button onclick="rejectJoinRequest(${req.id})" class="btn btn-red btn-sm"><i class="fas fa-times"></i></button></div>`;list.appendChild(item);});}
-async function loadMySentRequests(){const data=await fetch('/api/get-my-join-requests').then(r=>r.json());const section=document.getElementById('my-sent-requests-section'),list=document.getElementById('my-sent-requests-list');if(!data.success||!data.requests?.length){section.style.display='none';return;}section.style.display='';list.innerHTML='';const colors={pending:'tag-accent',approved:'tag-green',rejected:''};data.requests.forEach(req=>{const item=document.createElement('div');item.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;';item.innerHTML=`<div><div style="font-family:'Syne',sans-serif;font-weight:600;font-size:.875rem;">${escHtml(req.group_name)}</div><div style="font-size:.75rem;color:var(--muted);">Requested ${new Date(req.created_at).toLocaleDateString()}</div></div><span class="tag ${colors[req.status]||''}" style="${req.status==='rejected'?'background:rgba(224,48,48,.12);color:#e03030;':''}">${req.status}</span>`;list.appendChild(item);});}
+
 async function acceptJoinRequest(id){const data=await fetch('/api/accept-join-request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({request_id:id})}).then(r=>r.json());if(data.success){showToast('✅ Request accepted!','success');loadPendingJoinRequests();loadMyGroups();}else showToast('❌ '+(data.error||'Failed'),'error');}
 async function handleConnectionRequest(requesterId, action, btn){
     const row=btn.closest('div[style*="display:flex;gap:6px"]');
