@@ -664,7 +664,16 @@ body.loading { overflow: hidden; }
   });
 
   // ── Signup form ────────────────────────────────────────────
-  let verifyEmail = '';
+  let verifyEmail = sessionStorage.getItem('brainspark_verify_email') || '';
+
+  // Reopen modal if user left the page to check their inbox
+  if (verifyEmail) {
+    document.getElementById('verify-email-display').textContent = verifyEmail;
+    otpInputs.forEach(inp => { inp.value = ''; inp.classList.remove('filled', 'err'); });
+    document.getElementById('modal-error').classList.remove('show');
+    document.getElementById('verify-modal').classList.add('open');
+    setTimeout(() => otpInputs[0].focus(), 150);
+  }
 
   document.getElementById('signup-form').addEventListener('submit', async e => {
     e.preventDefault();
@@ -704,6 +713,7 @@ body.loading { overflow: hidden; }
 
       if (data.success) {
         verifyEmail = data.email || email.toLowerCase();
+        sessionStorage.setItem('brainspark_verify_email', verifyEmail);
         document.getElementById('verify-email-display').textContent = verifyEmail;
 
         // Reset OTP inputs
@@ -747,6 +757,7 @@ body.loading { overflow: hidden; }
       });
 
       if (data.success) {
+        sessionStorage.removeItem('brainspark_verify_email');
         window.location.href = data.redirect || '/login';
       } else {
         document.getElementById('otp-row').classList.add('shake');
@@ -820,15 +831,17 @@ body.loading { overflow: hidden; }
   });
 
   // ── Modal controls ─────────────────────────────────────────
-  document.getElementById('close-modal').onclick = () => {
+  function closeVerifyModal() {
     document.getElementById('verify-modal').classList.remove('open');
-  };
+    sessionStorage.removeItem('brainspark_verify_email');
+    verifyEmail = '';
+  }
+
+  document.getElementById('close-modal').onclick = closeVerifyModal;
   document.getElementById('verify-modal').addEventListener('click', e => {
-    if (e.target === e.currentTarget) e.currentTarget.classList.remove('open');
+    if (e.target === e.currentTarget) closeVerifyModal();
   });
-  document.getElementById('change-email').onclick = () => {
-    document.getElementById('verify-modal').classList.remove('open');
-  };
+  document.getElementById('change-email').onclick = closeVerifyModal;
   (function() {
     document.body.classList.add('loading');
     const msgs = [
