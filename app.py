@@ -4536,5 +4536,222 @@ def admin_maintenance_status():
     if not user or user.username != ADMIN_USERNAME:
         return jsonify({'error': 'Forbidden'}), 403
     return jsonify({'success': True, 'maintenance_mode': MAINTENANCE_MODE})
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  MASTERY MODE
+# ═══════════════════════════════════════════════════════════════════
+
+@app.route('/mastery')
+def mastery():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    user = User.query.get(session['user_id'])
+    if not user:
+        return redirect(url_for('login'))
+    time_of_day = 'Good morning' if datetime.utcnow().hour < 12 else ('Good afternoon' if datetime.utcnow().hour < 17 else 'Good evening')
+    return render_template('mastery.html', user=user, time_of_day=time_of_day)
+
+
+@app.route('/mastery/upload', methods=['POST'])
+def mastery_upload():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+    file = request.files.get('file')
+    if not file:
+        return jsonify({'success': False, 'error': 'No file provided'}), 400
+    try:
+        pdf_text = extract_pdf_text(file)
+        if not pdf_text:
+            return jsonify({'success': False, 'error': 'Could not extract text from PDF. Make sure it is not scanned/image-only.'})
+        # Limit to 12000 chars to keep AI prompt manageable
+        return jsonify({'success': True, 'pdf_text': pdf_text[:12000]})
+    except Exception as e:
+        logger.error(f'mastery_upload error: {e}', exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/mastery/generate-roadmap', methods=['POST'])
+def mastery_generate_roadmap():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+    data = request.json or {}
+    pdf_text = (data.get('pdf_text') or '')[:12000]
+    if not pdf_text:
+        return jsonify({'success': False, 'error': 'No PDF text provided'}), 400
+    try:
+        prompt = f"""You are an expert curriculum designer. Analyze the following educational text and create a structured learning roadmap.
+
+TEXT:
+{pdf_text}
+
+Return ONLY valid JSON (no markdown, no extra text) in this exact format:
+{{
+  "course_title": "Clear title for this course based on the content",
+  "sections": [
+    {{
+      "title": "Section title",
+      "summary": "2-3 sentence summary of what this section covers",
+      "content": "Key concepts, definitions, and important points from this section (3-5 paragraphs)"
+    }}
+  ]
+}}
+
+Rules:
+- Create 4 to 8 logical sections based on the content
+- Each section should be teachable in 10-15 minutes
+- Titles should be clear and student-friendly
+- Content should include key facts, definitions, examples from the text
+- Return ONLY the JSON object"""
+
+        response = model.generate_content(prompt)
+        text = response.text.strip().replace('```json', '').replace('```', '').strip()
+        s = text.find('{'); e = text.rfind('}') + 1
+        if s == -1 or e <= s:
+            raise ValueError('No JSON in AI response')
+        result = json.loads(text[s:e])
+        if 'sections' not in result or not result['sections']:
+            raise ValueError('Invalid roadmap structure')
+        return jsonify({'success': True, 'course_title': result.get('course_title', 'Your Course'), 'sections': result['sections']})
+    except Exception as e:
+        logger.error(f'mastery_generate_roadmap error: {e}', exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/mastery/explain', methods=['POST'])
+def mastery_explain():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+    data = request.json or {}
+    title   = data.get('section_title', '')
+    summary = data.get('section_summary', '')
+    content = data.get('section_content', '')
+    mode    = data.get('mode', 'normal')  # 'normal' | 'simple'
+
+    style = "Use very simple language, short sentences, real-world analogies, and step-by-step breakdowns. Imagine explaining to a 14-year-old." if mode == 'simple' else "Teach clearly and engagingly like a friendly university tutor. Use examples, highlight key terms, and structure the explanation logically."
+
+    try:
+        prompt = f"""You are Brainspark AI, a friendly and encouraging AI tutor. Teach the following topic to a student.
+
+Topic: {title}
+Summary: {summary}
+Content: {content}
+
+Teaching style: {style}
+
+Write a clear, engaging explanation in HTML. Use these exact tags only:
+- <p> for paragraphs
+- <strong> for key terms (wrap in: <span class="highlight-box"><strong>Term:</strong> definition</span>)
+- <span class="example-box"> for examples (start with: <strong>Example:</strong>)
+- <code> for formulas or technical terms
+
+Keep it to 3-5 paragraphs. Be encouraging and student-friendly. End with a motivational sentence.
+Return ONLY the HTML, no surrounding tags, no markdown."""
+
+        response = model.generate_content(prompt)
+        explanation = response.text.strip().replace('```html', '').replace('```', '').strip()
+        return jsonify({'success': True, 'explanation': explanation})
+    except Exception as e:
+        logger.error(f'mastery_explain error: {e}', exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/mastery/generate-quiz', methods=['POST'])
+def mastery_generate_quiz():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+    data    = request.json or {}
+    title   = data.get('section_title', '')
+    content = data.get('section_content', '')
+    count   = min(int(data.get('count', 5)), 20)
+
+    try:
+        prompt = f"""You are an expert quiz creator. Create {count} multiple-choice questions based on this content.
+
+Topic: {title}
+Content: {content}
+
+Return ONLY valid JSON (no markdown):
+{{
+  "questions": [
+    {{
+      "question": "Clear question text",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correct_index": 0,
+      "explanation": "Brief explanation of why this answer is correct"
+    }}
+  ]
+}}
+
+Rules:
+- Questions should test genuine understanding, not just memorization
+- All 4 options should be plausible
+- correct_index is 0-based (0=A, 1=B, 2=C, 3=D)
+- Vary difficulty: 40% easy, 40% medium, 20% hard
+- Return ONLY the JSON"""
+
+        response = model.generate_content(prompt)
+        text = response.text.strip().replace('```json', '').replace('```', '').strip()
+        s = text.find('{'); e = text.rfind('}') + 1
+        if s == -1 or e <= s:
+            raise ValueError('No JSON in AI response')
+        result = json.loads(text[s:e])
+        questions = result.get('questions', [])
+        if not questions:
+            raise ValueError('No questions generated')
+        return jsonify({'success': True, 'questions': questions})
+    except Exception as e:
+        logger.error(f'mastery_generate_quiz error: {e}', exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/mastery/videos', methods=['POST'])
+def mastery_videos():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+    data  = request.json or {}
+    topic = data.get('topic', '')
+    try:
+        # Use YouTube Data API if available, otherwise return curated search links
+        yt_api_key = os.getenv('YOUTUBE_API_KEY')
+        if yt_api_key:
+            search_url = 'https://www.googleapis.com/youtube/v3/search'
+            params = {
+                'part': 'snippet', 'q': f'{topic} explained tutorial',
+                'type': 'video', 'maxResults': 3,
+                'videoDuration': 'medium', 'key': yt_api_key
+            }
+            r = req.get(search_url, params=params, timeout=8)
+            items = r.json().get('items', [])
+            videos = [{
+                'id':      item['id']['videoId'],
+                'title':   item['snippet']['title'],
+                'channel': item['snippet']['channelTitle'],
+                'duration': 'Watch'
+            } for item in items if item.get('id', {}).get('videoId')]
+            return jsonify({'success': True, 'videos': videos})
+        else:
+            # Fallback: return YouTube search link as a single card
+            query = topic.replace(' ', '+')
+            return jsonify({'success': True, 'videos': [{
+                'id':      f'results?search_query={query}+explained',
+                'title':   f'Search: {topic} explained',
+                'channel': 'YouTube Search',
+                'duration': 'Browse'
+            }]})
+    except Exception as e:
+        logger.error(f'mastery_videos error: {e}', exc_info=True)
+        return jsonify({'success': False, 'videos': []})
+
+
+@app.route('/mastery/save-progress', methods=['POST'])
+def mastery_save_progress():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+    # Progress is stored client-side in masteryState for now.
+    # Extend this later to persist to DB using a MasteryCourse model.
+    return jsonify({'success': True})
+
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=app.debug)

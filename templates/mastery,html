@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mastery Mode – Brainspark</title>
+    <link rel="icon" type="image/png" href="/static/image/KNOWITNOW.png">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/styles.css">
+
+    <style>
+        :root {
+            --ink: #f0efe8; --ink2: #c8c6bc;
+            --surface: #0a0a14; --surface2: #0d0d1a; --surface3: #13131f;
+            --card: rgba(255,255,255,0.04); --card-border: rgba(255,255,255,0.08);
+            --muted: #5a5a70;
+            --accent: #ff4f30; --accent2: #ff8c5a;
+            --gold: #f5c842; --blue: #3b6bff; --blue2: #7ba4ff; --green: #00c98d;
+            --mastery: #6366f1; --mastery2: #818cf8; --mastery3: rgba(99,102,241,0.12);
+            --radius: 16px; --radius-sm: 8px;
+            --transition: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        [data-theme="light"] {
+            --ink: #0a0a14; --ink2: #1c1c2e;
+            --surface: #f5f4f0; --surface2: #ffffff; --surface3: #ededea;
+            --card: rgba(0,0,0,0.03); --card-border: rgba(0,0,0,0.07); --muted: #7a7a8c;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body { font-family: 'DM Sans', sans-serif; background: var(--surface); color: var(--ink); min-height: 100vh; transition: background 0.4s, color 0.4s; overflow-x: hidden; }
+        ::selection { background: var(--mastery); color: #fff; }
+        a { text-decoration: none; color: inherit; }
+        body::before { content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.018; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+        ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-thumb { background: var(--mastery); border-radius: 3px; }
+
+        /* NAV */
+        nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; padding: 0 3rem; height: 68px; display: flex; align-items: center; justify-content: space-between; background: rgba(10,10,20,0.75); backdrop-filter: blur(20px); border-bottom: 1px solid var(--card-border); }
+        [data-theme="light"] nav { background: rgba(245,244,240,0.85); }
+        .nav-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.4rem; letter-spacing: -0.02em; background: linear-gradient(135deg, #ff4f30, #ff8c5a); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; cursor: pointer; }
+        .nav-right { display: flex; align-items: center; gap: 1rem; }
+        .nav-user { display: flex; align-items: center; gap: 0.75rem; padding-left: 1rem; border-left: 1px solid var(--card-border); }
+        .nav-user-text .name { font-size: 0.875rem; font-weight: 600; color: var(--ink); }
+        .nav-user-text .level { font-size: 0.72rem; color: var(--muted); }
+        .nav-avatar { width: 36px; height: 36px; border-radius: 10px; object-fit: cover; border: 2px solid var(--accent); }
+        .icon-btn { width: 36px; height: 36px; border-radius: 9px; border: 1px solid var(--card-border); background: var(--card); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--muted); font-size: 0.9rem; transition: all 0.2s; backdrop-filter: blur(10px); }
+        .icon-btn:hover { border-color: var(--mastery); color: var(--mastery2); }
+        .mastery-nav-badge { display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.85rem; border-radius: 50px; background: var(--mastery3); border: 1px solid rgba(99,102,241,0.3); color: var(--mastery2); font-size: 0.8rem; font-weight: 700; }
+        .mastery-nav-badge i { font-size: 0.75rem; }
+
+        /* LAYOUT */
+        .page-wrap { padding-top: 68px; min-height: 100vh; display: flex; }
+        .sidebar { width: 240px; flex-shrink: 0; position: fixed; top: 68px; left: 0; bottom: 0; background: rgba(10,10,20,0.6); border-right: 1px solid var(--card-border); backdrop-filter: blur(20px); padding: 2rem 1.25rem; display: flex; flex-direction: column; gap: 0.5rem; overflow-y: auto; z-index: 50; transition: transform 0.3s; }
+        [data-theme="light"] .sidebar { background: rgba(255,255,255,0.85); }
+        .sidebar-label { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); padding: 1rem 0.75rem 0.5rem; margin-top: 0.5rem; }
+        .sidebar-link { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0.85rem; border-radius: var(--radius-sm); font-size: 0.875rem; font-weight: 500; color: var(--muted); transition: all 0.2s; cursor: pointer; border: none; background: none; width: 100%; text-align: left; }
+        .sidebar-link:hover { background: var(--card); color: var(--ink); }
+        .sidebar-link.active { background: var(--mastery3); color: var(--mastery2); border: 1px solid rgba(99,102,241,0.2); }
+        .sidebar-link i { width: 16px; text-align: center; font-size: 0.875rem; }
+        .main { flex: 1; margin-left: 240px; padding: 2.5rem; min-height: calc(100vh - 68px); }
+
+        /* BUTTONS */
+        .btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.7rem 1.5rem; border-radius: 50px; border: none; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: all var(--transition); }
+        .btn-mastery { background: var(--mastery); color: #fff; box-shadow: 0 4px 20px rgba(99,102,241,0.35); }
+        .btn-mastery:hover { background: var(--mastery2); transform: translateY(-1px); box-shadow: 0 8px 24px rgba(99,102,241,0.45); }
+        .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 4px 20px rgba(255,79,48,0.35); }
+        .btn-primary:hover { background: var(--accent2); transform: translateY(-1px); }
+        .btn-ghost { background: var(--card); color: var(--ink); border: 1px solid var(--card-border); }
+        .btn-ghost:hover { border-color: var(--mastery); color: var(--mastery2); }
+        .btn-green { background: var(--green); color: #fff; box-shadow: 0 4px 20px rgba(0,201,141,0.3); }
+        .btn-green:hover { background: #00e4a0; transform: translateY(-1px); }
+        .btn-full { width: 100%; justify-content: center; border-radius: var(--radius-sm); }
+        .btn-sm { padding: 0.45rem 1rem; font-size: 0.8rem; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+        /* HERO */
+        .mastery-hero { position: relative; border-radius: 24px; overflow: hidden; padding: 3rem; margin-bottom: 2rem; min-height: 200px; display: flex; align-items: flex-end; background: linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(10,10,20,0.9) 60%); border: 1px solid rgba(99,102,241,0.2); }
+        .mastery-hero-glow { position: absolute; inset: 0; background: radial-gradient(ellipse at 20% 50%, rgba(99,102,241,0.2) 0%, transparent 60%); pointer-events: none; }
+        .mastery-hero-grid { position: absolute; inset: 0; opacity: 0.04; background-image: linear-gradient(rgba(129,140,248,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(129,140,248,0.5) 1px, transparent 1px); background-size: 40px 40px; }
+        .hero-content { position: relative; z-index: 1; }
+        .hero-badge { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.85rem; border-radius: 50px; background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.35); color: var(--mastery2); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 0.75rem; }
+        .hero-dot { width: 5px; height: 5px; background: var(--mastery2); border-radius: 50%; animation: blink 1.5s infinite; }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        .hero-title { font-family: 'Syne', sans-serif; font-size: 2.2rem; font-weight: 800; color: #fff; line-height: 1.1; letter-spacing: -0.02em; margin-bottom: 0.5rem; }
+        .hero-title em { font-style: normal; color: var(--mastery2); }
+        .hero-sub { font-size: 0.95rem; color: rgba(255,255,255,0.55); }
+        .hero-icon { position: absolute; right: 3rem; top: 50%; transform: translateY(-50%); font-size: 5rem; opacity: 0.08; }
+
+        /* SCREENS */
+        .screen { display: none; }
+        .screen.active { display: block; animation: fadeIn 0.4s ease; }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
+        /* UPLOAD SCREEN */
+        .upload-card { background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius); padding: 2.5rem; max-width: 640px; margin: 0 auto; text-align: center; backdrop-filter: blur(10px); }
+        .upload-zone { border: 2px dashed rgba(99,102,241,0.35); border-radius: var(--radius); padding: 3rem 2rem; cursor: pointer; transition: all 0.3s; margin-bottom: 1.5rem; position: relative; overflow: hidden; }
+        .upload-zone::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(99,102,241,0.04) 0%, transparent 70%); pointer-events: none; }
+        .upload-zone:hover, .upload-zone.dragover { border-color: var(--mastery2); background: rgba(99,102,241,0.04); }
+        .upload-zone-icon { font-size: 3rem; color: var(--mastery2); margin-bottom: 1rem; opacity: 0.8; }
+        .upload-zone h3 { font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 700; color: var(--ink); margin-bottom: 0.4rem; }
+        .upload-zone p { font-size: 0.85rem; color: var(--muted); }
+        .upload-info-row { display: flex; gap: 0.75rem; justify-content: center; margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .upload-info-chip { display: flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.75rem; border-radius: 50px; background: var(--card); border: 1px solid var(--card-border); font-size: 0.78rem; color: var(--muted); }
+        .upload-info-chip i { color: var(--mastery2); font-size: 0.75rem; }
+        .progress-bar-wrap { height: 4px; background: var(--card-border); border-radius: 2px; overflow: hidden; margin-top: 1rem; display: none; }
+        .progress-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--mastery), var(--mastery2)); border-radius: 2px; transition: width 0.3s; }
+
+        /* ANALYSIS SCREEN */
+        .analysis-card { background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius); padding: 3rem 2rem; max-width: 520px; margin: 0 auto; text-align: center; }
+        .analysis-spinner { width: 80px; height: 80px; margin: 0 auto 1.5rem; position: relative; }
+        .spinner-ring { position: absolute; inset: 0; border-radius: 50%; border: 3px solid transparent; animation: spin 1.4s linear infinite; }
+        .spinner-ring-1 { border-top-color: var(--mastery); border-right-color: rgba(99,102,241,0.2); animation-duration: 1.2s; }
+        .spinner-ring-2 { width: 60px; height: 60px; top: 10px; left: 10px; border-bottom-color: var(--mastery2); border-left-color: rgba(129,140,248,0.15); animation-duration: 1.8s; animation-direction: reverse; }
+        .spinner-inner { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .analysis-title { font-family: 'Syne', sans-serif; font-size: 1.3rem; font-weight: 700; color: var(--ink); margin-bottom: 0.5rem; }
+        .analysis-steps { margin: 1.5rem 0; text-align: left; display: flex; flex-direction: column; gap: 0.6rem; }
+        .analysis-step { display: flex; align-items: center; gap: 0.75rem; padding: 0.7rem 1rem; border-radius: var(--radius-sm); background: rgba(255,255,255,0.02); font-size: 0.85rem; color: var(--muted); transition: all 0.3s; }
+        .analysis-step.done { color: var(--green); background: rgba(0,201,141,0.06); }
+        .analysis-step.active { color: var(--mastery2); background: var(--mastery3); }
+        .analysis-step i { width: 16px; text-align: center; }
+        .analysis-bar { height: 3px; background: var(--card-border); border-radius: 2px; overflow: hidden; margin-top: 1.5rem; }
+        .analysis-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--mastery), var(--mastery2)); border-radius: 2px; transition: width 0.6s ease; }
+
+        /* ROADMAP SCREEN */
+        .roadmap-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
+        .roadmap-meta { font-size: 0.82rem; color: var(--muted); margin-top: 0.25rem; }
+        .roadmap-stats { display: flex; gap: 1rem; }
+        .roadmap-stat { text-align: center; padding: 0.75rem 1.25rem; background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius-sm); }
+        .roadmap-stat-val { font-family: 'Syne', sans-serif; font-size: 1.4rem; font-weight: 800; color: var(--mastery2); }
+        .roadmap-stat-lbl { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+        .overall-progress { background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius); padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1.25rem; }
+        .overall-progress-bar { flex: 1; height: 8px; background: var(--card-border); border-radius: 4px; overflow: hidden; }
+        .overall-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--mastery), var(--mastery2)); border-radius: 4px; transition: width 1s ease; }
+        .overall-progress-pct { font-family: 'Syne', sans-serif; font-weight: 700; color: var(--mastery2); min-width: 40px; text-align: right; }
+        .sections-grid { display: flex; flex-direction: column; gap: 1rem; }
+        .section-card { background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius); padding: 1.25rem 1.5rem; display: flex; align-items: center; gap: 1.25rem; cursor: pointer; transition: all 0.3s; position: relative; overflow: hidden; }
+        .section-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--mastery); opacity: 0; transition: opacity 0.3s; }
+        .section-card:hover::before { opacity: 1; }
+        .section-card:hover { border-color: rgba(99,102,241,0.3); transform: translateX(4px); }
+        .section-card.locked { opacity: 0.55; cursor: not-allowed; }
+        .section-card.locked:hover { transform: none; border-color: var(--card-border); }
+        .section-card.completed::before { opacity: 1; background: var(--green); }
+        .section-card.completed { border-color: rgba(0,201,141,0.2); }
+        .section-card.active-section::before { opacity: 1; }
+        .section-card.active-section { border-color: rgba(99,102,241,0.3); background: rgba(99,102,241,0.05); }
+        .section-num { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1rem; flex-shrink: 0; background: var(--mastery3); color: var(--mastery2); }
+        .section-card.locked .section-num { background: rgba(255,255,255,0.04); color: var(--muted); }
+        .section-card.completed .section-num { background: rgba(0,201,141,0.12); color: var(--green); }
+        .section-info { flex: 1; min-width: 0; }
+        .section-title { font-family: 'Syne', sans-serif; font-size: 0.95rem; font-weight: 700; color: var(--ink); margin-bottom: 0.2rem; }
+        .section-meta { font-size: 0.78rem; color: var(--muted); display: flex; align-items: center; gap: 0.75rem; }
+        .section-meta-chip { display: flex; align-items: center; gap: 0.3rem; }
+        .section-progress-bar { height: 3px; background: var(--card-border); border-radius: 2px; overflow: hidden; margin-top: 0.5rem; }
+        .section-progress-fill { height: 100%; background: var(--mastery); border-radius: 2px; transition: width 0.6s; }
+        .section-status { flex-shrink: 0; text-align: center; }
+        .section-status-icon { font-size: 1.1rem; }
+        .section-status-txt { font-size: 0.68rem; color: var(--muted); margin-top: 0.2rem; }
+
+        /* LEARNING SCREEN */
+        .learn-layout { display: grid; grid-template-columns: 1fr 340px; gap: 1.5rem; align-items: start; }
+        .learn-panel { background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius); overflow: hidden; backdrop-filter: blur(10px); }
+        .learn-panel-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--card-border); display: flex; align-items: center; justify-content: space-between; }
+        .learn-panel-title { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700; color: var(--ink); }
+        .learn-panel-body { padding: 1.5rem; }
+        .learn-eyebrow { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mastery2); display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.4rem; }
+        .learn-eyebrow::before { content: ''; width: 14px; height: 1.5px; background: var(--mastery2); border-radius: 1px; }
+        .ai-explanation { font-size: 0.95rem; line-height: 1.8; color: var(--ink); }
+        .ai-explanation p { margin-bottom: 1rem; }
+        .ai-explanation p:last-child { margin-bottom: 0; }
+        .ai-explanation strong { color: var(--mastery2); }
+        .ai-explanation .highlight-box { background: rgba(99,102,241,0.08); border-left: 3px solid var(--mastery); border-radius: 0 8px 8px 0; padding: 0.85rem 1rem; margin: 1rem 0; font-size: 0.9rem; }
+        .ai-explanation .example-box { background: rgba(0,201,141,0.06); border-left: 3px solid var(--green); border-radius: 0 8px 8px 0; padding: 0.85rem 1rem; margin: 1rem 0; font-size: 0.9rem; }
+        .ai-explanation code { background: rgba(99,102,241,0.1); color: var(--mastery2); padding: 0.15em 0.4em; border-radius: 4px; font-size: 0.88em; font-family: monospace; }
+        .learn-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; padding: 1.25rem 1.5rem; border-top: 1px solid var(--card-border); }
+        .typing-cursor { display: inline-block; width: 2px; height: 1em; background: var(--mastery2); margin-left: 2px; animation: cursor-blink 0.8s infinite; vertical-align: text-bottom; }
+        @keyframes cursor-blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+        /* VIDEO PANEL */
+        .video-card { background: rgba(255,0,0,0.06); border: 1px solid rgba(255,0,0,0.15); border-radius: var(--radius-sm); padding: 0.85rem 1rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.75rem; cursor: pointer; transition: all 0.2s; }
+        .video-card:hover { background: rgba(255,0,0,0.1); border-color: rgba(255,0,0,0.3); }
+        .video-icon { color: #ff0000; font-size: 1.3rem; flex-shrink: 0; }
+        .video-info { flex: 1; min-width: 0; }
+        .video-title { font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .video-meta { font-size: 0.72rem; color: var(--muted); }
+
+        /* QUIZ SCREEN */
+        .quiz-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+        .quiz-progress-chips { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+        .quiz-chip { width: 28px; height: 6px; border-radius: 3px; background: var(--card-border); transition: background 0.3s; }
+        .quiz-chip.answered { background: var(--mastery); }
+        .quiz-chip.correct { background: var(--green); }
+        .quiz-chip.wrong { background: var(--accent); }
+        .quiz-timer { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700; color: var(--gold); background: rgba(245,200,66,0.1); border: 1px solid rgba(245,200,66,0.2); padding: 0.3rem 0.85rem; border-radius: 50px; }
+        .quiz-card { background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius); padding: 2rem; margin-bottom: 1.25rem; }
+        .quiz-q-num { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--mastery2); margin-bottom: 0.75rem; }
+        .quiz-question { font-family: 'Syne', sans-serif; font-size: 1.15rem; font-weight: 700; color: var(--ink); line-height: 1.5; margin-bottom: 1.5rem; }
+        .quiz-options { display: flex; flex-direction: column; gap: 0.75rem; }
+        .quiz-option { display: flex; align-items: center; gap: 0.85rem; padding: 0.9rem 1.1rem; border-radius: var(--radius-sm); border: 1px solid var(--card-border); background: rgba(255,255,255,0.02); cursor: pointer; transition: all 0.2s; font-size: 0.9rem; color: var(--ink); }
+        .quiz-option:hover:not(.disabled) { border-color: rgba(99,102,241,0.4); background: rgba(99,102,241,0.06); }
+        .quiz-option.selected { border-color: var(--mastery); background: var(--mastery3); color: var(--ink); }
+        .quiz-option.correct { border-color: var(--green); background: rgba(0,201,141,0.1); color: var(--green); }
+        .quiz-option.wrong { border-color: var(--accent); background: rgba(255,79,48,0.08); color: var(--accent); }
+        .quiz-option.disabled { cursor: not-allowed; }
+        .quiz-opt-letter { width: 28px; height: 28px; border-radius: 8px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.78rem; flex-shrink: 0; font-family: 'Syne', sans-serif; }
+        .quiz-option.selected .quiz-opt-letter { background: var(--mastery); color: #fff; }
+        .quiz-option.correct .quiz-opt-letter { background: var(--green); color: #fff; }
+        .quiz-option.wrong .quiz-opt-letter { background: var(--accent); color: #fff; }
+        .quiz-feedback { padding: 0.85rem 1rem; border-radius: var(--radius-sm); margin-top: 1rem; font-size: 0.875rem; font-weight: 500; display: none; }
+        .quiz-feedback.show { display: block; }
+        .quiz-feedback.correct { background: rgba(0,201,141,0.1); border: 1px solid rgba(0,201,141,0.25); color: var(--green); }
+        .quiz-feedback.wrong { background: rgba(255,79,48,0.08); border: 1px solid rgba(255,79,48,0.2); color: var(--accent); }
+
+        /* SCORE SCREEN */
+        .score-card { background: var(--card); border: 1px solid var(--card-border); border-radius: 24px; padding: 3rem; max-width: 540px; margin: 0 auto; text-align: center; }
+        .score-ring { width: 140px; height: 140px; margin: 0 auto 1.5rem; position: relative; }
+        .score-ring svg { transform: rotate(-90deg); }
+        .score-ring-bg { fill: none; stroke: var(--card-border); stroke-width: 10; }
+        .score-ring-fill { fill: none; stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset 1.5s cubic-bezier(0.16,1,0.3,1); }
+        .score-ring-text { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .score-pct { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800; }
+        .score-label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+        .score-title { font-family: 'Syne', sans-serif; font-size: 1.4rem; font-weight: 800; margin-bottom: 0.5rem; }
+        .score-sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 2rem; }
+        .score-actions { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; }
+
+        /* ACHIEVEMENT POPUP */
+        .achievement-overlay { position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.7); backdrop-filter: blur(12px); display: none; align-items: center; justify-content: center; }
+        .achievement-overlay.show { display: flex; }
+        .achievement-popup { background: var(--surface3); border: 1px solid rgba(99,102,241,0.3); border-radius: 24px; padding: 3rem; text-align: center; max-width: 400px; box-shadow: 0 32px 80px rgba(0,0,0,0.5), 0 0 60px rgba(99,102,241,0.15); animation: achievement-pop 0.5s cubic-bezier(0.16,1,0.3,1); }
+        @keyframes achievement-pop { from{opacity:0;transform:scale(0.8)} to{opacity:1;transform:scale(1)} }
+        .achievement-badge-icon { font-size: 5rem; margin-bottom: 1rem; animation: badge-float 2s ease-in-out infinite; display: block; }
+        @keyframes badge-float { 0%,100%{transform:translateY(0) rotate(-3deg)} 50%{transform:translateY(-8px) rotate(3deg)} }
+        .achievement-title { font-family: 'Syne', sans-serif; font-size: 1.5rem; font-weight: 800; color: var(--ink); margin-bottom: 0.5rem; }
+        .achievement-sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.5rem; line-height: 1.6; }
+        .xp-pill { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.4rem 1rem; border-radius: 50px; background: rgba(245,200,66,0.12); border: 1px solid rgba(245,200,66,0.3); color: var(--gold); font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.9rem; margin-bottom: 1.5rem; }
+        .confetti { position: absolute; pointer-events: none; }
+
+        /* FINAL EXAM */
+        .exam-header { background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: gap; }
+        .exam-timer { font-family: 'Syne', sans-serif; font-size: 1.4rem; font-weight: 800; color: var(--gold); }
+        .exam-timer.warning { color: var(--accent); animation: pulse-btn 1s infinite; }
+        @keyframes pulse-btn { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+        /* MISC */
+        .panel-eyebrow { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mastery2); display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.4rem; }
+        .panel-eyebrow::before { content: ''; width: 14px; height: 1.5px; background: var(--mastery2); border-radius: 1px; }
+        .panel-title { font-family: 'Syne', sans-serif; font-size: 1.05rem; font-weight: 700; color: var(--ink); }
+        .generating-bar { width: 100%; height: 3px; background: var(--card-border); border-radius: 2px; overflow: hidden; margin-top: 0.75rem; }
+        .generating-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--mastery), var(--mastery2)); border-radius: 2px; transition: width 0.3s; animation: progress-pulse 1.5s ease-in-out infinite; }
+        @keyframes progress-pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+        .badge-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; }
+        .badge-chip { display: flex; align-items: center; gap: 0.35rem; padding: 0.3rem 0.7rem; border-radius: 50px; background: var(--mastery3); border: 1px solid rgba(99,102,241,0.2); color: var(--mastery2); font-size: 0.75rem; font-weight: 600; }
+        .reveal { opacity: 0; transform: translateY(16px); transition: opacity 0.5s ease, transform 0.5s ease; }
+        .reveal.visible { opacity: 1; transform: translateY(0); }
+        .token-btn { display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.85rem; border-radius: 50px; background: rgba(168,85,247,0.12); border: 1px solid rgba(168,85,247,0.3); color: #c084fc; font-size: 0.8rem; font-weight: 700; text-decoration: none; transition: all 0.2s; }
+        .token-btn:hover { background: rgba(168,85,247,0.25); }
+        .theory-input { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid var(--card-border); border-radius: var(--radius-sm); padding: 0.75rem 1rem; color: var(--ink); font-family: 'DM Sans', sans-serif; font-size: 0.875rem; resize: vertical; min-height: 100px; outline: none; transition: border-color 0.2s; }
+        .theory-input:focus { border-color: rgba(99,102,241,0.4); }
+        .theory-feedback { padding: 1rem; border-radius: var(--radius-sm); margin-top: 0.75rem; font-size: 0.875rem; display: none; }
+        .theory-feedback.show { display: block; }
+        .theory-feedback.pass { background: rgba(0,201,141,0.08); border: 1px solid rgba(0,201,141,0.2); color: var(--green); }
+        .theory-feedback.fail { background: rgba(255,79,48,0.06); border: 1px solid rgba(255,79,48,0.2); color: var(--accent); }
+
+        /* MOBILE */
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); width: 80vw; max-width: 280px; }
+            .sidebar.open { transform: translateX(0); box-shadow: 8px 0 32px rgba(0,0,0,0.4); }
+            .main { margin-left: 0 !important; padding: 1rem !important; }
+            nav { padding: 0 1rem !important; height: 60px; }
+            .hero-title { font-size: 1.5rem; }
+            .learn-layout { grid-template-columns: 1fr; }
+            .roadmap-stats { flex-wrap: wrap; }
+        }
+    </style>
+</head>
+<body class="loading">
+
+<!-- NAV -->
+<nav>
+    <div class="nav-logo" onclick="window.location.href='/dashboard'">Brainspark</div>
+    <div class="nav-right">
+        <span class="mastery-nav-badge"><i class="fas fa-brain"></i> Mastery Mode</span>
+        <a href="/tokens" class="token-btn"><i class="fas fa-bolt"></i> <span id="nav-tokens">—</span></a>
+        <button class="icon-btn" onclick="toggleTheme()" title="Toggle theme"><i id="theme-icon" class="fas fa-moon"></i></button>
+        <button class="icon-btn" id="sidebar-toggle" onclick="toggleSidebar()" style="display:none"><i class="fas fa-bars"></i></button>
+        <div class="nav-user">
+            <div class="nav-user-text">
+                <div class="name">{{ user.name }}</div>
+                <div class="level">{{ user.study_level }}</div>
+            </div>
+            {% if user.profile_picture %}
+            <img src="{{ url_for('serve_profile_picture', filename=user.profile_picture) }}" class="nav-avatar" alt="avatar">
+            {% else %}
+            <div class="nav-avatar" style="display:flex;align-items:center;justify-content:center;background:var(--mastery3);font-weight:700;color:var(--mastery2);">{{ user.name[0] }}</div>
+            {% endif %}
+        </div>
+    </div>
+</nav>
+
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-label">Main</div>
+    <button class="sidebar-link" onclick="window.location.href='/dashboard'"><i class="fas fa-house"></i> Dashboard</button>
+    <div class="sidebar-label">Learn</div>
+    <button class="sidebar-link active"><i class="fas fa-brain"></i> Mastery Mode</button>
+    <div class="sidebar-label">Connect</div>
+    <button class="sidebar-link" onclick="window.location.href='/study-buddies'"><i class="fas fa-users"></i> Study Buddies</button>
+    <button class="sidebar-link" onclick="window.location.href='/similar-questions'"><i class="fas fa-copy"></i> Similar Questions</button>
+    <div class="sidebar-label">Tokens</div>
+    <button class="sidebar-link" onclick="window.location.href='/tokens'" style="background:rgba(168,85,247,0.08);color:#c084fc;border:1px solid rgba(168,85,247,0.2);border-radius:8px;margin-bottom:4px;">
+        <i class="fas fa-bolt"></i>
+        <span style="flex:1;">Spark Tokens</span>
+        <span id="token-count" style="font-family:'Syne',sans-serif;font-weight:700;font-size:.8rem;color:#a855f7;">—</span>
+    </button>
+    <div style="flex:1"></div>
+    <div class="sidebar-label">Account</div>
+    <button class="sidebar-link" onclick="window.location.href='/settings'"><i class="fas fa-gear"></i> Settings</button>
+    <button class="sidebar-link" onclick="logout()" style="color:#ff4f30"><i class="fas fa-sign-out-alt"></i> Logout</button>
+</div>
+
+<div class="page-wrap">
+<div class="main">
+
+    <!-- HERO -->
+    <div class="mastery-hero reveal" id="top">
+        <div class="mastery-hero-glow"></div>
+        <div class="mastery-hero-grid"></div>
+        <div class="hero-content">
+            <div class="hero-badge"><div class="hero-dot"></div> AI-Powered Learning</div>
+            <h1 class="hero-title">Mastery <em>Mode</em> 🧠</h1>
+            <p class="hero-sub">Upload any PDF and let AI turn it into a complete, structured learning journey.</p>
+        </div>
+        <div class="hero-icon"><i class="fas fa-brain"></i></div>
+    </div>
+
+    <!-- ══ SCREEN 1: UPLOAD ══ -->
+    <div class="screen active reveal" id="screen-upload">
+        <div class="upload-card">
+            <div class="panel-eyebrow" style="justify-content:center;margin-bottom:0.5rem;">Start Learning</div>
+            <div class="panel-title" style="text-align:center;margin-bottom:0.3rem;">Upload Your PDF</div>
+            <p style="text-align:center;font-size:0.85rem;color:var(--muted);margin-bottom:1.5rem;">AI will analyze it and build a personalized mastery roadmap just for you.</p>
+
+            <div class="upload-zone" id="mastery-upload-zone" onclick="document.getElementById('mastery-pdf-input').click()">
+                <div class="upload-zone-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                <h3>Drag & drop your PDF here</h3>
+                <p>or click to browse · Max 15MB</p>
+                <input type="file" id="mastery-pdf-input" accept=".pdf" style="display:none">
+            </div>
+
+            <div class="upload-info-row">
+                <div class="upload-info-chip"><i class="fas fa-check-circle"></i> AI-generated roadmap</div>
+                <div class="upload-info-chip"><i class="fas fa-check-circle"></i> Interactive quizzes</div>
+                <div class="upload-info-chip"><i class="fas fa-check-circle"></i> Mastery certificate</div>
+            </div>
+
+            <button class="btn btn-mastery btn-full" id="mastery-upload-btn" onclick="startMastery()" disabled>
+                <i class="fas fa-brain"></i> Analyze & Build Roadmap
+            </button>
+            <div class="progress-bar-wrap" id="mastery-progress-wrap">
+                <div class="progress-bar-fill" id="mastery-progress-fill"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ SCREEN 2: ANALYSIS ══ -->
+    <div class="screen" id="screen-analysis">
+        <div class="analysis-card">
+            <div class="analysis-spinner">
+                <div class="spinner-ring spinner-ring-1"></div>
+                <div class="spinner-ring spinner-ring-2"></div>
+                <div class="spinner-inner">🧠</div>
+            </div>
+            <div class="analysis-title">Analyzing Your PDF…</div>
+            <p style="font-size:0.85rem;color:var(--muted);margin-bottom:0.5rem;">Building your personalized learning roadmap</p>
+            <div class="analysis-steps">
+                <div class="analysis-step active" id="astep-1"><i class="fas fa-file-pdf"></i> Extracting content from PDF</div>
+                <div class="analysis-step" id="astep-2"><i class="fas fa-cut"></i> Identifying key topics & sections</div>
+                <div class="analysis-step" id="astep-3"><i class="fas fa-map"></i> Building your mastery roadmap</div>
+                <div class="analysis-step" id="astep-4"><i class="fas fa-question-circle"></i> Preparing quizzes & exercises</div>
+                <div class="analysis-step" id="astep-5"><i class="fas fa-check-circle"></i> Finalizing your learning journey</div>
+            </div>
+            <div class="analysis-bar"><div class="analysis-bar-fill" id="analysis-bar-fill"></div></div>
+        </div>
+    </div>
+
+    <!-- ══ SCREEN 3: ROADMAP ══ -->
+    <div class="screen" id="screen-roadmap">
+        <div class="roadmap-header reveal">
+            <div>
+                <div class="panel-eyebrow">Your Learning Journey</div>
+                <div class="panel-title" id="course-title" style="font-size:1.3rem;">Course Roadmap</div>
+                <div class="roadmap-meta" id="course-meta">— sections · Est. — min</div>
+            </div>
+            <div class="roadmap-stats">
+                <div class="roadmap-stat"><div class="roadmap-stat-val" id="stat-sections">0</div><div class="roadmap-stat-lbl">Sections</div></div>
+                <div class="roadmap-stat"><div class="roadmap-stat-val" id="stat-mastery">0%</div><div class="roadmap-stat-lbl">Mastery</div></div>
+                <div class="roadmap-stat"><div class="roadmap-stat-val" id="stat-xp">0</div><div class="roadmap-stat-lbl">XP</div></div>
+            </div>
+        </div>
+        <div class="overall-progress reveal">
+            <div style="font-size:0.82rem;color:var(--muted);min-width:80px;">Overall Progress</div>
+            <div class="overall-progress-bar"><div class="overall-progress-fill" id="overall-progress-fill"></div></div>
+            <div class="overall-progress-pct" id="overall-progress-pct">0%</div>
+        </div>
+        <div class="sections-grid reveal" id="sections-grid"></div>
+        <div style="margin-top:1.5rem;text-align:center;" id="final-exam-btn-wrap" style="display:none">
+            <button class="btn btn-mastery" onclick="startFinalExam()" id="final-exam-btn" style="display:none">
+                <i class="fas fa-graduation-cap"></i> Take Final Exam
+            </button>
+        </div>
+    </div>
+
+    <!-- ══ SCREEN 4: LEARNING ══ -->
+    <div class="screen" id="screen-learn">
+        <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;" class="reveal">
+            <button class="btn btn-ghost btn-sm" onclick="showScreen('roadmap')"><i class="fas fa-arrow-left"></i> Roadmap</button>
+            <div>
+                <div class="panel-eyebrow">Section <span id="learn-section-num">1</span></div>
+                <div class="panel-title" id="learn-section-title">Loading…</div>
+            </div>
+        </div>
+        <div class="learn-layout reveal">
+            <!-- Left: AI Explanation -->
+            <div>
+                <div class="learn-panel" style="margin-bottom:1.25rem;">
+                    <div class="learn-panel-header">
+                        <div>
+                            <div class="learn-eyebrow">AI Tutor</div>
+                            <div class="learn-panel-title">Explanation</div>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:0.5rem;">
+                            <div style="width:8px;height:8px;border-radius:50%;background:var(--green);animation:blink 1.5s infinite;"></div>
+                            <span style="font-size:0.75rem;color:var(--green);">Live</span>
+                        </div>
+                    </div>
+                    <div class="learn-panel-body">
+                        <div class="ai-explanation" id="learn-explanation">
+                            <p>Loading explanation…</p>
+                        </div>
+                    </div>
+                    <div class="learn-actions">
+                        <button class="btn btn-ghost btn-sm" onclick="explainAgain()"><i class="fas fa-rotate-right"></i> Explain Again</button>
+                        <button class="btn btn-ghost btn-sm" onclick="simplifyFurther()"><i class="fas fa-child"></i> Simplify Further</button>
+                        <button class="btn btn-green btn-sm" onclick="iUnderstand()" id="understand-btn"><i class="fas fa-check"></i> I Understand</button>
+                    </div>
+                </div>
+
+                <!-- Quiz area (shown after "I Understand") -->
+                <div id="section-quiz-area" style="display:none;">
+                    <div id="quiz-container"></div>
+                </div>
+            </div>
+
+            <!-- Right sidebar: Videos + progress -->
+            <div>
+                <div class="learn-panel" style="margin-bottom:1.25rem;">
+                    <div class="learn-panel-header">
+                        <div class="learn-panel-title"><i class="fab fa-youtube" style="color:#ff0000;margin-right:0.5rem;"></i> Recommended Videos</div>
+                    </div>
+                    <div class="learn-panel-body" id="video-panel">
+                        <div style="text-align:center;padding:1.5rem;color:var(--muted);font-size:0.85rem;"><i class="fas fa-spinner fa-spin"></i> Loading…</div>
+                    </div>
+                </div>
+                <div class="learn-panel">
+                    <div class="learn-panel-header">
+                        <div class="learn-panel-title">Section Progress</div>
+                    </div>
+                    <div class="learn-panel-body">
+                        <div style="font-size:0.82rem;color:var(--muted);margin-bottom:0.5rem;">Mastery Level</div>
+                        <div class="overall-progress-bar" style="margin-bottom:0.75rem;height:6px;border-radius:3px;">
+                            <div class="overall-progress-fill" id="section-mastery-bar" style="height:100%;background:linear-gradient(90deg,var(--mastery),var(--mastery2));border-radius:3px;transition:width 0.6s;width:0%;"></div>
+                        </div>
+                        <div class="badge-row" id="section-badges"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ SCREEN 5: FINAL EXAM ══ -->
+    <div class="screen" id="screen-exam">
+        <div class="exam-header reveal">
+            <div>
+                <div class="panel-eyebrow">Final Assessment</div>
+                <div class="panel-title" style="font-size:1.2rem;">Final Exam</div>
+                <div style="font-size:0.82rem;color:var(--muted);margin-top:0.2rem;">Complete all questions to earn your Mastery Certificate</div>
+            </div>
+            <div style="text-align:right;">
+                <div class="exam-timer" id="exam-timer">45:00</div>
+                <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">Time Remaining</div>
+            </div>
+        </div>
+        <div id="exam-container" class="reveal"></div>
+    </div>
+
+    <!-- ══ SCREEN 6: RESULTS ══ -->
+    <div class="screen" id="screen-result">
+        <div class="score-card reveal">
+            <div class="score-ring">
+                <svg viewBox="0 0 120 120" width="140" height="140">
+                    <circle class="score-ring-bg" cx="60" cy="60" r="50"/>
+                    <circle class="score-ring-fill" id="score-ring-fill" cx="60" cy="60" r="50"
+                        stroke-dasharray="314" stroke-dashoffset="314"/>
+                </svg>
+                <div class="score-ring-text">
+                    <div class="score-pct" id="result-pct">0%</div>
+                    <div class="score-label">Score</div>
+                </div>
+            </div>
+            <div class="score-title" id="result-title">Loading…</div>
+            <div class="score-sub" id="result-sub"></div>
+            <div class="score-actions" id="result-actions"></div>
+        </div>
+    </div>
+
+</div>
+</div>
+
+<!-- ACHIEVEMENT POPUP -->
+<div class="achievement-overlay" id="achievement-overlay">
+    <div class="achievement-popup">
+        <span class="achievement-badge-icon" id="ach-icon">🏆</span>
+        <div class="achievement-title" id="ach-title">Section Mastered!</div>
+        <div class="achievement-sub" id="ach-sub">You've demonstrated understanding of this section.</div>
+        <div class="xp-pill"><i class="fas fa-star"></i> <span id="ach-xp">+50 XP</span></div>
+        <button class="btn btn-mastery" onclick="closeAchievement()"><i class="fas fa-arrow-right"></i> Continue</button>
+    </div>
+</div>
+
+<script>
+// ══ State ══════════════════════════════════════════════════════════════
+let masteryState = {
+    pdfText: '',
+    courseTitle: '',
+    sections: [],           // [{title, summary, content, status:'locked'|'unlocked'|'completed', quiz:[], score:0}]
+    currentSection: 0,
+    currentQuiz: [],
+    currentQuizAnswers: [],
+    quizIndex: 0,
+    xp: 0,
+    examQuestions: [],
+    examAnswers: [],
+    examTimerInterval: null,
+    examTimeLeft: 2700,     // 45 min
+    explanationMode: 'normal',  // 'normal' | 'simple'
+};
+
+// ══ Theme ══════════════════════════════════════════════════════════════
+let isDark = true;
+function toggleTheme() {
+    isDark = !isDark;
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    document.getElementById('theme-icon').className = isDark ? 'fas fa-moon' : 'fas fa-sun';
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+}
+(function(){
+    const saved = localStorage.getItem('theme') || 'dark';
+    isDark = saved === 'dark';
+    document.documentElement.setAttribute('data-theme', saved);
+    document.getElementById('theme-icon').className = isDark ? 'fas fa-moon' : 'fas fa-sun';
+})();
+
+function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
+if (window.innerWidth < 769) document.getElementById('sidebar-toggle').style.display = 'flex';
+
+async function logout() {
+    if (!confirm('Logout?')) return;
+    try { await fetch('/logout', { method:'POST' }); window.location.href='/'; } catch(e) {}
+}
+
+// ══ Screen Router ══════════════════════════════════════════════════════
+function showScreen(name) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-' + name).classList.add('active');
+}
+
+// ══ Reveal Observer ════════════════════════════════════════════════════
+const revealObserver = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); revealObserver.unobserve(e.target); } });
+}, { threshold: 0.05 });
+document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+// ══ Tokens ═════════════════════════════════════════════════════════════
+async function loadTokens() {
+    try {
+        const res = await fetch('/api/dashboard-stats');
+        const data = await res.json();
+        if (data.success && data.spark_tokens !== undefined) {
+            document.getElementById('token-count').textContent = data.spark_tokens;
+            document.getElementById('nav-tokens').textContent = data.spark_tokens;
+        }
+    } catch(e) {}
+}
+loadTokens();
+
+// ══ Upload ═════════════════════════════════════════════════════════════
+const uploadZone = document.getElementById('mastery-upload-zone');
+const pdfInput   = document.getElementById('mastery-pdf-input');
+
+uploadZone.addEventListener('dragover',  e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', e => {
+    e.preventDefault(); uploadZone.classList.remove('dragover');
+    if (e.dataTransfer.files[0]) { pdfInput.files = e.dataTransfer.files; handleFileSelect(); }
+});
+pdfInput.addEventListener('change', handleFileSelect);
+
+function handleFileSelect() {
+    if (!pdfInput.files[0]) return;
+    const f = pdfInput.files[0];
+    uploadZone.innerHTML = `<div class="upload-zone-icon" style="color:var(--green)"><i class="fas fa-check-circle"></i></div><h3>${f.name}</h3><p>Ready to analyze</p>`;
+    document.getElementById('mastery-upload-btn').disabled = false;
+}
+
+async function startMastery() {
+    if (!pdfInput.files[0]) return;
+    const file = pdfInput.files[0];
+    if (file.size > 15 * 1024 * 1024) { alert('File too large. Max 15MB.'); return; }
+
+    const btn = document.getElementById('mastery-upload-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading…';
+    document.getElementById('mastery-progress-wrap').style.display = 'block';
+    animateBar('mastery-progress-fill');
+
+    // Extract PDF text client-side using FileReader (send to backend)
+    const fd = new FormData();
+    fd.append('file', file);
+
+    try {
+        const res = await fetch('/mastery/upload', { method: 'POST', body: fd });
+        if (!res.ok) throw new Error('Upload failed');
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Unknown error');
+        masteryState.pdfText = data.pdf_text || '';
+        showScreen('analysis');
+        runAnalysis();
+    } catch(e) {
+        alert('❌ ' + e.message);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-brain"></i> Analyze & Build Roadmap';
+        document.getElementById('mastery-progress-wrap').style.display = 'none';
+    }
+}
+
+function animateBar(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    let w = 0;
+    const t = setInterval(() => {
+        w = Math.min(w + (Math.random() * 8), 90);
+        el.style.width = w + '%';
+        if (w >= 90) clearInterval(t);
+    }, 300);
+}
+
+// ══ Analysis Animation + AI Roadmap Generation ════════════════════════
+async function runAnalysis() {
+    const steps = ['astep-1','astep-2','astep-3','astep-4','astep-5'];
+    const pcts  = [15, 35, 60, 80, 100];
+    const bar   = document.getElementById('analysis-bar-fill');
+
+    for (let i = 0; i < steps.length; i++) {
+        // Mark previous done
+        if (i > 0) {
+            document.getElementById(steps[i-1]).classList.remove('active');
+            document.getElementById(steps[i-1]).classList.add('done');
+            document.getElementById(steps[i-1]).querySelector('i').className = 'fas fa-check-circle';
+        }
+        document.getElementById(steps[i]).classList.add('active');
+        bar.style.width = pcts[i] + '%';
+        await sleep(i === 2 ? 1800 : 900); // longer pause on roadmap step while AI works
+    }
+
+    // Call AI to generate roadmap
+    try {
+        await generateRoadmap();
+        // All steps done
+        steps.forEach((s, i) => {
+            document.getElementById(s).classList.remove('active');
+            document.getElementById(s).classList.add('done');
+            document.getElementById(s).querySelector('i').className = 'fas fa-check-circle';
+        });
+        bar.style.width = '100%';
+        await sleep(600);
+        showScreen('roadmap');
+        renderRoadmap();
+    } catch(e) {
+        alert('❌ Failed to generate roadmap: ' + e.message);
+        showScreen('upload');
+    }
+}
+
+async function generateRoadmap() {
+    const res = await fetch('/mastery/generate-roadmap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pdf_text: masteryState.pdfText })
+    });
+    if (!res.ok) throw new Error('Roadmap generation failed');
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'AI error');
+
+    masteryState.courseTitle = data.course_title;
+    masteryState.sections = data.sections.map((s, i) => ({
+        ...s,
+        status: i === 0 ? 'unlocked' : 'locked',
+        score: 0,
+        quiz: []
+    }));
+}
+
+// ══ Roadmap Render ═════════════════════════════════════════════════════
+function renderRoadmap() {
+    const sections = masteryState.sections;
+    document.getElementById('course-title').textContent = masteryState.courseTitle || 'Your Course';
+    document.getElementById('course-meta').textContent = `${sections.length} sections · Est. ${sections.length * 12} min`;
+    document.getElementById('stat-sections').textContent = sections.length;
+
+    const completed = sections.filter(s => s.status === 'completed').length;
+    const mastery   = sections.length ? Math.round((completed / sections.length) * 100) : 0;
+    document.getElementById('stat-mastery').textContent = mastery + '%';
+    document.getElementById('stat-xp').textContent = masteryState.xp;
+    document.getElementById('overall-progress-fill').style.width = mastery + '%';
+    document.getElementById('overall-progress-pct').textContent = mastery + '%';
+
+    const grid = document.getElementById('sections-grid');
+    grid.innerHTML = sections.map((s, i) => {
+        const statusIcon = s.status === 'completed'
+            ? `<i class="fas fa-check-circle" style="color:var(--green);font-size:1.3rem;"></i>`
+            : s.status === 'locked'
+            ? `<i class="fas fa-lock" style="color:var(--muted);font-size:1.1rem;"></i>`
+            : `<i class="fas fa-play-circle" style="color:var(--mastery2);font-size:1.3rem;"></i>`;
+
+        const statusTxt = s.status === 'completed' ? 'Done' : s.status === 'locked' ? 'Locked' : 'Start';
+        const scoreHtml = s.status === 'completed' ? `<span class="section-meta-chip"><i class="fas fa-star" style="color:var(--gold)"></i> ${s.score}%</span>` : '';
+
+        return `
+        <div class="section-card ${s.status} ${s.status === 'unlocked' ? 'active-section' : ''}" 
+             onclick="openSection(${i})" id="section-card-${i}">
+            <div class="section-num">${s.status === 'completed' ? '✓' : i + 1}</div>
+            <div class="section-info">
+                <div class="section-title">${s.title}</div>
+                <div class="section-meta">
+                    <span class="section-meta-chip"><i class="fas fa-clock"></i> ~12 min</span>
+                    ${scoreHtml}
+                    <span class="section-meta-chip"><i class="fas fa-question-circle"></i> Quiz</span>
+                </div>
+                ${s.status !== 'locked' ? `<div class="section-progress-bar"><div class="section-progress-fill" style="width:${s.status === 'completed' ? 100 : 0}%"></div></div>` : ''}
+            </div>
+            <div class="section-status">
+                <div class="section-status-icon">${statusIcon}</div>
+                <div class="section-status-txt">${statusTxt}</div>
+            </div>
+        </div>`;
+    }).join('');
+
+    // Show final exam button if all sections done
+    const allDone = sections.every(s => s.status === 'completed');
+    document.getElementById('final-exam-btn').style.display = allDone ? 'inline-flex' : 'none';
+
+    // Re-observe new elements
+    document.querySelectorAll('.reveal').forEach(el => {
+        el.classList.remove('visible');
+        revealObserver.observe(el);
+    });
+}
+
+function openSection(i) {
+    const s = masteryState.sections[i];
+    if (s.status === 'locked') {
+        alert('🔒 Complete the previous section first to unlock this one!');
+        return;
+    }
+    masteryState.currentSection = i;
+    masteryState.explanationMode = 'normal';
+    showScreen('learn');
+    loadSectionContent(i);
+}
+
+// ══ Learning Screen ════════════════════════════════════════════════════
+async function loadSectionContent(i) {
+    const s = masteryState.sections[i];
+    document.getElementById('learn-section-num').textContent = i + 1;
+    document.getElementById('learn-section-title').textContent = s.title;
+    document.getElementById('section-quiz-area').style.display = 'none';
+    document.getElementById('understand-btn').disabled = false;
+    document.getElementById('understand-btn').innerHTML = '<i class="fas fa-check"></i> I Understand';
+
+    // Show explanation
+    await streamExplanation(s, 'normal');
+
+    // Load videos
+    loadVideos(s.title);
+
+    // Section mastery bar
+    document.getElementById('section-mastery-bar').style.width = s.score + '%';
+    updateSectionBadges(s.score);
+}
+
+async function streamExplanation(section, mode) {
+    const el = document.getElementById('learn-explanation');
+    el.innerHTML = '<span style="color:var(--muted);font-size:0.85rem;"><i class="fas fa-spinner fa-spin"></i> AI is preparing your explanation…</span>';
+
+    try {
+        const res = await fetch('/mastery/explain', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                section_title:   section.title,
+                section_summary: section.summary || '',
+                section_content: section.content || '',
+                mode: mode
+            })
+        });
+        if (!res.ok) throw new Error('Explanation failed');
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+
+        // Typewriter effect
+        el.innerHTML = '';
+        await typewriterHTML(el, data.explanation);
+    } catch(e) {
+        el.innerHTML = `<p style="color:var(--accent)">⚠️ Could not load explanation. ${e.message}</p>`;
+    }
+}
+
+async function typewriterHTML(el, html) {
+    // Strip tags for typing, then set full HTML
+    el.innerHTML = html;
+}
+
+async function explainAgain() {
+    const s = masteryState.sections[masteryState.currentSection];
+    await streamExplanation(s, masteryState.explanationMode);
+}
+
+async function simplifyFurther() {
+    masteryState.explanationMode = 'simple';
+    const s = masteryState.sections[masteryState.currentSection];
+    await streamExplanation(s, 'simple');
+}
+
+async function iUnderstand() {
+    const btn = document.getElementById('understand-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating Quiz…';
+
+    const s = masteryState.sections[masteryState.currentSection];
+    try {
+        const res = await fetch('/mastery/generate-quiz', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                section_title:   s.title,
+                section_content: s.content || s.summary || ''
+            })
+        });
+        if (!res.ok) throw new Error('Quiz generation failed');
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+
+        masteryState.currentQuiz = data.questions;
+        masteryState.currentQuizAnswers = [];
+        masteryState.quizIndex = 0;
+
+        document.getElementById('section-quiz-area').style.display = 'block';
+        renderQuizQuestion();
+        // Scroll to quiz
+        document.getElementById('section-quiz-area').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch(e) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check"></i> I Understand';
+        alert('❌ ' + e.message);
+    }
+}
+
+// ══ Videos ═════════════════════════════════════════════════════════════
+async function loadVideos(topic) {
+    const panel = document.getElementById('video-panel');
+    panel.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--muted);font-size:0.85rem;"><i class="fas fa-spinner fa-spin"></i> Finding videos…</div>';
+    try {
+        const res = await fetch('/mastery/videos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ topic })
+        });
+        const data = await res.json();
+        if (!data.success || !data.videos.length) throw new Error('No videos found');
+        panel.innerHTML = data.videos.map(v => `
+            <a href="https://www.youtube.com/watch?v=${v.id}" target="_blank" class="video-card">
+                <div class="video-icon"><i class="fab fa-youtube"></i></div>
+                <div class="video-info">
+                    <div class="video-title">${v.title}</div>
+                    <div class="video-meta">${v.channel} · ${v.duration}</div>
+                </div>
+                <i class="fas fa-external-link-alt" style="color:var(--muted);font-size:0.75rem;"></i>
+            </a>`).join('');
+    } catch(e) {
+        panel.innerHTML = '<p style="font-size:0.82rem;color:var(--muted);text-align:center;padding:1rem;">No video recommendations available for this topic.</p>';
+    }
+}
+
+// ══ Quiz ══════════════════════════════════════════════════════════════
+function renderQuizQuestion() {
+    const container = document.getElementById('quiz-container');
+    const questions = masteryState.currentQuiz;
+    const qi = masteryState.quizIndex;
+
+    if (qi >= questions.length) {
+        showQuizResults();
+        return;
+    }
+
+    const q = questions[qi];
+    const letters = ['A','B','C','D'];
+
+    // Progress chips
+    const chips = questions.map((_, idx) => {
+        const ans = masteryState.currentQuizAnswers[idx];
+        let cls = '';
+        if (ans !== undefined) cls = ans.correct ? 'correct' : 'wrong';
+        else if (idx === qi) cls = 'answered';
+        return `<div class="quiz-chip ${cls}"></div>`;
+    }).join('');
+
+    container.innerHTML = `
+        <div class="quiz-header">
+            <div>
+                <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.35rem;">Section Quiz</div>
+                <div class="quiz-progress-chips">${chips}</div>
+            </div>
+            <div style="font-size:0.82rem;color:var(--muted);">Question ${qi + 1} / ${questions.length}</div>
+        </div>
+        <div class="quiz-card">
+            <div class="quiz-q-num">Question ${qi + 1}</div>
+            <div class="quiz-question">${q.question}</div>
+            <div class="quiz-options">
+                ${q.options.map((opt, oi) => `
+                    <div class="quiz-option" onclick="selectOption(${oi})" id="opt-${oi}">
+                        <div class="quiz-opt-letter">${letters[oi]}</div>
+                        <div>${opt}</div>
+                    </div>`).join('')}
+            </div>
+            <div class="quiz-feedback" id="quiz-feedback"></div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:0.75rem;margin-top:0.75rem;">
+            <button class="btn btn-mastery" id="next-btn" onclick="nextQuestion()" style="display:none">
+                ${qi + 1 < questions.length ? 'Next Question <i class="fas fa-arrow-right"></i>' : 'View Results <i class="fas fa-flag-checkered"></i>'}
+            </button>
+        </div>`;
+}
+
+let selectedOpt = null;
+function selectOption(oi) {
+    if (document.querySelector('.quiz-option.correct') || document.querySelector('.quiz-option.wrong')) return;
+    selectedOpt = oi;
+
+    document.querySelectorAll('.quiz-option').forEach((el, i) => {
+        el.classList.toggle('selected', i === oi);
+    });
+
+    const q = masteryState.currentQuiz[masteryState.quizIndex];
+    const correct = oi === q.correct_index;
+    const feedback = document.getElementById('quiz-feedback');
+
+    document.querySelectorAll('.quiz-option').forEach((el, i) => {
+        el.classList.add('disabled');
+        if (i === q.correct_index) el.classList.add('correct');
+        else if (i === oi && !correct) el.classList.add('wrong');
+    });
+
+    feedback.className = 'quiz-feedback show ' + (correct ? 'correct' : 'wrong');
+    feedback.innerHTML = correct
+        ? `<i class="fas fa-check-circle"></i> Correct! ${q.explanation || ''}`
+        : `<i class="fas fa-times-circle"></i> Not quite. ${q.explanation || 'The correct answer is highlighted above.'}`;
+
+    masteryState.currentQuizAnswers[masteryState.quizIndex] = { selected: oi, correct };
+    document.getElementById('next-btn').style.display = 'inline-flex';
+}
+
+function nextQuestion() {
+    masteryState.quizIndex++;
+    renderQuizQuestion();
+}
+
+async function showQuizResults() {
+    const answers  = masteryState.currentQuizAnswers;
+    const correct  = answers.filter(a => a.correct).length;
+    const total    = masteryState.currentQuiz.length;
+    const score    = Math.round((correct / total) * 100);
+    const passed   = score >= 60;
+
+    const si = masteryState.currentSection;
+    masteryState.sections[si].score = score;
+
+    const container = document.getElementById('quiz-container');
+    container.innerHTML = `
+        <div class="score-card" style="max-width:100%;">
+            <div class="score-ring">
+                <svg viewBox="0 0 120 120" width="140" height="140">
+                    <circle class="score-ring-bg" cx="60" cy="60" r="50"/>
+                    <circle class="score-ring-fill" id="quiz-score-ring" cx="60" cy="60" r="50"
+                        stroke="${passed ? 'var(--green)' : 'var(--accent)'}"
+                        stroke-dasharray="314" stroke-dashoffset="${314 - (314 * score / 100)}"/>
+                </svg>
+                <div class="score-ring-text">
+                    <div class="score-pct" style="color:${passed ? 'var(--green)' : 'var(--accent)'}">${score}%</div>
+                    <div class="score-label">Score</div>
+                </div>
+            </div>
+            <div class="score-title">${passed ? '🎉 Section Passed!' : '😅 Keep Practising'}</div>
+            <div class="score-sub">${correct}/${total} correct · ${passed ? 'Great work! Next section unlocked.' : 'Score 60% or above to unlock the next section.'}</div>
+            <div class="score-actions">
+                ${passed
+                    ? `<button class="btn btn-mastery" onclick="completeSectionAndContinue()"><i class="fas fa-arrow-right"></i> Continue</button>`
+                    : `<button class="btn btn-ghost" onclick="retrySection()"><i class="fas fa-rotate-right"></i> Review & Retry</button>
+                       <button class="btn btn-mastery" onclick="loadSectionContent(${si})"><i class="fas fa-book-open"></i> Study Again</button>`
+                }
+            </div>
+        </div>`;
+
+    if (passed) {
+        // Save progress
+        await saveSectionProgress(si, score);
+        const xpGained = 50 + Math.round(score * 0.5);
+        masteryState.xp += xpGained;
+        showAchievement('📖', 'Section Mastered!', `You scored ${score}% on this section.`, `+${xpGained} XP`);
+    }
+}
+
+async function saveSectionProgress(si, score) {
+    masteryState.sections[si].status = 'completed';
+    masteryState.sections[si].score = score;
+    // Unlock next
+    if (si + 1 < masteryState.sections.length) {
+        masteryState.sections[si + 1].status = 'unlocked';
+    }
+    try {
+        await fetch('/mastery/save-progress', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ section_index: si, score, xp: masteryState.xp })
+        });
+    } catch(e) {}
+}
+
+function completeSectionAndContinue() {
+    closeAchievement();
+    showScreen('roadmap');
+    renderRoadmap();
+}
+
+async function retrySection() {
+    masteryState.quizIndex = 0;
+    masteryState.currentQuizAnswers = [];
+    renderQuizQuestion();
+}
+
+// ══ Achievement Popup ══════════════════════════════════════════════════
+let achievementCallback = null;
+function showAchievement(icon, title, sub, xp) {
+    document.getElementById('ach-icon').textContent = icon;
+    document.getElementById('ach-title').textContent = title;
+    document.getElementById('ach-sub').textContent = sub;
+    document.getElementById('ach-xp').textContent = xp;
+    document.getElementById('achievement-overlay').classList.add('show');
+}
+function closeAchievement() {
+    document.getElementById('achievement-overlay').classList.remove('show');
+    if (achievementCallback) { achievementCallback(); achievementCallback = null; }
+}
+
+// ══ Section Badges ══════════════════════════════════════════════════════
+function updateSectionBadges(score) {
+    const row = document.getElementById('section-badges');
+    const badges = [];
+    if (score >= 100) badges.push('🏆 Perfect');
+    if (score >= 80)  badges.push('⭐ Excellent');
+    if (score >= 60)  badges.push('✅ Passed');
+    if (score > 0)    badges.push(`📊 ${score}%`);
+    row.innerHTML = badges.map(b => `<span class="badge-chip">${b}</span>`).join('');
+}
+
+// ══ Final Exam ════════════════════════════════════════════════════════
+async function startFinalExam() {
+    showScreen('exam');
+    const container = document.getElementById('exam-container');
+    container.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);"><i class="fas fa-spinner fa-spin fa-2x"></i><p style="margin-top:1rem;">Generating final exam…</p></div>';
+
+    try {
+        const allContent = masteryState.sections.map(s => s.content || s.summary || s.title).join('\n\n');
+        const res = await fetch('/mastery/generate-quiz', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ section_title: masteryState.courseTitle, section_content: allContent, count: 20 })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+
+        masteryState.examQuestions = data.questions;
+        masteryState.examAnswers   = [];
+        masteryState.examTimeLeft  = 2700;
+        startExamTimer();
+        renderExam();
+    } catch(e) {
+        container.innerHTML = `<p style="color:var(--accent);text-align:center;">${e.message}</p>`;
+    }
+}
+
+function startExamTimer() {
+    if (masteryState.examTimerInterval) clearInterval(masteryState.examTimerInterval);
+    masteryState.examTimerInterval = setInterval(() => {
+        masteryState.examTimeLeft--;
+        const m = Math.floor(masteryState.examTimeLeft / 60);
+        const s = masteryState.examTimeLeft % 60;
+        const el = document.getElementById('exam-timer');
+        el.textContent = `${m}:${s.toString().padStart(2,'0')}`;
+        if (masteryState.examTimeLeft <= 120) el.classList.add('warning');
+        if (masteryState.examTimeLeft <= 0) {
+            clearInterval(masteryState.examTimerInterval);
+            submitExam();
+        }
+    }, 1000);
+}
+
+function renderExam() {
+    const container = document.getElementById('exam-container');
+    const letters   = ['A','B','C','D'];
+    container.innerHTML = masteryState.examQuestions.map((q, qi) => `
+        <div class="quiz-card" style="margin-bottom:1rem;">
+            <div class="quiz-q-num">Question ${qi + 1} of ${masteryState.examQuestions.length}</div>
+            <div class="quiz-question">${q.question}</div>
+            <div class="quiz-options">
+                ${q.options.map((opt, oi) => `
+                    <div class="quiz-option" onclick="selectExamOption(${qi},${oi})" id="exam-opt-${qi}-${oi}">
+                        <div class="quiz-opt-letter">${letters[oi]}</div>
+                        <div>${opt}</div>
+                    </div>`).join('')}
+            </div>
+        </div>`).join('') +
+        `<div style="text-align:center;padding:1.5rem;">
+            <button class="btn btn-mastery" onclick="submitExam()"><i class="fas fa-flag-checkered"></i> Submit Exam</button>
+        </div>`;
+}
+
+function selectExamOption(qi, oi) {
+    masteryState.examAnswers[qi] = oi;
+    // Update UI
+    for (let i = 0; i < 4; i++) {
+        const el = document.getElementById(`exam-opt-${qi}-${i}`);
+        if (el) el.classList.toggle('selected', i === oi);
+    }
+}
+
+function submitExam() {
+    if (masteryState.examTimerInterval) clearInterval(masteryState.examTimerInterval);
+    const questions = masteryState.examQuestions;
+    const answers   = masteryState.examAnswers;
+    let correct = 0;
+    questions.forEach((q, i) => {
+        if (answers[i] === q.correct_index) correct++;
+    });
+    const score  = Math.round((correct / questions.length) * 100);
+    const passed = score >= 70;
+
+    showScreen('result');
+    const ring = document.getElementById('score-ring-fill');
+    ring.setAttribute('stroke', passed ? 'var(--green)' : 'var(--accent)');
+    setTimeout(() => {
+        ring.style.strokeDashoffset = 314 - (314 * score / 100);
+    }, 100);
+
+    document.getElementById('result-pct').textContent = score + '%';
+    document.getElementById('result-pct').style.color = passed ? 'var(--green)' : 'var(--accent)';
+    document.getElementById('result-title').textContent = passed ? '🎓 Course Mastered!' : '😅 Almost There!';
+    document.getElementById('result-sub').textContent = passed
+        ? `You scored ${score}% on the final exam. You've earned your Mastery Certificate!`
+        : `You scored ${score}% on the final exam. A score of 70% or above is needed to pass.`;
+
+    document.getElementById('result-actions').innerHTML = passed
+        ? `<button class="btn btn-mastery" onclick="downloadCertificate()"><i class="fas fa-certificate"></i> Get Certificate</button>
+           <button class="btn btn-ghost" onclick="showScreen('roadmap')"><i class="fas fa-home"></i> Roadmap</button>`
+        : `<button class="btn btn-ghost" onclick="startFinalExam()"><i class="fas fa-rotate-right"></i> Retry Exam</button>
+           <button class="btn btn-mastery" onclick="showScreen('roadmap')"><i class="fas fa-book-open"></i> Review Sections</button>`;
+
+    if (passed) {
+        const xpGained = 200 + Math.round(score * 2);
+        masteryState.xp += xpGained;
+        setTimeout(() => showAchievement('🎓', 'Course Mastered!', `Final Exam: ${score}% · Certificate Earned`, `+${xpGained} XP`), 800);
+    }
+}
+
+function downloadCertificate() {
+    alert('🎓 Your Mastery Certificate is being generated! Check your email.');
+}
+
+// ══ Utility ═══════════════════════════════════════════════════════════
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
+
+<!-- LOADER -->
+<div id="bs-loader">
+    <div class="bsl-logo-wrap">
+        <div class="bsl-ring bsl-ring-1"></div>
+        <div class="bsl-ring bsl-ring-2"></div>
+        <img class="bsl-logo" src="/static/image/KNOWITNOW.png" onerror="this.style.display='none'">
+    </div>
+    <div class="bsl-brand">Brain<span>spark</span></div>
+    <div class="bsl-tagline">Mastery Mode</div>
+    <div class="bsl-bar-wrap"><div class="bsl-bar" id="bsl-bar"></div></div>
+    <div class="bsl-msg" id="bsl-msg">Loading…</div>
+</div>
+
+<script>
+(function(){
+    const msgs = [[20,'Initializing AI tutor…'],[50,'Building learning engine…'],[80,'Almost ready…'],[100,'Welcome to Mastery Mode ✦']];
+    const bar = document.getElementById('bsl-bar');
+    const msg = document.getElementById('bsl-msg');
+    const loader = document.getElementById('bs-loader');
+    let step = 0;
+    function tick() {
+        if (step >= msgs.length) return;
+        const [pct, text] = msgs[step];
+        bar.style.width = pct + '%';
+        msg.style.opacity = '0';
+        setTimeout(() => { msg.textContent = text; msg.style.opacity = '1'; }, 150);
+        step++;
+        if (step < msgs.length) setTimeout(tick, 350);
+    }
+    setTimeout(tick, 100);
+    setTimeout(() => {
+        bar.style.width = '100%';
+        setTimeout(() => { loader.classList.add('hide'); document.body.classList.remove('loading'); }, 400);
+    }, 1800);
+})();
+</script>
+
+<style>
+#bs-loader { position: fixed; inset: 0; z-index: 99999; background: #080810; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2rem; transition: opacity 0.8s ease, visibility 0.8s ease; }
+#bs-loader.hide { opacity: 0; visibility: hidden; pointer-events: none; }
+body.loading { overflow: hidden; }
+.bsl-logo-wrap { position: relative; display: flex; align-items: center; justify-content: center; }
+.bsl-ring { position: absolute; border-radius: 50%; border: 2px solid transparent; animation: bsl-spin 1.4s linear infinite; }
+.bsl-ring-1 { width: 130px; height: 130px; border-top-color: #6366f1; border-right-color: rgba(99,102,241,0.2); animation-duration: 1.2s; }
+.bsl-ring-2 { width: 150px; height: 150px; border-bottom-color: #818cf8; border-left-color: rgba(129,140,248,0.15); animation-duration: 1.8s; animation-direction: reverse; }
+@keyframes bsl-spin { to { transform: rotate(360deg); } }
+.bsl-logo { width: 80px; height: 80px; border-radius: 50%; background: #0d0d20; padding: 8px; animation: bsl-pulse 1.4s ease-in-out infinite; }
+@keyframes bsl-pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
+.bsl-brand { font-family: 'Syne', sans-serif; font-size: 2.2rem; font-weight: 800; letter-spacing: -0.02em; color: #fff; animation: bsl-fadein 0.6s 0.3s both; }
+.bsl-brand span { color: #6366f1; }
+.bsl-tagline { font-size: 0.78rem; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(255,255,255,0.35); animation: bsl-fadein 0.6s 0.5s both; }
+.bsl-bar-wrap { width: 220px; height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; animation: bsl-fadein 0.6s 0.6s both; }
+.bsl-bar { height: 100%; width: 0%; border-radius: 2px; background: linear-gradient(90deg, #6366f1, #818cf8); transition: width 0.35s ease; }
+.bsl-msg { font-size: 0.8rem; color: rgba(255,255,255,0.3); letter-spacing: 0.05em; min-height: 1.2em; transition: opacity 0.3s; animation: bsl-fadein 0.6s 0.7s both; }
+@keyframes bsl-fadein { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+</style>
+
+</body>
+</html>
