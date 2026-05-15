@@ -2169,7 +2169,247 @@ def schedule_brainstorm():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+# ─────────────────────────────────────────────────────────────────────────────
+#  SAVE PUSH SUBSCRIPTION (alias — the frontend calls /api/save-push-subscription)
+# ─────────────────────────────────────────────────────────────────────────────
+@app.route('/api/save-push-subscription', methods=['POST'])
+def save_push_subscription():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    try:
+        sub_data = request.get_json(silent=True)
+        if not sub_data:
+            return jsonify({'error': 'No subscription data'}), 400
+        user = User.query.get(session['user_id'])
+        if user:
+            user.push_subscription = json.dumps(sub_data)
+            db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.warning(f'save_push_subscription error: {e}')
+        return jsonify({'success': False}), 500
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  BRAINSTORM AI QUIZ — Generate questions from PDF
+# ─────────────────────────────────────────────────────────────────────────────
+@app.route('/api/brainstorm-generate-quiz', methods=['POST'])
+def brainstorm_generate_quiz():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+
+    user_id  = session['user_id']
+    user     = User.query.get(user_id)
+    group_id = request.form.get('group_id')
+    session_id = request.form.get('session_id')
+
+    # Token check — cost proportional to question count
+    try:
+        q_count = int(request.form.get('question_count', 10))
+        q_count = max(5, min(20, q_count))
+    except Exception:
+        q_count = 10
+
+    token_cost = max(2, (q_count // 5))
+    user_tokens = getattr(user, 'spark_tokens', 0) or 0
+    if user_tokens < token_cost:
+        return jsonify({'success': False, 'error': f'Not enough tokens. You need {token_cost} tokens but only have {user_tokens}.'}), 400
+
+    # Get PDF
+    pdf_file = request.files.get('pdf')
+    if not pdf_file or not pdf_file.filename:
+        return jsonify({'success': False, 'error': 'Please upload a PDF file.'}), 400
+    if not allowed_file(pdf_file.filename):
+        return jsonify({'success': False, 'error': 'Only PDF files are supported.'}), 400
+
+    # Extract text
+    pdf_text = extract_pdf_text(pdf_file)
+    if not pdf_text or len(pdf_text.strip()) < 80:
+        # Try simple extractor fallback
+        pdf_file.seek(0)
+        import tempfile as _tf
+        with _tf.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
+            tmp_path = tmp.name
+            pdf_file.save(tmp_path)
+        pdf_text = extract_pdf_text_simple(tmp_path)
+        try:
+            os.remove(tmp_path)
+        except Exception:
+            pass
+    if not pdf_text or len(pdf_text.strip()) < 80:
+        return jsonify({'success': False, 'error': 'PDF has no readable text. Use a text-based PDF, not a scanned image.'}), 400
+
+    pdf_text = pdf_text[:5000]  # cap to avoid timeout
+
+    # AI prompt — only IMPORTANT questions
+    prompt = f"""You are an expert exam tutor preparing a live group quiz from study material.
+From the text below, generate EXACTLY {q_count} IMPORTANT multiple-choice questions.
+
+STRICT RULES:
+- Only ask about KEY concepts, important definitions, critical facts, or core principles.
+- NEVER ask about trivial details like professor names, page numbers, dates of publication, or minor administrative info.
+- Each question must have EXACTLY 4 options labelled A, B, C, D.
+- The "answer" field must be exactly ONE letter: A, B, C, or D.
+- The "explanation" field must clearly explain WHY that answer is correct in 1-2 sentences.
+- Questions must be self-contained and understandable without the original text.
+
+TEXT:
+{pdf_text}
+
+Return ONLY valid JSON, no markdown, no extra text:
+{{"questions":[{{"question":"...","options":["A. option","B. option","C. option","D. option"],"answer":"A","explanation":"..."}}]}}"""
+
+    try:
+        response = model.generate_content(prompt)
+        raw = response.text.strip().replace('```json','').replace('```','').strip()
+        s = raw.find('{'); e = raw.rfind('}') + 1
+        if s == -1 or e <= s:
+            return jsonify({'success': False, 'error': 'AI returned invalid response. Try again.'}), 500
+        parsed = json.loads(raw[s:e])
+        questions = parsed.get('questions', [])
+        if not questions:
+            return jsonify({'success': False, 'error': 'No questions generated. Try again.'}), 500
+
+        # Validate and clean
+        valid = []
+        for q in questions:
+            if not q.get('question') or not q.get('options') or not q.get('answer'):
+                continue
+            if len(q['options']) != 4:
+                continue
+            valid.append({
+                'question': q['question'],
+                'options':  q['options'],
+                'answer':   str(q['answer']).upper().strip()[:1],
+                'explanation': q.get('explanation', '')
+            })
+        if len(valid) < 3:
+            return jsonify({'success': False, 'error': 'Could not generate enough valid questions. Try a different PDF.'}), 500
+
+        # Deduct tokens from uploader
+        user.spark_tokens = max(0, user_tokens - token_cost)
+        log = TokenUsageLog(user_id=user_id, feature='brainstorm_quiz', tokens_used=token_cost)
+        db.session.add(log)
+        db.session.commit()
+
+        # Store quiz state on server so members can poll
+        quiz_state_key = f'quiz_{group_id}_{session_id}'
+        # Store in a temporary GroupMessage so members can find it
+        gid = int(group_id) if group_id else None
+        if gid:
+            quiz_init_msg = GroupMessage(
+                group_id=gid,
+                sender_id=user_id,
+                content=json.dumps({'type': 'quiz_init', 'session_id': session_id, 'q_count': len(valid), 'time_per_q': int(request.form.get('time_per_q', 30))}),
+                message_type='quiz_event'
+            )
+            db.session.add(quiz_init_msg)
+            db.session.commit()
+
+        return jsonify({'success': True, 'questions': valid, 'tokens_used': token_cost})
+
+    except json.JSONDecodeError:
+        return jsonify({'success': False, 'error': 'AI response parse error. Try again.'}), 500
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'brainstorm_generate_quiz error: {e}', exc_info=True)
+        return jsonify({'success': False, 'error': str(e)[:200]}), 500
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  BRAINSTORM AI QUIZ — Broadcast an event (question / answer / end)
+# ─────────────────────────────────────────────────────────────────────────────
+@app.route('/api/brainstorm-quiz-event', methods=['POST'])
+def brainstorm_quiz_event():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    data     = request.get_json(silent=True) or {}
+    group_id = data.get('group_id')
+    if not group_id:
+        return jsonify({'error': 'group_id required'}), 400
+    if not ChatGroupMember.query.filter_by(group_id=group_id, user_id=session['user_id']).first():
+        return jsonify({'error': 'Not a member'}), 403
+    try:
+        # Store the event as a group message so members can poll it
+        payload = {
+            'type':       data.get('event'),          # 'question' | 'answer' | 'end'
+            'idx':        data.get('idx'),
+            'question':   data.get('question', ''),
+            'options':    data.get('options', []),
+            'answer':     data.get('answer', ''),
+            'explanation':data.get('explanation', ''),
+            'time_per_q': data.get('time_per_q', 30),
+            'session_id': data.get('session_id'),
+        }
+        msg = GroupMessage(
+            group_id=group_id,
+            sender_id=session['user_id'],
+            content=json.dumps(payload),
+            message_type='quiz_event'
+        )
+        db.session.add(msg)
+        db.session.flush()
+
+        # Push notification to all group members
+        ev_type = data.get('event')
+        if ev_type == 'question':
+            title = f"🧠 Quiz Question {(data.get('idx') or 0)+1}"
+            body  = (data.get('question') or '')[:80]
+            group = ChatGroup.query.get(group_id)
+            for m in ChatGroupMember.query.filter_by(group_id=group_id).all():
+                if m.user_id == session['user_id']:
+                    continue
+                _create_notification(m.user_id, 'quiz_question', title, body, 'group', group_id)
+
+        db.session.commit()
+        return jsonify({'success': True, 'event_id': msg.id})
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'brainstorm_quiz_event error: {e}', exc_info=True)
+        return jsonify({'error': str(e)[:200]}), 500
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  BRAINSTORM AI QUIZ — Get latest quiz event for members to poll
+# ─────────────────────────────────────────────────────────────────────────────
+@app.route('/api/brainstorm-quiz-state')
+def brainstorm_quiz_state():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    group_id   = request.args.get('group_id')
+    session_id = request.args.get('session_id', '')
+    if not group_id:
+        return jsonify({'error': 'group_id required'}), 400
+    if not ChatGroupMember.query.filter_by(group_id=group_id, user_id=session['user_id']).first():
+        return jsonify({'error': 'Not a member'}), 403
+    try:
+        # Get the most recent quiz_event message for this group
+        latest = GroupMessage.query.filter_by(
+            group_id=group_id,
+            message_type='quiz_event',
+            is_deleted=False
+        ).order_by(GroupMessage.created_at.desc()).first()
+
+        if not latest:
+            return jsonify({'success': True, 'event': None})
+
+        payload = json.loads(latest.content)
+        payload['id'] = latest.id  # used by frontend to dedupe
+        return jsonify({'success': True, 'event': payload})
+    except Exception as e:
+        logger.error(f'brainstorm_quiz_state error: {e}', exc_info=True)
+        return jsonify({'error': str(e)[:200]}), 500
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  BRAINSTORM AI QUIZ — Member submits answer (optional tracking)
+# ─────────────────────────────────────────────────────────────────────────────
+@app.route('/api/brainstorm-quiz-answer', methods=['POST'])
+def brainstorm_quiz_answer():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    # Just acknowledge — answer tracking is client-side for now
+    return jsonify({'success': True})
 @app.route('/api/get-group-sessions/<int:group_id>')
 def get_group_sessions(group_id):
     if 'user_id' not in session:

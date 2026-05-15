@@ -286,6 +286,13 @@
         .bs-session-card.live{border-color:var(--green);background:rgba(0,201,141,.07);}
         .live-badge{display:inline-flex;align-items:center;gap:5px;background:var(--green);color:#fff;padding:3px 10px;border-radius:99px;font-size:.72rem;font-weight:700;animation:livePulse 2s ease-in-out infinite;}
         @keyframes livePulse{0%,100%{opacity:1;}50%{opacity:.7;}}
+@keyframes spin{to{transform:rotate(360deg);}}
+.quiz-opt-btn{width:100%;text-align:left;padding:12px 16px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--ink);cursor:pointer;font-size:.9rem;font-family:'DM Sans',sans-serif;transition:all .2s;display:flex;align-items:center;gap:10px;}
+.quiz-opt-btn:hover{border-color:var(--spark);background:rgba(168,85,247,.06);}
+.quiz-opt-btn.selected{border-color:var(--blue);background:rgba(59,107,255,.1);color:var(--blue2);}
+.quiz-opt-btn.correct{border-color:var(--green);background:rgba(0,201,141,.1);color:var(--green);}
+.quiz-opt-btn.wrong{border-color:#e03030;background:rgba(224,48,48,.08);color:#e03030;}
+.quiz-opt-letter{width:28px;height:28px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.8rem;flex-shrink:0;}
 
         /* EMPTY STATE */
         .empty-state{text-align:center;padding:48px 24px;color:var(--muted);}
@@ -835,7 +842,7 @@ body.loading { overflow: hidden; }
 <div id="schedule-bs-modal" class="modal-overlay" style="display:none;">
     <div class="modal-box">
         <div class="modal-hd">
-            <div class="modal-title"><i class="fas fa-brain" style="color:var(--spark);margin-right:8px;"></i>Brainstorm Session</div>
+            <div class="modal-title"><i class="fas fa-brain" style="color:var(--spark);margin-right:8px;"></i>AI Quiz Brainstorm</div>
             <button onclick="closeModal('schedule-bs-modal')" class="modal-close"><i class="fas fa-times"></i></button>
         </div>
 
@@ -852,25 +859,6 @@ body.loading { overflow: hidden; }
             <div>
                 <label style="font-size:.75rem;font-weight:600;color:var(--muted);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em;">Date and Time</label>
                 <input id="bs-sched-time" type="datetime-local" class="inp">
-            </div>
-            <div>
-                <label style="font-size:.75rem;font-weight:600;color:var(--muted);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em;">Session Structure</label>
-                <div style="display:flex;gap:10px;">
-                    <label style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all .2s;" id="bs-type-lecture-label">
-                        <input type="radio" name="bs-type" value="lecture" id="bs-type-lecture" checked style="accent-color:var(--spark);">
-                        <div>
-                            <div style="font-weight:600;font-size:.85rem;">Lecture</div>
-                            <div style="font-size:.73rem;color:var(--muted);">Coordinator teaches live</div>
-                        </div>
-                    </label>
-                    <label style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all .2s;" id="bs-type-qa-label">
-                        <input type="radio" name="bs-type" value="qa" id="bs-type-qa" style="accent-color:var(--spark);">
-                        <div>
-                            <div style="font-weight:600;font-size:.85rem;">Q and A</div>
-                            <div style="font-size:.73rem;color:var(--muted);">Members drop questions, you solve</div>
-                        </div>
-                    </label>
-                </div>
             </div>
             <div>
                 <label style="font-size:.75rem;font-weight:600;color:var(--muted);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em;">Description (optional)</label>
@@ -893,6 +881,117 @@ body.loading { overflow: hidden; }
             </div>
             <div id="bs-modal-upcoming-list" style="width:100%;display:flex;flex-direction:column;gap:8px;margin-top:4px;max-height:260px;overflow-y:auto;"></div>
         </div>
+    </div>
+</div>
+
+<!-- AI Quiz Upload Modal (shown when session starts / user joins a live session) -->
+<div id="quiz-upload-modal" class="modal-overlay" style="display:none;">
+    <div class="modal-box modal-box-wide">
+        <div class="modal-hd">
+            <div class="modal-title"><i class="fas fa-robot" style="color:var(--spark);margin-right:8px;"></i>AI Quiz Setup</div>
+            <button onclick="closeModal('quiz-upload-modal')" class="modal-close"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body" style="display:flex;flex-direction:column;gap:16px;">
+            <div style="padding:12px 14px;background:rgba(168,85,247,.07);border:1px solid rgba(168,85,247,.2);border-radius:12px;font-size:.85rem;color:var(--muted);line-height:1.6;">
+                ⚡ Upload your PDF or slides. AI will generate <strong>important</strong> questions — not trivial ones. Questions are sent live to all members one at a time. <strong>Tokens are deducted from you (the uploader).</strong>
+            </div>
+            <div>
+                <label style="font-size:.75rem;font-weight:600;color:var(--muted);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em;">Upload PDF / Slides</label>
+                <label for="quiz-pdf-input" id="quiz-pdf-label" class="btn btn-ghost btn-full" style="border-radius:10px;cursor:pointer;padding:14px;justify-content:center;border-style:dashed;">
+                    <i class="fas fa-file-pdf" style="color:#f97316;margin-right:6px;"></i> Choose PDF or Slide File
+                </label>
+                <input type="file" id="quiz-pdf-input" accept=".pdf" style="display:none;" onchange="onQuizFileSelected(event)">
+                <div id="quiz-file-name" style="font-size:.78rem;color:var(--green);margin-top:6px;display:none;"></div>
+            </div>
+            <div style="display:flex;gap:12px;">
+                <div style="flex:1;">
+                    <label style="font-size:.75rem;font-weight:600;color:var(--muted);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em;">Number of Questions</label>
+                    <select id="quiz-q-count" class="inp">
+                        <option value="5">5 questions</option>
+                        <option value="8">8 questions</option>
+                        <option value="10" selected>10 questions</option>
+                        <option value="15">15 questions</option>
+                        <option value="20">20 questions</option>
+                    </select>
+                </div>
+                <div style="flex:1;">
+                    <label style="font-size:.75rem;font-weight:600;color:var(--muted);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em;">Time Per Question</label>
+                    <select id="quiz-time-per-q" class="inp">
+                        <option value="20">20 seconds</option>
+                        <option value="30" selected>30 seconds</option>
+                        <option value="45">45 seconds</option>
+                        <option value="60">60 seconds</option>
+                        <option value="90">90 seconds</option>
+                    </select>
+                </div>
+            </div>
+            <div id="quiz-token-info" style="font-size:.8rem;color:var(--muted);padding:10px 12px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);">
+                💡 Cost: <strong id="quiz-token-cost">2</strong> tokens from your balance (for AI generation). Members answer for free.
+            </div>
+            <button onclick="startAIQuiz()" id="quiz-start-btn" class="btn btn-spark btn-full" style="padding:12px;border-radius:12px;">
+                <i class="fas fa-robot"></i> Generate & Start AI Quiz
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- AI Quiz Live Overlay (full screen, shown during quiz) -->
+<div id="quiz-live-overlay" style="display:none;position:fixed;inset:0;z-index:600;background:var(--surface);flex-direction:column;overflow:hidden;">
+    <!-- Header -->
+    <div style="padding:12px 20px;background:linear-gradient(135deg,#1a0533,#2d1060);border-bottom:1px solid rgba(168,85,247,.3);display:flex;align-items:center;gap:12px;flex-shrink:0;">
+        <div style="flex:1;">
+            <div id="quiz-live-title" style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;color:#fff;"></div>
+            <div id="quiz-live-progress" style="font-size:.75rem;color:rgba(255,255,255,.5);margin-top:2px;"></div>
+        </div>
+        <div id="quiz-live-timer-wrap" style="width:52px;height:52px;position:relative;flex-shrink:0;">
+            <svg width="52" height="52" style="transform:rotate(-90deg)">
+                <circle cx="26" cy="26" r="22" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="4"/>
+                <circle id="quiz-timer-circle" cx="26" cy="26" r="22" fill="none" stroke="#a855f7" stroke-width="4" stroke-dasharray="138.2" stroke-dashoffset="0" style="transition:stroke-dashoffset 1s linear;"/>
+            </svg>
+            <div id="quiz-timer-text" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:1rem;color:#fff;">30</div>
+        </div>
+    </div>
+    <!-- Question area -->
+    <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:24px 20px;gap:16px;">
+        <!-- Waiting screen -->
+        <div id="quiz-waiting-screen" style="text-align:center;padding:48px 24px;color:var(--muted);">
+            <i class="fas fa-hourglass-half" style="font-size:2.5rem;opacity:.2;display:block;margin-bottom:16px;animation:spin 2s linear infinite;"></i>
+            <div id="quiz-waiting-msg" style="font-size:.95rem;">Waiting for the quiz to start…</div>
+        </div>
+        <!-- Question card -->
+        <div id="quiz-question-card" style="display:none;width:100%;max-width:680px;">
+            <div style="background:linear-gradient(135deg,rgba(168,85,247,.1),rgba(59,107,255,.08));border:1px solid rgba(168,85,247,.25);border-radius:16px;padding:20px 24px;margin-bottom:16px;">
+                <div id="quiz-q-number" style="font-size:.72rem;font-weight:700;color:var(--spark);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;"></div>
+                <div id="quiz-q-text" style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.05rem;color:var(--ink);line-height:1.5;"></div>
+            </div>
+            <div id="quiz-options-wrap" style="display:flex;flex-direction:column;gap:10px;"></div>
+        </div>
+        <!-- Answer reveal -->
+        <div id="quiz-answer-card" style="display:none;width:100%;max-width:680px;">
+            <div id="quiz-answer-inner" style="background:rgba(0,201,141,.07);border:1px solid rgba(0,201,141,.3);border-radius:16px;padding:20px 24px;margin-bottom:12px;"></div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button onclick="requestQuizExplain()" class="btn btn-ghost" style="flex:1;border-radius:12px;padding:10px;"><i class="fas fa-comment-dots"></i> Explain More</button>
+                <div id="quiz-explain-box" style="display:none;width:100%;padding:14px 16px;background:linear-gradient(135deg,#1a0533,#2d1060);border:1px solid rgba(168,85,247,.4);border-radius:14px;font-size:.875rem;color:#e9d5ff;line-height:1.7;margin-top:4px;"></div>
+            </div>
+        </div>
+        <!-- Uploader controls (only shown to admin who uploaded) -->
+        <div id="quiz-admin-controls" style="display:none;width:100%;max-width:680px;margin-top:8px;">
+            <button onclick="quizNextQuestion()" id="quiz-next-btn" class="btn btn-spark btn-full" style="padding:12px;border-radius:12px;">
+                <i class="fas fa-arrow-right"></i> Next Question
+            </button>
+        </div>
+        <!-- Results screen -->
+        <div id="quiz-results-screen" style="display:none;width:100%;max-width:680px;text-align:center;">
+            <div style="font-size:3rem;margin-bottom:16px;">🎉</div>
+            <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.4rem;color:var(--ink);margin-bottom:8px;">Quiz Complete!</div>
+            <div id="quiz-results-summary" style="font-size:.875rem;color:var(--muted);line-height:1.7;margin-bottom:20px;"></div>
+            <button onclick="closeQuizOverlay()" class="btn btn-accent btn-full" style="padding:12px;border-radius:12px;"><i class="fas fa-check"></i> Close</button>
+        </div>
+    </div>
+    <!-- Footer: member answer status -->
+    <div style="padding:10px 20px;border-top:1px solid var(--border);background:var(--surface2);flex-shrink:0;display:flex;align-items:center;gap:12px;">
+        <div id="quiz-answered-count" style="font-size:.78rem;color:var(--muted);flex:1;"></div>
+        <button onclick="closeQuizOverlay()" class="btn btn-ghost btn-sm"><i class="fas fa-door-open"></i> Leave Quiz</button>
     </div>
 </div>
 
@@ -1019,6 +1118,19 @@ let _bsVoiceRecorder=null,_bsVoiceChunks=[],_bsVoiceBroadcasting=false;
 let myHandRaiseId=null,myHandStatus=null;
 let _bsChatPollInterval=null;
 let _pendingSessionData=null; // for admin start prompt
+
+// ── AI Quiz state ──────────────────────────────────────────
+let _quizQuestions=[];      // full array of {question, options, answer, explanation}
+let _quizCurrentIdx=-1;     // which question is live (-1 = not started)
+let _quizTimer=null;        // countdown interval
+let _quizTimePerQ=30;       // seconds per question
+let _quizMemberAnswers={};  // { questionIdx: choiceLetter } — this member's answers
+let _quizPollInterval=null; // polls server for quiz state updates (members)
+let _quizIsUploader=false;  // true if I'm the one who uploaded and controls the quiz
+let _quizGroupId=null;      // group this quiz is tied to
+let _quizSessionKey=null;   // unique key used as group-message content
+let _quizAnsweredThisQ=false; // prevent double-answering per question
+let _quizNotifTimers=[];    // push reminder timers
 
 // Notification
 let notifOpen=false;
@@ -1594,11 +1706,48 @@ async function loadNotifications(){
 }
 
 // ═══════════════════════════════════════════════════════════
+//  PUSH NOTIFICATION HELPERS
+// ═══════════════════════════════════════════════════════════
+function urlB64ToUint8Array(b){const p='='.repeat((4-b.length%4)%4);const s=(b+p).replace(/-/g,'+').replace(/_/g,'/');const raw=atob(s);return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)));}
+
+async function registerPush(){
+    if(!('serviceWorker' in navigator)||!('PushManager' in window))return;
+    try{
+        const reg=await navigator.serviceWorker.register('/static/sw.js');
+        const existing=await reg.pushManager.getSubscription();
+        if(existing){_savePushSub(existing);return;}
+        const kd=await fetch('/api/push-vapid-public-key').then(r=>r.json()).catch(()=>null);
+        if(!kd||!kd.public_key)return;
+        const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlB64ToUint8Array(kd.public_key)});
+        _savePushSub(sub);
+    }catch(e){console.log('Push skipped:',e.message);}
+}
+
+function _savePushSub(sub){
+    fetch('/api/save-push-subscription',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(sub)}).catch(()=>{});
+}
+
+function scheduleLocalReminders(sessionTimeISO,title){
+    _quizNotifTimers.forEach(t=>clearTimeout(t));
+    _quizNotifTimers=[];
+    const sessionMs=new Date(sessionTimeISO).getTime();
+    const reminders=[{ms:60*60*1000,msg:`⏰ Brainstorm in 1 hour: ${title}`},{ms:15*60*1000,msg:`⏰ Brainstorm in 15 minutes: ${title}`},{ms:0,msg:`🧠 Brainstorm starting now: ${title}`}];
+    reminders.forEach(r=>{
+        const delay=sessionMs-Date.now()-r.ms;
+        if(delay>0){
+            const t=setTimeout(()=>{
+                showToast(r.msg,'info');
+                if('Notification' in window&&Notification.permission==='granted'){new Notification('Brainspark',{body:r.msg,icon:'/static/image/KNOWITNOW.png'});}
+            },delay);
+            _quizNotifTimers.push(t);
+        }
+    });
+}
+
+// ═══════════════════════════════════════════════════════════
 //  SCHEDULE BRAINSTORM MODAL
 // ═══════════════════════════════════════════════════════════
-function showScheduleBrainstormModal(){
-    handleBSIconClick();
-}
+function showScheduleBrainstormModal(){handleBSIconClick();}
 
 function handleBSIconClick(){
     if(!gcCurrentGroupId){showToast('Select a group first','warn');return;}
@@ -1609,8 +1758,7 @@ function handleBSIconClick(){
         document.getElementById('bs-sched-subject').value='';
         document.getElementById('bs-sched-time').value='';
         document.getElementById('bs-sched-desc').value='';
-        document.getElementById('bs-type-lecture').checked=true;
-    } else {
+    }else{
         document.getElementById('bs-modal-admin-view').style.display='none';
         document.getElementById('bs-modal-member-view').style.display='flex';
         loadUpcomingSessionsForMember();
@@ -1625,33 +1773,18 @@ async function loadUpcomingSessionsForMember(){
         const data=await fetch(`/api/get-group-sessions/${gcCurrentGroupId}`).then(r=>r.json());
         container.innerHTML='';
         const active=(data.sessions||[]).filter(s=>s.status!=='completed');
-        if(!active.length){
-            container.innerHTML='<div style="font-size:.8rem;color:var(--muted);text-align:center;padding:12px;background:var(--surface2);border-radius:10px;">No upcoming sessions scheduled yet.</div>';
-            return;
-        }
+        if(!active.length){container.innerHTML='<div style="font-size:.8rem;color:var(--muted);text-align:center;padding:12px;background:var(--surface2);border-radius:10px;">No upcoming sessions scheduled yet.</div>';return;}
         active.forEach(s=>{
             const isLive=s.status==='ongoing';
             const card=document.createElement('div');
             card.style.cssText=`padding:12px 14px;background:var(--surface2);border:1px solid ${isLive?'var(--green)':'var(--border)'};border-radius:12px;text-align:left;cursor:pointer;transition:all .2s;`;
             card.onmouseover=()=>card.style.borderColor=isLive?'var(--green)':'var(--accent)';
             card.onmouseout=()=>card.style.borderColor=isLive?'var(--green)':'var(--border)';
-            card.innerHTML=`
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                    ${isLive?'<span style="background:var(--green);color:#fff;font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:99px;">LIVE NOW</span>':'<span style="background:rgba(59,107,255,.12);color:var(--blue2);font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:99px;">SCHEDULED</span>'}
-                    <span style="font-family:\'Syne\',sans-serif;font-weight:700;font-size:.875rem;color:var(--ink);">${escHtml(s.title)}</span>
-                </div>
-                <div style="font-size:.78rem;color:var(--muted);margin-bottom:4px;">${new Date(s.scheduled_time).toLocaleString()}</div>
-                <div style="font-size:.75rem;color:${isLive?'var(--green)':'var(--muted)'};">${isLive?'Tap to join now':'Tap to view details'}</div>
-            `;
-            card.onclick=()=>{
-                closeModal('schedule-bs-modal');
-                handleSessionCardClick(s);
-            };
+            card.innerHTML=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">${isLive?'<span style="background:var(--green);color:#fff;font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:99px;">LIVE NOW</span>':'<span style="background:rgba(59,107,255,.12);color:var(--blue2);font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:99px;">SCHEDULED</span>'}<span style="font-family:\'Syne\',sans-serif;font-weight:700;font-size:.875rem;color:var(--ink);">${escHtml(s.title)}</span></div><div style="font-size:.78rem;color:var(--muted);margin-bottom:4px;">${new Date(s.scheduled_time).toLocaleString()}</div><div style="font-size:.75rem;color:${isLive?'var(--green)':'var(--muted)'};">${isLive?'Tap to join quiz now':'Tap to view details'}</div>`;
+            card.onclick=()=>{closeModal('schedule-bs-modal');handleSessionCardClick(s);};
             container.appendChild(card);
         });
-    }catch{
-        container.innerHTML='<div style="font-size:.8rem;color:var(--accent);text-align:center;padding:8px;">Could not load sessions.</div>';
-    }
+    }catch{container.innerHTML='<div style="font-size:.8rem;color:var(--accent);text-align:center;padding:8px;">Could not load sessions.</div>';}
 }
 
 async function scheduleOrStartBrainstorm(startNow){
@@ -1659,45 +1792,345 @@ async function scheduleOrStartBrainstorm(startNow){
     const subject=document.getElementById('bs-sched-subject').value.trim();
     const timeVal=document.getElementById('bs-sched-time').value;
     const desc=document.getElementById('bs-sched-desc').value.trim();
-    const sessionType=document.querySelector('input[name="bs-type"]:checked')?.value||'lecture';
     if(!title){showToast('Session title required','warn');return;}
     if(!startNow&&!timeVal){showToast('Please select a date and time','warn');return;}
-    const scheduledTime=startNow?new Date().toISOString():timeVal;
+    const scheduledTime=startNow?new Date().toISOString():new Date(timeVal).toISOString();
     const fullDesc=`${subject?subject+' — ':''}${desc||'Join us for a collaborative study session!'}`;
     closeModal('schedule-bs-modal');
+
+    // Request notification permission
+    if('Notification' in window&&Notification.permission==='default'){Notification.requestPermission();}
+
     try{
         const data=await fetch('/api/schedule-brainstorm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_id:gcCurrentGroupId,title,description:fullDesc,scheduled_time:scheduledTime})}).then(r=>r.json());
         if(!data.success){showToast('Failed: '+(data.error||'Unknown error'),'error');return;}
         const sessionId=data.session_id;
-        const sd={id:sessionId,title,description:fullDesc,scheduled_time:scheduledTime,status:startNow?'ongoing':'scheduled',teacher_id:startNow?bsCurrentUserId:null,session_type:sessionType};
-        if(startNow){
+        const sd={id:sessionId,title,description:fullDesc,scheduled_time:scheduledTime,status:startNow?'ongoing':'scheduled',teacher_id:startNow?bsCurrentUserId:null};
+        if(!startNow){
+            scheduleLocalReminders(scheduledTime,title);
+            showToast('✅ Session scheduled! Members have been notified.','success');
+            await loadGCMessages(gcCurrentGroupId);
+        }else{
             await fetch('/api/update-session-status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sessionId,status:'ongoing'})});
-            if(bsCurrentUserId){
-                await fetch('/api/set-session-teacher',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sessionId,teacher_id:bsCurrentUserId})}).catch(()=>{});
-            }
-            bsCoordId=bsCurrentUserId;
-            bsIsAdmin=true;
-            showToast('Live session started! Members have been notified.','success');
+            if(bsCurrentUserId){await fetch('/api/set-session-teacher',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sessionId,teacher_id:bsCurrentUserId})}).catch(()=>{});}
+            bsCoordId=bsCurrentUserId;bsIsAdmin=true;
+            showToast('Live session started!','success');
             await loadGCMessages(gcCurrentGroupId);
-            await openBSSession({...sd,status:'ongoing',teacher_id:bsCurrentUserId});
-        } else {
-            showToast('Session scheduled! Members have been notified.','success');
-            await loadGCMessages(gcCurrentGroupId);
+            // Admin who started immediately opens the quiz upload modal
+            _quizGroupId=gcCurrentGroupId;
+            bsSessionId=sessionId;bsGroupId=gcCurrentGroupId;
+            openQuizUploadModal(true);
         }
-    }catch{
-        showToast('Error scheduling session. Please try again.','error');
+    }catch{showToast('Error scheduling session. Please try again.','error');}
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SESSION CARD HANDLERS (members joining)
+// ═══════════════════════════════════════════════════════════
+async function handleSessionCardClick(sd){
+    if(!bsCurrentUserId){try{const r=await fetch('/api/dashboard-stats').then(x=>x.json());if(r.success)bsCurrentUserId=r.user_id;}catch{}}
+    if(sd.status==='completed'){showToast('This session has already ended.','info');return;}
+    if(sd.status==='scheduled'){
+        if(gcCurrentGroupIsAdmin){
+            // Admin taps a scheduled card → they are the uploader, open quiz upload
+            bsSessionId=sd.id;bsGroupId=sd.group_id||gcCurrentGroupId;_quizGroupId=bsGroupId;
+            await fetch('/api/update-session-status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sd.id,status:'ongoing'})});
+            if(bsCurrentUserId){await fetch('/api/set-session-teacher',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sd.id,teacher_id:bsCurrentUserId})}).catch(()=>{});}
+            bsCoordId=bsCurrentUserId;bsIsAdmin=true;
+            await loadGCMessages(gcCurrentGroupId);
+            openQuizUploadModal(true);
+        }else{showToast('Session not started yet. Waiting for the admin to begin.','info');}
+        return;
+    }
+    // ongoing — members join the quiz viewer
+    bsSessionId=sd.id;bsGroupId=sd.group_id||gcCurrentGroupId;_quizGroupId=bsGroupId;
+    await fetch('/api/join-brainstorm-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sd.id})}).catch(()=>{});
+    openQuizLiveOverlay(sd.title,false);
+}
+
+async function startSessionAsCoord(){} // kept for compat, no longer used
+async function startSessionWithPickedCoord(){} // kept for compat
+
+// ═══════════════════════════════════════════════════════════
+//  AI QUIZ — UPLOAD & GENERATE
+// ═══════════════════════════════════════════════════════════
+let _quizPdfFile=null;
+
+function openQuizUploadModal(isUploader){
+    _quizIsUploader=isUploader;
+    _quizPdfFile=null;
+    document.getElementById('quiz-pdf-label').innerHTML='<i class="fas fa-file-pdf" style="color:#f97316;margin-right:6px;"></i> Choose PDF or Slide File';
+    document.getElementById('quiz-file-name').style.display='none';
+    document.getElementById('quiz-pdf-input').value='';
+    openModal('quiz-upload-modal');
+    // Update token cost display
+    document.getElementById('quiz-q-count').onchange=function(){document.getElementById('quiz-token-cost').textContent=Math.max(2,Math.ceil(parseInt(this.value)/5));};
+}
+
+function onQuizFileSelected(e){
+    const file=e.target.files[0];if(!file)return;
+    _quizPdfFile=file;
+    document.getElementById('quiz-pdf-label').innerHTML=`<i class="fas fa-check-circle" style="color:var(--green);margin-right:6px;"></i> ${escHtml(file.name)}`;
+    const fn=document.getElementById('quiz-file-name');fn.textContent='✅ '+file.name+' ready';fn.style.display='';
+}
+
+async function startAIQuiz(){
+    if(!_quizPdfFile){showToast('Please select a PDF file first','warn');return;}
+    const qCount=parseInt(document.getElementById('quiz-q-count').value)||10;
+    const timePerQ=parseInt(document.getElementById('quiz-time-per-q').value)||30;
+    _quizTimePerQ=timePerQ;
+    const btn=document.getElementById('quiz-start-btn');
+    btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Generating questions…';
+
+    try{
+        const fd=new FormData();
+        fd.append('pdf',_quizPdfFile);
+        fd.append('question_count',qCount);
+        fd.append('group_id',_quizGroupId||gcCurrentGroupId);
+        fd.append('session_id',bsSessionId||'');
+
+        const data=await fetch('/api/brainstorm-generate-quiz',{method:'POST',body:fd}).then(r=>r.json());
+        if(!data.success){showToast('❌ '+(data.error||'Failed to generate questions'),'error');btn.disabled=false;btn.innerHTML='<i class="fas fa-robot"></i> Generate & Start AI Quiz';return;}
+
+        _quizQuestions=data.questions;
+        _quizCurrentIdx=-1;
+        _quizMemberAnswers={};
+        _quizAnsweredThisQ=false;
+        closeModal('quiz-upload-modal');
+        openQuizLiveOverlay(document.getElementById('bs-session-title')?.textContent||'AI Quiz',true);
+        // Post quiz-start message to group chat so members see it and join
+        await fetch('/api/send-group-message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_id:_quizGroupId||gcCurrentGroupId,content:JSON.stringify({type:'quiz_start',session_id:bsSessionId,title:'🧠 AI Quiz Started!',q_count:_quizQuestions.length,time_per_q:_quizTimePerQ}),message_type:'quiz_event'})}).catch(()=>{});
+        // Admin starts first question after 3s
+        setTimeout(()=>quizNextQuestion(),3000);
+    }catch(e){
+        showToast('Error generating quiz: '+e.message,'error');
+        btn.disabled=false;btn.innerHTML='<i class="fas fa-robot"></i> Generate & Start AI Quiz';
     }
 }
 
-async function sendSessionCardMessage(sd){
-    await loadGCMessages(gcCurrentGroupId);
+// ═══════════════════════════════════════════════════════════
+//  AI QUIZ — LIVE OVERLAY
+// ═══════════════════════════════════════════════════════════
+function openQuizLiveOverlay(title,isUploader){
+    _quizIsUploader=isUploader;
+    const el=document.getElementById('quiz-live-overlay');
+    el.style.display='flex';
+    document.getElementById('quiz-live-title').textContent=title||'AI Quiz';
+    document.getElementById('quiz-waiting-screen').style.display='';
+    document.getElementById('quiz-waiting-msg').textContent=isUploader?'Starting quiz…':'Waiting for quiz to begin…';
+    document.getElementById('quiz-question-card').style.display='none';
+    document.getElementById('quiz-answer-card').style.display='none';
+    document.getElementById('quiz-results-screen').style.display='none';
+    document.getElementById('quiz-admin-controls').style.display=isUploader?'':'none';
+    document.getElementById('quiz-next-btn').disabled=true;
+    if(!isUploader){startQuizPoll();}
+}
+
+function closeQuizOverlay(){
+    document.getElementById('quiz-live-overlay').style.display='none';
+    stopQuizPoll();
+    if(_quizTimer){clearInterval(_quizTimer);_quizTimer=null;}
+    _quizCurrentIdx=-1;_quizQuestions=[];_quizMemberAnswers={};_quizAnsweredThisQ=false;
+}
+
+// Called by admin to advance to next question
+async function quizNextQuestion(){
+    if(!_quizIsUploader)return;
+    _quizCurrentIdx++;
+    if(_quizCurrentIdx>=_quizQuestions.length){
+        endQuiz();return;
+    }
+    _quizAnsweredThisQ=false;
+    const q=_quizQuestions[_quizCurrentIdx];
+    // Broadcast question to all via server
+    await fetch('/api/brainstorm-quiz-event',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+        group_id:_quizGroupId||gcCurrentGroupId,
+        session_id:bsSessionId,
+        event:'question',
+        idx:_quizCurrentIdx,
+        question:q.question,
+        options:q.options,
+        time_per_q:_quizTimePerQ
+    })}).catch(()=>{});
+    showQuizQuestion(_quizCurrentIdx,q,_quizTimePerQ,true);
+}
+
+function showQuizQuestion(idx,q,timePerQ,isUploader){
+    document.getElementById('quiz-waiting-screen').style.display='none';
+    document.getElementById('quiz-answer-card').style.display='none';
+    document.getElementById('quiz-results-screen').style.display='none';
+    const total=_quizQuestions.length||'?';
+    document.getElementById('quiz-live-progress').textContent=`Question ${idx+1} of ${total}`;
+    document.getElementById('quiz-q-number').textContent=`Question ${idx+1}`;
+    document.getElementById('quiz-q-text').textContent=q.question;
+    document.getElementById('quiz-question-card').style.display='';
+    const wrap=document.getElementById('quiz-options-wrap');
+    wrap.innerHTML='';
+    const letters=['A','B','C','D'];
+    (q.options||[]).forEach((opt,i)=>{
+        const btn=document.createElement('button');
+        btn.className='quiz-opt-btn';
+        btn.dataset.letter=letters[i]||String.fromCharCode(65+i);
+        btn.innerHTML=`<span class="quiz-opt-letter">${letters[i]||String.fromCharCode(65+i)}</span>${escHtml(opt.replace(/^[A-D]\.\s*/,''))}`;
+        btn.onclick=()=>{if(!isUploader&&!_quizAnsweredThisQ)memberPickAnswer(idx,btn.dataset.letter,q.answer);};
+        if(isUploader)btn.disabled=true; // uploader doesn't answer, they run the quiz
+        wrap.appendChild(btn);
+    });
+    if(isUploader){
+        document.getElementById('quiz-admin-controls').style.display='';
+        document.getElementById('quiz-next-btn').disabled=true;
+    }
+    // Start countdown
+    startQuizCountdown(timePerQ,isUploader,q);
+}
+
+function startQuizCountdown(seconds,isUploader,q){
+    if(_quizTimer)clearInterval(_quizTimer);
+    let remaining=seconds;
+    const circle=document.getElementById('quiz-timer-circle');
+    const txt=document.getElementById('quiz-timer-text');
+    const circumference=138.2;
+    function tick(){
+        remaining--;
+        txt.textContent=remaining;
+        const offset=circumference*(1-(remaining/seconds));
+        if(circle)circle.style.strokeDashoffset=offset;
+        if(remaining<=0){
+            clearInterval(_quizTimer);_quizTimer=null;
+            // Time's up — reveal answer
+            revealAnswer(q,isUploader);
+        }
+    }
+    // Set initial
+    txt.textContent=seconds;
+    if(circle)circle.style.strokeDashoffset=0;
+    _quizTimer=setInterval(tick,1000);
+}
+
+function memberPickAnswer(idx,letter,correctAnswer){
+    if(_quizAnsweredThisQ)return;
+    _quizAnsweredThisQ=true;
+    _quizMemberAnswers[idx]=letter;
+    // Highlight selected
+    document.querySelectorAll('.quiz-opt-btn').forEach(btn=>{
+        if(btn.dataset.letter===letter)btn.classList.add('selected');
+        btn.disabled=true;
+    });
+    showToast('Answer locked in!','info');
+    // Send to server (non-blocking)
+    fetch('/api/brainstorm-quiz-answer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+        group_id:_quizGroupId||gcCurrentGroupId,
+        session_id:bsSessionId,
+        question_idx:idx,
+        answer:letter
+    })}).catch(()=>{});
+}
+
+function revealAnswer(q,isUploader){
+    if(_quizTimer){clearInterval(_quizTimer);_quizTimer=null;}
+    const correct=String(q.answer||'').toUpperCase().trim();
+    // Colour buttons
+    document.querySelectorAll('.quiz-opt-btn').forEach(btn=>{
+        btn.disabled=true;
+        const letter=btn.dataset.letter;
+        if(letter===correct)btn.classList.add('correct');
+        else if(_quizMemberAnswers[_quizCurrentIdx]===letter&&letter!==correct)btn.classList.add('wrong');
+    });
+    // Show answer card
+    const myAnswer=_quizMemberAnswers[_quizCurrentIdx]||null;
+    const correct2=myAnswer===correct;
+    const ansEl=document.getElementById('quiz-answer-inner');
+    ansEl.innerHTML=`
+        <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--green);margin-bottom:8px;">✅ Correct Answer: ${correct}</div>
+        ${myAnswer&&!isUploader?`<div style="font-size:.85rem;margin-bottom:8px;color:${correct2?'var(--green)':'#e03030'};">${correct2?'🎉 You got it right!':'❌ Your answer was '+myAnswer}</div>`:''}
+        <div style="font-size:.875rem;color:var(--ink);line-height:1.65;">${escHtml(q.explanation||'No explanation provided.')}</div>
+    `;
+    document.getElementById('quiz-explain-box').style.display='none';
+    document.getElementById('quiz-answer-card').style.display='';
+    if(isUploader){
+        document.getElementById('quiz-next-btn').disabled=false;
+        document.getElementById('quiz-next-btn').textContent=_quizCurrentIdx+1>=_quizQuestions.length?'Finish Quiz ✓':'Next Question →';
+        // Broadcast answer reveal to members
+        fetch('/api/brainstorm-quiz-event',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+            group_id:_quizGroupId||gcCurrentGroupId,
+            session_id:bsSessionId,
+            event:'answer',
+            idx:_quizCurrentIdx,
+            answer:correct,
+            explanation:q.explanation||''
+        })}).catch(()=>{});
+    }
+}
+
+async function requestQuizExplain(){
+    const q=_quizQuestions[_quizCurrentIdx];if(!q)return;
+    const box=document.getElementById('quiz-explain-box');
+    box.style.display='';box.innerHTML='<i class="fas fa-spinner fa-spin"></i> SparkAI is explaining…';
+    try{
+        const data=await fetch('/api/ask-ai-group',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+            question:`Explain in simple terms: "${q.question}". The correct answer is ${q.answer}. ${q.explanation||''}`,
+            group_id:_quizGroupId||gcCurrentGroupId,
+            context:'Brainstorm AI Quiz explanation'
+        })}).then(r=>r.json());
+        box.innerHTML=data.success?escHtml(data.explanation||''):'Could not explain right now. Try again.';
+    }catch{box.innerHTML='Could not explain. Try again.';}
+}
+
+function endQuiz(){
+    if(_quizTimer){clearInterval(_quizTimer);_quizTimer=null;}
+    stopQuizPoll();
+    document.getElementById('quiz-question-card').style.display='none';
+    document.getElementById('quiz-answer-card').style.display='none';
+    document.getElementById('quiz-admin-controls').style.display='none';
+    document.getElementById('quiz-waiting-screen').style.display='none';
+    const correct=Object.entries(_quizMemberAnswers).filter(([idx,ans])=>_quizQuestions[idx]&&ans===String(_quizQuestions[idx].answer).toUpperCase()).length;
+    const total=_quizQuestions.length;
+    document.getElementById('quiz-results-summary').innerHTML=`You answered <strong>${Object.keys(_quizMemberAnswers).length}</strong> of <strong>${total}</strong> questions.<br>Correct answers: <strong style="color:var(--green);">${correct}</strong> / ${total}<br>Score: <strong style="color:var(--spark);">${Math.round(correct/total*100)}%</strong>`;
+    document.getElementById('quiz-results-screen').style.display='';
+    if(_quizIsUploader){
+        fetch('/api/update-session-status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:bsSessionId,status:'completed'})}).catch(()=>{});
+        fetch('/api/brainstorm-quiz-event',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_id:_quizGroupId||gcCurrentGroupId,session_id:bsSessionId,event:'end'})}).catch(()=>{});
+        loadGCMessages(gcCurrentGroupId);
+    }
 }
 
 // ═══════════════════════════════════════════════════════════
-//  BRAINSTORM OVERLAY
+//  AI QUIZ — MEMBER POLL (non-uploaders watch for events)
 // ═══════════════════════════════════════════════════════════
-function isCoord(){return bsCurrentUserId&&bsCoordId&&String(bsCurrentUserId)===String(bsCoordId);}
+let _quizLastEventId=null;
 
+function startQuizPoll(){
+    if(_quizPollInterval)clearInterval(_quizPollInterval);
+    _quizPollInterval=setInterval(pollQuizEvents,2500);
+}
+function stopQuizPoll(){if(_quizPollInterval){clearInterval(_quizPollInterval);_quizPollInterval=null;}}
+
+async function pollQuizEvents(){
+    if(_quizIsUploader)return;
+    const gid=_quizGroupId||gcCurrentGroupId;if(!gid)return;
+    try{
+        const data=await fetch(`/api/brainstorm-quiz-state?group_id=${gid}&session_id=${bsSessionId||''}`).then(r=>r.json());
+        if(!data.success||!data.event)return;
+        const ev=data.event;
+        if(ev.id===_quizLastEventId)return;
+        _quizLastEventId=ev.id;
+        if(ev.type==='question'){
+            _quizCurrentIdx=ev.idx;
+            _quizAnsweredThisQ=!!_quizMemberAnswers[ev.idx];
+            // Rebuild questions array from server data for members who joined mid-quiz
+            if(!_quizQuestions[ev.idx])_quizQuestions[ev.idx]={question:ev.question,options:ev.options,answer:'',explanation:''};
+            showQuizQuestion(ev.idx,_quizQuestions[ev.idx],ev.time_per_q||_quizTimePerQ,false);
+        }else if(ev.type==='answer'){
+            if(_quizTimer){clearInterval(_quizTimer);_quizTimer=null;}
+            _quizQuestions[ev.idx]=_quizQuestions[ev.idx]||{};
+            _quizQuestions[ev.idx].answer=ev.answer;
+            _quizQuestions[ev.idx].explanation=ev.explanation||'';
+            revealAnswer(_quizQuestions[ev.idx],false);
+        }else if(ev.type==='end'){
+            endQuiz();
+        }
+    }catch{}
+}
 // ═══════════════════════════════════════════════════════════
 //  BS VIEW TABS
 // ═══════════════════════════════════════════════════════════
@@ -2202,7 +2635,6 @@ async function leaveBSSession(){
 function closeBSOverlay(){
   document.getElementById('bs-overlay').style.display='none';
   disposeJitsi();
-  // Clean up built-in whiteboard
   if(_exViewPollInterval){clearInterval(_exViewPollInterval);_exViewPollInterval=null;}
   clearTimeout(_exSyncTimer);
   const wrap=document.getElementById('bs-view-whiteboard');
@@ -2210,6 +2642,10 @@ function closeBSOverlay(){
   _exCtx=null;_exHistory=[];
   bsSessionId=null;bsGroupId=null;bsCoordId=null;
   _sessionNotes=[];
+  // Also clean quiz
+  stopQuizPoll();
+  if(_quizTimer){clearInterval(_quizTimer);_quizTimer=null;}
+  _quizQuestions=[];_quizCurrentIdx=-1;_quizMemberAnswers={};
 }
 function stopAllBSPolling(){if(_wbPollInterval)clearInterval(_wbPollInterval);if(_handPollInterval)clearInterval(_handPollInterval);if(_teacherHandPollInterval)clearInterval(_teacherHandPollInterval);if(_bsChatPollInterval)clearInterval(_bsChatPollInterval);_wbPollInterval=_handPollInterval=_teacherHandPollInterval=_bsChatPollInterval=null;
 if(_exViewPollInterval){clearInterval(_exViewPollInterval);_exViewPollInterval=null;}}
@@ -2327,8 +2763,9 @@ function closeGCChat(){
 document.addEventListener('DOMContentLoaded',()=>{
     applyTheme(localStorage.getItem('theme')||'dark');
     setTimeout(()=>loadBuddies(),200);
-setTimeout(()=>loadNotifications(),500);
-setInterval(loadNotifications,30000);
+    setTimeout(()=>loadNotifications(),500);
+    setTimeout(()=>registerPush(),4000);
+    setInterval(loadNotifications,30000);
     // Resolve current user ID early
     fetch('/api/dashboard-stats').then(r=>r.json()).then(d=>{if(d.success){bsCurrentUserId=d.user_id;_myUserId=d.user_id;}}).catch(()=>{});
     const params=new URLSearchParams(window.location.search);const joinId=params.get('join');
