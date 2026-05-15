@@ -13,9 +13,7 @@ import hashlib
 import base64
 from models import (db, User, Quiz, QuizResult, Connection, UserTag, Message,)
 # ── Maintenance Mode ──────────────────────────────────────────────────────────
-MAINTENANCE_MODE = os.getenv('MAINTENANCE_MODE', 'false').lower() == 'true'
-MAINTENANCE_MESSAGE = os.getenv('MAINTENANCE_MESSAGE', 
-    'Brainspark is currently undergoing scheduled maintenance. We\'ll be back shortly!')
+
 
 
 
@@ -111,8 +109,8 @@ MAINTENANCE_MESSAGE = os.getenv('MAINTENANCE_MESSAGE',
 @app.before_request
 def check_maintenance():
     # Allow admin and static files through
-    allowed_paths = ['/login', '/static', '/uploads', '/admin', 
-                     '/api/admin', '/toggle_mode']
+    allowed_paths = ['/login', '/logout', '/static', '/uploads', '/admin',
+                     '/api/admin', '/toggle_mode', '/dashboard']
     if not MAINTENANCE_MODE:
         return
     # Let admin user through
@@ -4536,6 +4534,7 @@ def admin_toggle_maintenance():
     global MAINTENANCE_MODE
     data = request.json or {}
     MAINTENANCE_MODE = data.get('enabled', not MAINTENANCE_MODE)
+    os.environ['MAINTENANCE_MODE'] = 'true' if MAINTENANCE_MODE else 'false'
     return jsonify({'success': True, 'maintenance_mode': MAINTENANCE_MODE})
 
 @app.route('/api/admin/maintenance-status')
