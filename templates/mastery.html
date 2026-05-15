@@ -345,7 +345,7 @@
             <div class="upload-zone" id="mastery-upload-zone" onclick="document.getElementById('mastery-pdf-input').click()">
                 <div class="upload-zone-icon"><i class="fas fa-cloud-upload-alt"></i></div>
                 <h3>Drag & drop your PDF here</h3>
-                <p>or click to browse · Max 15MB</p>
+                <p>or click to browse · Max 5MB</p>
                 <input type="file" id="mastery-pdf-input" accept=".pdf" style="display:none">
             </div>
 
@@ -605,6 +605,7 @@ loadTokens();
             masteryState.sections    = data.sections;
             masteryState.xp          = data.xp || 0;
             masteryState.pdfText     = data.pdfText || '';
+            masteryState.currentSection = data.currentSection || 0;
 
             // Show resume banner on upload screen
             const card = document.querySelector('.upload-card');
@@ -627,6 +628,11 @@ loadTokens();
 function resumeCourse() {
     showScreen('roadmap');
     renderRoadmap();
+    // Re-open the section they were last on if it was in progress
+    const s = masteryState.sections[masteryState.currentSection];
+    if (s && (s.status === 'unlocked' || s.status === 'completed')) {
+        setTimeout(() => openSection(masteryState.currentSection), 300);
+    }
 }
 
 // ══ Upload ═════════════════════════════════════════════════════════════
@@ -651,7 +657,7 @@ function handleFileSelect() {
 async function startMastery() {
     if (!pdfInput.files[0]) return;
     const file = pdfInput.files[0];
-    if (file.size > 15 * 1024 * 1024) { alert('File too large. Max 15MB.'); return; }
+    if (file.size > 5 * 1024 * 1024) { alert('File too large. Max 5MB.'); return; }
 
     const btn = document.getElementById('mastery-upload-btn');
     btn.disabled = true;
@@ -1076,11 +1082,12 @@ async function saveSectionProgress(si, score) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                courseTitle: masteryState.courseTitle,
-                sections:    masteryState.sections,
-                xp:          masteryState.xp,
-                pdfText:     masteryState.pdfText
-            })
+    courseTitle:    masteryState.courseTitle,
+    sections:       masteryState.sections,
+    xp:             masteryState.xp,
+    pdfText:        masteryState.pdfText,
+    currentSection: masteryState.currentSection
+})
         });
     } catch(e) {}
 }

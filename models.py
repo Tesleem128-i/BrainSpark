@@ -448,7 +448,18 @@ class HandRaise(db.Model):
 
     user    = db.relationship('User', foreign_keys=[user_id], backref='hand_raises')
     session = db.relationship('BrainstormSession', foreign_keys=[session_id], backref='hand_raises')
+class MasteryProgress(db.Model):
+    __tablename__ = 'mastery_progress'
+    id             = db.Column(db.Integer, primary_key=True)
+    user_id        = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, unique=True)
+    course_title   = db.Column(db.String(300), default='')
+    sections       = db.Column(db.Text, default='[]')   # JSON
+    pdf_text       = db.Column(db.Text, default='')
+    current_section= db.Column(db.Integer, default=0)
+    xp             = db.Column(db.Integer, default=0)
+    updated_at     = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    user = db.relationship('User', backref='mastery_progress')
     def __repr__(self):
         return f'<HandRaise {self.user_id} in session {self.session_id}>'
         

@@ -7,10 +7,11 @@ from models import (db, User, Quiz, QuizResult, Connection, UserTag, Message,
                     ChatGroup, ChatGroupMember, GroupMessage, BrainstormSession,
                     BrainstormNote, GroupJoinRequest, Poll, PollOption, PollVote,
                     GeneratedQuestion, TopicMastery, WrongAnswer, AppNotification,
-                    HandRaise, TokenTransaction, TokenUsageLog)
+                    HandRaise, TokenTransaction, TokenUsageLog, MasteryProgress)
 import os
 import hashlib
 import base64
+from models import (db, User, Quiz, QuizResult, Connection, UserTag, Message,)
 # ── Maintenance Mode ──────────────────────────────────────────────────────────
 MAINTENANCE_MODE = os.getenv('MAINTENANCE_MODE', 'false').lower() == 'true'
 MAINTENANCE_MESSAGE = os.getenv('MAINTENANCE_MESSAGE', 
@@ -4753,24 +4754,47 @@ def mastery_save_progress():
     if 'user_id' not in session:
         return jsonify({'success': False, 'error': 'Not logged in'}), 401
     data = request.json or {}
-    # Save full mastery state to Flask session (persists across page reloads and logout/login)
-    session['mastery_state'] = {
-        'courseTitle':  data.get('courseTitle', ''),
-        'sections':     data.get('sections', []),
-        'xp':           data.get('xp', 0),
-        'pdfText':      data.get('pdfText', '')
-    }
-    session.modified = True
-    return jsonify({'success': True})
+    try:
+        prog = MasteryProgress.query.filter_by(user_id=session['user_id']).first()
+        if not prog:
+            prog = MasteryProgress(user_id=session['user_id'])
+            db.session.add(prog)
+        prog.course_title    = data.get('courseTitle', '')
+        prog.sections        = json.dumps(data.get('sections', []))
+        prog.xp              = data.get('xp', 0)
+        prog.pdf_text        = data.get('pdfText', '')
+        prog.current_section = data.get('currentSection', 0)
+        prog.updated_at      = datetime.utcnow()
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'mastery_save_progress error: {e}', exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/mastery/load-progress')
 def mastery_load_progress():
     if 'user_id' not in session:
         return jsonify({'success': False, 'error': 'Not logged in'}), 401
-    saved = session.get('mastery_state')
-    if saved and saved.get('sections'):
-        return jsonify({'success': True, 'has_progress': True, **saved})
-    return jsonify({'success': True, 'has_progress': False})
+    try:
+        prog = MasteryProgress.query.filter_by(user_id=session['user_id']).first()
+        if not prog:
+            return jsonify({'success': True, 'has_progress': False})
+        sections = json.loads(prog.sections or '[]')
+        if not sections:
+            return jsonify({'success': True, 'has_progress': False})
+        return jsonify({
+            'success':        True,
+            'has_progress':   True,
+            'courseTitle':    prog.course_title,
+            'sections':       sections,
+            'xp':             prog.xp,
+            'pdfText':        prog.pdf_text,
+            'currentSection': prog.current_section,
+        })
+    except Exception as e:
+        logger.error(f'mastery_load_progress error: {e}', exc_info=True)
+        return jsonify({'success': False, 'has_progress': False}), 500
 
 
 if __name__ == '__main__':
