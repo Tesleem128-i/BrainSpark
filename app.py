@@ -545,6 +545,8 @@ def send_email():
 def upload_notes():
     if 'user_id' not in session:
         return jsonify({'success': False, 'error': 'Please login first'}), 401
+    token_check = require_tokens('upload_notes', 1)
+    if token_check: return jsonify({'success': False, 'error': token_check['error']}), token_check['code']
 
     file = None
     for field_name in ('file', 'pdf', 'notes'):
@@ -2213,9 +2215,10 @@ def brainstorm_generate_quiz():
         q_count = 10
 
     token_cost = max(2, (q_count // 5))
-    user_tokens = getattr(user, 'spark_tokens', 0) or 0
-    if user_tokens < token_cost:
-        return jsonify({'success': False, 'error': f'Not enough tokens. You need {token_cost} tokens but only have {user_tokens}.'}), 400
+    if user.username != ADMIN_USERNAME:
+        user_tokens = getattr(user, 'spark_tokens', 0) or 0
+        if user_tokens < token_cost:
+            return jsonify({'success': False, 'error': f'Not enough tokens. You need {token_cost} tokens but only have {user_tokens}.'}), 400
 
     # Get PDF
     pdf_file = request.files.get('pdf')
@@ -2288,11 +2291,12 @@ Return ONLY valid JSON, no markdown, no extra text:
         if len(valid) < 3:
             return jsonify({'success': False, 'error': 'Could not generate enough valid questions. Try a different PDF.'}), 500
 
-        # Deduct tokens from uploader
-        user.spark_tokens = max(0, user_tokens - token_cost)
-        log = TokenUsageLog(user_id=user_id, feature='brainstorm_quiz', tokens_used=token_cost)
-        db.session.add(log)
-        db.session.commit()
+        # Deduct tokens from uploader (admin is exempt)
+        if user.username != ADMIN_USERNAME:
+            user.spark_tokens = max(0, (getattr(user, 'spark_tokens', 0) or 0) - token_cost)
+            log = TokenUsageLog(user_id=user_id, feature='brainstorm_quiz', tokens_used=token_cost)
+            db.session.add(log)
+            db.session.commit()
 
         # Store quiz state on server so members can poll
         quiz_state_key = f'quiz_{group_id}_{session_id}'
@@ -3774,11 +3778,13 @@ os.makedirs('uploads/receipts', exist_ok=True)
 
 
 def deduct_token(user_id, feature='ai', tokens=1):
-    """Deduct spark tokens and log usage. Returns True if successful."""
+    """Deduct spark tokens and log usage. Returns True if successful. Admin bypasses."""
     try:
         user = User.query.get(user_id)
         if not user:
             return False
+        if user.username == ADMIN_USERNAME:
+            return True  # Admin uses AI for free, no deduction
         tokens_available = getattr(user, 'spark_tokens', 0) or 0
         if tokens_available < tokens:
             return False
@@ -3794,12 +3800,14 @@ def deduct_token(user_id, feature='ai', tokens=1):
 
 
 def require_tokens(feature='ai', tokens=1):
-    """Decorator/check — returns error dict if user has no tokens."""
+    """Decorator/check — returns error dict if user has no tokens. Admin bypasses."""
     if 'user_id' not in session:
         return {'error': 'Unauthorized', 'code': 401}
     user = User.query.get(session['user_id'])
     if not user:
         return {'error': 'User not found', 'code': 404}
+    if user.username == ADMIN_USERNAME:
+        return None  # Admin always passes
     available = getattr(user, 'spark_tokens', 0) or 0
     if available < tokens:
         return {'error': 'NO_TOKENS', 'code': 402}
@@ -4559,6 +4567,8 @@ def mastery():
 def mastery_upload():
     if 'user_id' not in session:
         return jsonify({'success': False, 'error': 'Not logged in'}), 401
+    token_check = require_tokens('mastery_upload', 1)
+    if token_check: return jsonify({'success': False, 'error': token_check['error']}), token_check['code']
     file = request.files.get('file')
     if not file:
         return jsonify({'success': False, 'error': 'No file provided'}), 400
@@ -4570,6 +4580,7 @@ def mastery_upload():
         pdf_text = extract_pdf_text(file)
         if not pdf_text:
             return jsonify({'success': False, 'error': 'Could not extract text from PDF. Make sure it is not scanned/image-only.'})
+        deduct_token(session['user_id'], 'mastery_upload', 1)
         return jsonify({'success': True, 'pdf_text': pdf_text[:12000]})
     except Exception as e:
         logger.error(f'mastery_upload error: {e}', exc_info=True)
@@ -4580,6 +4591,8 @@ def mastery_upload():
 def mastery_generate_roadmap():
     if 'user_id' not in session:
         return jsonify({'success': False, 'error': 'Not logged in'}), 401
+    token_check = require_tokens('mastery_roadmap', 2)
+    if token_check: return jsonify({'success': False, 'error': token_check['error']}), token_check['code']
     data = request.json or {}
     pdf_text = (data.get('pdf_text') or '')[:12000]
     if not pdf_text:
@@ -4617,6 +4630,7 @@ Rules:
         result = json.loads(text[s:e])
         if 'sections' not in result or not result['sections']:
             raise ValueError('Invalid roadmap structure')
+        deduct_token(session['user_id'], 'mastery_roadmap', 2)
         return jsonify({'success': True, 'course_title': result.get('course_title', 'Your Course'), 'sections': result['sections']})
     except Exception as e:
         logger.error(f'mastery_generate_roadmap error: {e}', exc_info=True)
@@ -4627,6 +4641,8 @@ Rules:
 def mastery_explain():
     if 'user_id' not in session:
         return jsonify({'success': False, 'error': 'Not logged in'}), 401
+    token_check = require_tokens('mastery_explain', 1)
+    if token_check: return jsonify({'success': False, 'error': token_check['error']}), token_check['code']
     data = request.json or {}
     title   = data.get('section_title', '')
     summary = data.get('section_summary', '')
@@ -4655,6 +4671,7 @@ Return ONLY the HTML, no surrounding tags, no markdown."""
 
         response = model.generate_content(prompt)
         explanation = response.text.strip().replace('```html', '').replace('```', '').strip()
+        deduct_token(session['user_id'], 'mastery_explain', 1)
         return jsonify({'success': True, 'explanation': explanation})
     except Exception as e:
         logger.error(f'mastery_explain error: {e}', exc_info=True)
@@ -4665,6 +4682,8 @@ Return ONLY the HTML, no surrounding tags, no markdown."""
 def mastery_generate_quiz():
     if 'user_id' not in session:
         return jsonify({'success': False, 'error': 'Not logged in'}), 401
+    token_check = require_tokens('mastery_quiz', 1)
+    if token_check: return jsonify({'success': False, 'error': token_check['error']}), token_check['code']
     data    = request.json or {}
     title   = data.get('section_title', '')
     content = data.get('section_content', '')
@@ -4704,6 +4723,7 @@ Rules:
         questions = result.get('questions', [])
         if not questions:
             raise ValueError('No questions generated')
+        deduct_token(session['user_id'], 'mastery_quiz', 1)
         return jsonify({'success': True, 'questions': questions})
     except Exception as e:
         logger.error(f'mastery_generate_quiz error: {e}', exc_info=True)
