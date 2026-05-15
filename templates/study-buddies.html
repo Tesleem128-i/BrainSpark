@@ -2814,11 +2814,9 @@ document.addEventListener('DOMContentLoaded',()=>{
     document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('bs-overlay').style.display!=='none'){if(confirm('Leave the brainstorm session?'))leaveBSSession();}});
 });
   (function() {
-    const bar    = document.getElementById('bsl-bar');
-    const msg    = document.getElementById('bsl-msg');
-    const loader = document.getElementById('bs-loader');
-
     function hideLoader() {
+      var loader = document.getElementById('bs-loader');
+      if (!loader) return;
       loader.classList.add('hide');
       loader.style.opacity = '0';
       loader.style.visibility = 'hidden';
@@ -2827,28 +2825,33 @@ document.addEventListener('DOMContentLoaded',()=>{
       document.body.style.overflow = '';
     }
 
-    const msgs = [
-      [20,  'Initialising…'],
-      [50,  'Loading workspace…'],
-      [80,  'Almost ready…'],
-      [100, 'Welcome to Brainspark ✦'],
-    ];
-    let step = 0;
-    function tick() {
-      if (step >= msgs.length) return;
-      const [pct, text] = msgs[step];
-      bar.style.width = pct + '%';
-      msg.textContent = text;
-      step++;
-      if (step < msgs.length) setTimeout(tick, 300);
-    }
-    tick();
+    try {
+      var bar = document.getElementById('bsl-bar');
+      var msg = document.getElementById('bsl-msg');
+      var msgs = [
+        [20,  'Initialising…'],
+        [50,  'Loading workspace…'],
+        [80,  'Almost ready…'],
+        [100, 'Welcome to Brainspark ✦'],
+      ];
+      var step = 0;
+      function tick() {
+        if (step >= msgs.length) return;
+        var pct = msgs[step][0], text = msgs[step][1];
+        if (bar) bar.style.width = pct + '%';
+        if (msg) msg.textContent = text;
+        step++;
+        if (step < msgs.length) setTimeout(tick, 300);
+      }
+      tick();
+    } catch(e) {}
 
     // Hide after 1.5s
     setTimeout(hideLoader, 1500);
-
     // Hard fallback — 2.5s no matter what
     setTimeout(hideLoader, 2500);
+    // Nuclear fallback via window.load
+    window.addEventListener('load', function() { setTimeout(hideLoader, 1000); });
   })();
 // ═══════════════════════════════════════════════════════════
 //  CHAT BACKGROUNDS
