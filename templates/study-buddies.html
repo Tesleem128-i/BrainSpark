@@ -2838,17 +2838,21 @@ document.addEventListener('DOMContentLoaded',()=>{
         loader.style.opacity = '0';
         loader.style.visibility = 'hidden';
         loader.style.pointerEvents = 'none';
+        loader.style.display = 'none';
+        document.body.classList.remove('loading');
         document.body.style.overflow = '';
       }, 400);
     }, 2200);
 
-    // Safety fallback — force hide after 5 seconds no matter what
+    // Safety fallback — force hide after 4 seconds no matter what
     setTimeout(() => {
       loader.style.opacity = '0';
       loader.style.visibility = 'hidden';
       loader.style.pointerEvents = 'none';
+      loader.style.display = 'none';
+      document.body.classList.remove('loading');
       document.body.style.overflow = '';
-    }, 5000);
+    }, 4000);
   })();
 // ═══════════════════════════════════════════════════════════
 //  CHAT BACKGROUNDS

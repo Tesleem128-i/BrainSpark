@@ -468,7 +468,7 @@ body.loading { overflow: hidden; }
 <!-- VERIFICATION MODAL -->
 <div class="modal-overlay" id="verify-modal">
   <div class="modal">
-    <button class="modal-close" id="close-modal"><i class="fas fa-times"></i></button>
+    <button class="modal-close" id="close-modal" title="Cancel verification" style="background:none;border:none;opacity:0.4;cursor:pointer;"><i class="fas fa-times"></i></button>
     <div class="modal-icon"><i class="fas fa-envelope-open-text"></i></div>
     <div class="modal-title">Check your inbox</div>
     <p class="modal-desc">We've sent a 6-digit code to <strong id="verify-email-display"></strong>. Enter it below to verify your account.</p>
@@ -837,10 +837,17 @@ body.loading { overflow: hidden; }
     verifyEmail = '';
   }
 
-  document.getElementById('close-modal').onclick = closeVerifyModal;
+  // X button — confirm before closing
+  document.getElementById('close-modal').onclick = () => {
+    if (confirm('Cancel verification? You will need to sign up again.')) {
+      closeVerifyModal();
+    }
+  };
+  // Clicking outside the modal does nothing
   document.getElementById('verify-modal').addEventListener('click', e => {
-    if (e.target === e.currentTarget) closeVerifyModal();
+    e.stopPropagation(); // block accidental dismiss
   });
+  // Change email link — this is the intentional cancel
   document.getElementById('change-email').onclick = closeVerifyModal;
   (function() {
     document.body.classList.add('loading');
