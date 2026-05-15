@@ -290,7 +290,7 @@
                 <div class="level">{{ user.study_level }}</div>
             </div>
             {% if user.profile_pic %}
-            <img src="{{ url_for('serve_profile_picture', filename=user.profile_pic) }}" class="nav-avatar" alt="avatar">
+            <img src="{{ user.get_profile_pic_url() }}" class="nav-avatar" alt="avatar">
             {% else %}
             <div class="nav-avatar" style="display:flex;align-items:center;justify-content:center;background:var(--mastery3);font-weight:700;color:var(--mastery2);">{{ user.name[0] }}</div>
             {% endif %}
