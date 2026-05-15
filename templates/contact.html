@@ -1,263 +1,387 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Brainspark — Contact</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg: #f7f4ef;
-    --surface: #ffffff;
-    --accent: #2d5be3;
-    --accent2: #e8380d;
-    --text: #1a1a2e;
-    --muted: #6b6b7b;
-    --border: #e2ddd6;
-    --tag-bg: #eef1fc;
-  }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Brainspark — Contact</title>
+  <link rel="icon" type="image/png" href="/static/image/KNOWITNOW.png">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  <style>
+    /* ===================== TOKENS ===================== */
+    :root {
+      --ink: #0a0a14;
+      --ink2: #1c1c2e;
+      --surface: #ffffff;
+      --surface2: #f5f4f0;
+      --muted: #7a7a8c;
+      --accent: #ff4f30;
+      --accent2: #ff8c5a;
+      --gold: #f5c842;
+      --blue: #3b6bff;
+      --blue2: #7ba4ff;
+      --green: #00c98d;
+      --radius: 16px;
+      --radius-sm: 8px;
+      --transition: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      --border: rgba(0,0,0,0.07);
+    }
+    [data-theme="dark"] {
+      --ink: #f0efe8;
+      --ink2: #c8c6bc;
+      --surface: #0d0d18;
+      --surface2: #16162a;
+      --muted: #5a5a70;
+      --accent: #ff6244;
+      --accent2: #ffaa6e;
+      --border: rgba(255,255,255,0.06);
+    }
 
-  body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    line-height: 1.7;
-  }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--surface);
+      color: var(--ink);
+      overflow-x: hidden;
+      transition: background 0.4s, color 0.4s;
+    }
+    ::selection { background: var(--accent); color: #fff; }
+    a { text-decoration: none; color: inherit; }
+    img { display: block; max-width: 100%; }
 
-  /* ── Header ── */
-  header {
-    background: var(--text);
-    color: #fff;
-    padding: 0 2rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 64px;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; }
 
-  .logo {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.5rem;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-  }
+    /* ===================== NAV ===================== */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      padding: 0 6vw;
+      height: 72px;
+      display: flex; align-items: center; justify-content: space-between;
+      transition: background 0.5s, backdrop-filter 0.5s;
+    }
+    nav.scrolled {
+      background: rgba(10,10,20,0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .nav-logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800; font-size: 1.5rem; letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #ff4f30, #ff8c5a);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .nav-links { display: flex; align-items: center; gap: 2.5rem; list-style: none; }
+    .nav-links a {
+      font-size: 0.9rem; font-weight: 500; color: rgba(255,255,255,0.75);
+      letter-spacing: 0.01em; transition: color 0.2s; position: relative;
+    }
+    .nav-links a::after {
+      content: ''; position: absolute; bottom: -4px; left: 0; width: 0; height: 1px;
+      background: var(--accent); transition: width 0.3s;
+    }
+    .nav-links a:hover { color: #fff; }
+    .nav-links a:hover::after { width: 100%; }
+    .nav-cta { display: flex; align-items: center; gap: 1rem; }
+    .btn-outline {
+      padding: 0.5rem 1.2rem; border: 1.5px solid rgba(255,255,255,0.35);
+      color: #fff; border-radius: 50px; font-size: 0.875rem; font-weight: 500; transition: all 0.2s;
+    }
+    .btn-outline:hover { border-color: #fff; background: rgba(255,255,255,0.08); }
+    .btn-primary {
+      padding: 0.5rem 1.4rem; background: var(--accent); color: #fff;
+      border-radius: 50px; font-size: 0.875rem; font-weight: 600;
+      transition: all 0.2s; box-shadow: 0 4px 20px rgba(255,79,48,0.4);
+    }
+    .btn-primary:hover { background: var(--accent2); transform: translateY(-1px); }
+    #theme-btn {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: rgba(255,255,255,0.7); font-size: 0.95rem; transition: all 0.2s;
+    }
+    #theme-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+    .hamburger { display: none; background: none; border: none; cursor: pointer; color: #fff; font-size: 1.4rem; }
 
-  .logo span { color: #6c8aff; }
+    /* ===================== MOBILE MENU ===================== */
+    .mobile-menu {
+      display: none; position: fixed; inset: 0; z-index: 200;
+      background: rgba(8,8,16,0.97); backdrop-filter: blur(20px);
+      flex-direction: column; align-items: center; justify-content: center; gap: 2rem;
+    }
+    .mobile-menu.open { display: flex; }
+    .mobile-menu a { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 700; color: #fff; }
+    .mobile-close {
+      position: absolute; top: 1.5rem; right: 1.5rem;
+      background: none; border: none; color: rgba(255,255,255,0.6); font-size: 1.5rem; cursor: pointer;
+    }
 
-  header nav a {
-    color: rgba(255,255,255,0.7);
-    text-decoration: none;
-    font-size: 0.875rem;
-    margin-left: 1.5rem;
-    transition: color 0.2s;
-  }
+    /* ===================== HERO ===================== */
+    #hero {
+      position: relative; min-height: 52vh;
+      display: flex; align-items: flex-end;
+      padding: 0 6vw 7vh; overflow: hidden;
+    }
+    .hero-bg { position: absolute; inset: 0; z-index: 0; }
+    .hero-bg img {
+      width: 100%; height: 100%; object-fit: cover; object-position: center top;
+      filter: brightness(0.38);
+    }
+    .hero-bg::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(to bottom,
+        rgba(10,10,20,0.1) 0%,
+        rgba(10,10,20,0.0) 35%,
+        rgba(10,10,20,0.65) 70%,
+        rgba(10,10,20,0.97) 100%);
+    }
+    .hero-bg::before {
+      content: ''; position: absolute; inset: 0; z-index: 1; opacity: 0.025;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+    .hero-content { position: relative; z-index: 1; max-width: 640px; }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.35rem 1rem; border-radius: 50px;
+      background: rgba(255,79,48,0.15); border: 1px solid rgba(255,79,48,0.4);
+      color: #ff7a5a; font-size: 0.8rem; font-weight: 500; letter-spacing: 0.05em;
+      text-transform: uppercase; margin-bottom: 1.25rem;
+      opacity: 0; transform: translateY(20px);
+      animation: fadeUp 0.7s 0.2s forwards;
+    }
+    .hero-badge span { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; animation: blink 1.5s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    .hero-title {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(2.5rem, 6vw, 5rem);
+      font-weight: 800; line-height: 1.05; letter-spacing: -0.03em;
+      color: #fff; margin-bottom: 1rem;
+      opacity: 0; transform: translateY(30px);
+      animation: fadeUp 0.7s 0.35s forwards;
+    }
+    .hero-title em { font-style: normal; color: var(--accent); }
+    .hero-subtitle {
+      font-size: 1.05rem; font-weight: 300; color: rgba(255,255,255,0.65);
+      line-height: 1.7; max-width: 460px;
+      opacity: 0; transform: translateY(20px);
+      animation: fadeUp 0.7s 0.5s forwards;
+    }
+    @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
 
-  header nav a:hover { color: #fff; }
+    /* ===================== SECTION SHARED ===================== */
+    .section-eyebrow {
+      font-size: 0.8rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--accent); margin-bottom: 1rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .section-eyebrow::before { content: ''; width: 20px; height: 2px; background: var(--accent); border-radius: 1px; }
+    .section-title {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(1.8rem, 4vw, 3rem);
+      font-weight: 800; letter-spacing: -0.03em;
+      line-height: 1.1; color: var(--ink); margin-bottom: 1rem;
+    }
 
-  /* ── Hero ── */
-  .hero {
-    background: var(--text);
-    color: #fff;
-    padding: 5rem 2rem 4rem;
-    text-align: center;
-  }
+    /* ===================== CONTACT SECTION ===================== */
+    #contact-main {
+      padding: 6rem 6vw 7rem;
+      background: var(--surface);
+    }
+    .contact-wrap {
+      max-width: 900px; margin: 0 auto;
+    }
+    .contact-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; margin-top: 3.5rem;
+    }
 
-  .hero-badge {
-    display: inline-block;
-    background: rgba(108,138,255,0.2);
-    color: #6c8aff;
-    border: 1px solid rgba(108,138,255,0.3);
-    border-radius: 999px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    padding: 0.35rem 1rem;
-    margin-bottom: 1.5rem;
-  }
+    /* ── Info column ── */
+    .contact-info { display: flex; flex-direction: column; gap: 1.5rem; }
+    .contact-detail {
+      display: flex; align-items: flex-start; gap: 1.2rem;
+      padding: 1.75rem; border-radius: var(--radius);
+      background: var(--surface2); border: 1px solid var(--border);
+      transition: all var(--transition);
+    }
+    .contact-detail:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 16px 48px rgba(0,0,0,0.08);
+      border-color: rgba(255,79,48,0.25);
+    }
+    .contact-detail-icon {
+      width: 46px; height: 46px; border-radius: 12px;
+      background: rgba(255,79,48,0.08);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .contact-detail-icon i { font-size: 1.15rem; color: var(--accent); }
+    .contact-detail-body h3 {
+      font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700;
+      color: var(--ink); margin-bottom: 0.3rem;
+    }
+    .contact-detail-body p { font-size: 0.88rem; color: var(--muted); line-height: 1.6; }
+    .contact-detail-body a { color: var(--accent); font-weight: 500; }
+    .contact-detail-body a:hover { text-decoration: underline; }
 
-  .hero h1 {
-    font-family: 'Playfair Display', serif;
-    font-size: clamp(2rem, 5vw, 3.5rem);
-    font-weight: 700;
-    line-height: 1.15;
-    margin-bottom: 1rem;
-  }
+    .response-card {
+      padding: 1.75rem; border-radius: var(--radius);
+      background: var(--ink); color: #fff;
+      display: flex; flex-direction: column; gap: 0.75rem;
+    }
+    .response-card h3 {
+      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.1rem;
+    }
+    .response-card p { font-size: 0.88rem; color: rgba(255,255,255,0.5); line-height: 1.6; }
+    .response-tag {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.3rem 0.8rem; border-radius: 50px;
+      background: rgba(255,79,48,0.15); color: #ff7a5a;
+      font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em;
+      width: fit-content;
+    }
 
-  .hero p {
-    color: rgba(255,255,255,0.6);
-    font-size: 1rem;
-    max-width: 520px;
-    margin: 0 auto;
-  }
+    /* ── Form column ── */
+    .contact-form-wrap {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2.25rem;
+    }
+    .contact-form-title {
+      font-family: 'Syne', sans-serif; font-size: 1.2rem; font-weight: 700;
+      color: var(--ink); margin-bottom: 1.5rem;
+      display: flex; align-items: center; gap: 0.6rem;
+    }
+    .contact-form-title i { color: var(--accent); }
 
-  /* ── Layout ── */
-  .container {
-    max-width: 860px;
-    margin: 0 auto;
-    padding: 3rem 2rem 6rem;
-  }
+    .inp-label {
+      display: block; font-size: 0.72rem; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 0.45rem;
+    }
+    .inp {
+      width: 100%; padding: 0.85rem 1.1rem;
+      border-radius: 10px; border: 1.5px solid var(--border);
+      background: var(--surface); color: var(--ink);
+      font-size: 0.9rem; font-family: 'DM Sans', sans-serif;
+      outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+      margin-bottom: 1rem;
+    }
+    .inp:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(255,79,48,0.1);
+    }
+    textarea.inp { resize: vertical; min-height: 120px; line-height: 1.6; }
 
-  /* ── Contact Cards ── */
-  .contact-grid {
-    display: grid;
-    gap: 2rem;
-    margin-top: 2rem;
-  }
+    .btn-submit {
+      width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.6rem;
+      padding: 0.9rem 1.5rem; border-radius: 50px;
+      background: var(--accent); color: #fff;
+      border: none; font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem; font-weight: 600; cursor: pointer;
+      transition: all 0.2s; box-shadow: 0 6px 20px rgba(255,79,48,0.35);
+    }
+    .btn-submit:hover { background: var(--accent2); transform: translateY(-2px); box-shadow: 0 10px 28px rgba(255,79,48,0.45); }
+    .btn-submit:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
 
-  .contact-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 2.5rem;
-    text-align: center;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-    transition: transform 0.2s, box-shadow 0.2s;
-  }
+    #form-result {
+      margin-top: 0.9rem; font-size: 0.85rem; text-align: center;
+      min-height: 1.2em; font-weight: 500;
+      display: none;
+    }
+    #form-result.success { color: var(--green); display: block; }
+    #form-result.error   { color: var(--accent); display: block; }
 
-  .contact-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 40px rgba(0,0,0,0.1);
-  }
+    /* ===================== TOAST ===================== */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+      padding: 12px 20px; border-radius: 12px; font-weight: 600;
+      font-size: 0.875rem; box-shadow: 0 8px 28px rgba(0,0,0,.35);
+      animation: toastIn .22s ease; pointer-events: none; color: #fff;
+    }
+    @keyframes toastIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 
-  .contact-icon {
-    font-size: 3.5rem;
-    margin-bottom: 1.5rem;
-    display: block;
-  }
+    /* ===================== SCROLL REVEAL ===================== */
+    .reveal { opacity: 0; transform: translateY(32px); transition: opacity 0.7s ease, transform 0.7s ease; }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
 
-  .contact-card h2 {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.4rem;
-    font-weight: 600;
-    margin-bottom: 1rem;
-    color: var(--text);
-  }
+    /* ===================== FOOTER ===================== */
+    footer {
+      background: #080810; padding: 4rem 6vw 2.5rem;
+      border-top: 1px solid rgba(255,255,255,0.04);
+    }
+    .footer-grid { display: grid; grid-template-columns: 1.5fr repeat(2, 1fr); gap: 3rem; margin-bottom: 3rem; }
+    .footer-brand h3 { font-family: 'Syne', sans-serif; font-size: 1.5rem; font-weight: 800; color: var(--accent); margin-bottom: 1rem; }
+    .footer-brand p { font-size: 0.9rem; color: rgba(255,255,255,0.35); line-height: 1.7; max-width: 280px; }
+    .footer-social { display: flex; gap: 0.75rem; margin-top: 1.5rem; }
+    .footer-social a {
+      width: 36px; height: 36px; border-radius: 8px;
+      background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.5);
+      display: flex; align-items: center; justify-content: center; font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+    .footer-social a:hover { background: var(--accent); color: #fff; transform: translateY(-2px); }
+    .footer-col h4 { font-size: 0.8rem; font-weight: 600; color: rgba(255,255,255,0.6); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 1.25rem; }
+    .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 0.75rem; }
+    .footer-col ul a { font-size: 0.9rem; color: rgba(255,255,255,0.35); transition: color 0.2s; }
+    .footer-col ul a:hover { color: #fff; }
+    .footer-bottom {
+      border-top: 1px solid rgba(255,255,255,0.06); padding-top: 2rem;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .footer-bottom p { font-size: 0.82rem; color: rgba(255,255,255,0.25); }
+    .footer-bottom-links { display: flex; gap: 1.5rem; }
+    .footer-bottom-links a { font-size: 0.82rem; color: rgba(255,255,255,0.25); transition: color 0.2s; }
+    .footer-bottom-links a:hover { color: rgba(255,255,255,0.6); }
 
-  .contact-link {
-    display: inline-block;
-    font-size: 1.3rem;
-    font-weight: 500;
-    color: var(--accent);
-    text-decoration: none;
-    word-break: break-all;
-    line-height: 1.4;
-  }
-
-  .contact-link:hover {
-    color: #1e3a8a;
-    text-decoration: underline;
-  }
-
-  .contact-card.phone .contact-icon { color: #10b981; }
-  .contact-card.email .contact-icon { color: var(--accent); }
-
-  /* ── Hours ── */
-  .hours {
-    background: var(--tag-bg);
-    border-radius: 12px;
-    padding: 1.5rem;
-    margin-top: 2rem;
-    text-align: center;
-  }
-
-  .hours h3 {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.1rem;
-    margin-bottom: 0.5rem;
-    color: var(--accent);
-  }
-
-  /* ── Footer ── */
-  footer {
-    background: var(--text);
-    color: rgba(255,255,255,0.5);
-    text-align: center;
-    padding: 1.5rem;
-    font-size: 0.8rem;
-  }
-
-  footer a { color: rgba(255,255,255,0.7); text-decoration: none; }
-
-  @media (max-width: 600px) {
-    .container { padding: 2rem 1rem 4rem; }
-    .contact-card { padding: 2rem 1.5rem; }
-    .contact-link { font-size: 1.1rem; }
     /* ===================== LOADER ===================== */
-#bs-loader {
-  position: fixed; inset: 0; z-index: 99999;
-  background: #080810;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 2rem; transition: opacity 0.8s ease, visibility 0.8s ease;
-}
-#bs-loader.hide { opacity: 0; visibility: hidden; pointer-events: none; }
-body.loading { overflow: hidden; }
+    #bs-loader {
+      position: fixed; inset: 0; z-index: 99999;
+      background: #080810;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 2rem; transition: opacity 0.8s ease, visibility 0.8s ease;
+    }
+    #bs-loader.hide { opacity: 0; visibility: hidden; pointer-events: none; }
+    body.loading { overflow: hidden; }
+    .bsl-logo-wrap { position: relative; display: flex; align-items: center; justify-content: center; }
+    .bsl-ring {
+      position: absolute; border-radius: 50%;
+      border: 2px solid transparent; animation: bsl-spin 1.4s linear infinite;
+    }
+    .bsl-ring-1 { width: 130px; height: 130px; border-top-color: #ff4f30; border-right-color: rgba(255,79,48,0.2); animation-duration: 1.2s; }
+    .bsl-ring-2 { width: 150px; height: 150px; border-bottom-color: #ff8c5a; border-left-color: rgba(255,140,90,0.15); animation-duration: 1.8s; animation-direction: reverse; }
+    @keyframes bsl-spin { to { transform: rotate(360deg); } }
+    .bsl-logo { width: 80px; height: 80px; border-radius: 50%; background: #0d0d20; padding: 8px; animation: bsl-pulse 1.4s ease-in-out infinite; }
+    @keyframes bsl-pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
+    .bsl-brand { font-family: 'Syne', sans-serif; font-size: 2.2rem; font-weight: 800; letter-spacing: -0.02em; color: #fff; animation: bsl-fadein 0.6s 0.3s both; }
+    .bsl-brand span { color: #ff4f30; }
+    .bsl-tagline { font-size: 0.78rem; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(255,255,255,0.35); animation: bsl-fadein 0.6s 0.5s both; }
+    .bsl-bar-wrap { width: 220px; height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; animation: bsl-fadein 0.6s 0.6s both; }
+    .bsl-bar { height: 100%; width: 0%; border-radius: 2px; background: linear-gradient(90deg, #ff4f30, #ff8c5a); transition: width 0.35s ease; }
+    .bsl-msg { font-size: 0.8rem; color: rgba(255,255,255,0.3); letter-spacing: 0.05em; min-height: 1.2em; transition: opacity 0.3s; animation: bsl-fadein 0.6s 0.7s both; }
+    @keyframes bsl-fadein { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 
-.bsl-logo-wrap {
-  position: relative; display: flex; align-items: center; justify-content: center;
-}
-.bsl-ring {
-  position: absolute; border-radius: 50%;
-  border: 2px solid transparent;
-  animation: bsl-spin 1.4s linear infinite;
-}
-.bsl-ring-1 {
-  width: 130px; height: 130px;
-  border-top-color: #ff4f30; border-right-color: rgba(255,79,48,0.2);
-  animation-duration: 1.2s;
-}
-.bsl-ring-2 {
-  width: 150px; height: 150px;
-  border-bottom-color: #ff8c5a; border-left-color: rgba(255,140,90,0.15);
-  animation-duration: 1.8s; animation-direction: reverse;
-}
-@keyframes bsl-spin { to { transform: rotate(360deg); } }
-
-.bsl-logo {
-  width: 80px; height: 80px; border-radius: 50%;
-  background: #0d0d20; padding: 8px;
-  animation: bsl-pulse 1.4s ease-in-out infinite;
-}
-@keyframes bsl-pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
-
-.bsl-brand {
-  font-family: 'Syne', sans-serif; font-size: 2.2rem; font-weight: 800;
-  letter-spacing: -0.02em; color: #fff;
-  animation: bsl-fadein 0.6s 0.3s both;
-}
-.bsl-brand span { color: #ff4f30; }
-
-.bsl-tagline {
-  font-size: 0.78rem; letter-spacing: 0.18em; text-transform: uppercase;
-  color: rgba(255,255,255,0.35);
-  animation: bsl-fadein 0.6s 0.5s both;
-}
-.bsl-bar-wrap {
-  width: 220px; height: 3px; background: rgba(255,255,255,0.08);
-  border-radius: 2px; overflow: hidden;
-  animation: bsl-fadein 0.6s 0.6s both;
-}
-.bsl-bar {
-  height: 100%; width: 0%; border-radius: 2px;
-  background: linear-gradient(90deg, #ff4f30, #ff8c5a);
-  transition: width 0.35s ease;
-}
-.bsl-msg {
-  font-size: 0.8rem; color: rgba(255,255,255,0.3); letter-spacing: 0.05em;
-  min-height: 1.2em; transition: opacity 0.3s;
-  animation: bsl-fadein 0.6s 0.7s both;
-}
-@keyframes bsl-fadein { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-  }
-</style>
+    /* ===================== RESPONSIVE ===================== */
+    @media (max-width: 768px) {
+      .contact-grid { grid-template-columns: 1fr; }
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 640px) {
+      nav { padding: 0 5vw; }
+      .nav-links, .btn-outline { display: none; }
+      .hamburger { display: block; }
+      #contact-main { padding: 5rem 5vw 5rem; }
+      .footer-grid { grid-template-columns: 1fr; gap: 2rem; }
+      .footer-bottom { flex-direction: column; gap: 1rem; text-align: center; }
+    }
+  </style>
 </head>
 <body>
-  <!-- ======================== LOADER ======================== -->
+
+<!-- ======================== LOADER ======================== -->
 <div id="bs-loader">
   <div class="bsl-logo-wrap">
     <div class="bsl-ring bsl-ring-1"></div>
@@ -270,45 +394,165 @@ body.loading { overflow: hidden; }
   <div class="bsl-msg" id="bsl-msg">Initialising…</div>
 </div>
 
-<!-- Header -->
-<header>
-  <div class="logo">Brain<span>spark</span></div>
-  <nav>
-    <a href="/dashboard">Dashboard</a>
-    <a href="/login">Login</a>
-  </nav>
-</header>
+<!-- ======================== NAV ======================== -->
+<nav id="main-nav">
+  <a href="/" class="nav-logo">Brainspark</a>
+  <ul class="nav-links">
+    <li><a href="/#how-it-works">How it Works</a></li>
+    <li><a href="/dashboard">Dashboard</a></li>
+  </ul>
+  <div class="nav-cta">
+    <button id="theme-btn" onclick="toggleTheme()" title="Toggle theme"><i class="fas fa-moon"></i></button>
+    <a href="/login" class="btn-outline">Login</a>
+    <a href="/signup" class="btn-primary">Sign up</a>
+    <button class="hamburger" onclick="openMenu()"><i class="fas fa-bars"></i></button>
+  </div>
+</nav>
 
-<!-- Hero -->
-<div class="hero">
-  <div class="hero-badge">Get In Touch</div>
-  <h1>Contact Us</h1>
-  <p>Questions about Brainspark? We'd love to hear from you. Reach out directly — we respond within 24 hours.</p>
+<!-- Mobile menu -->
+<div class="mobile-menu" id="mobile-menu">
+  <button class="mobile-close" onclick="closeMenu()"><i class="fas fa-times"></i></button>
+  <a href="/#how-it-works" onclick="closeMenu()">How it Works</a>
+  <a href="/dashboard" onclick="closeMenu()">Dashboard</a>
+  <a href="/login" onclick="closeMenu()">Login</a>
+  <a href="/signup" onclick="closeMenu()" style="color: var(--accent);">Sign up →</a>
 </div>
 
-<!-- Main Content -->
-<div class="container">
-  <div class="contact-grid">
-    
-    <!-- Phone -->
-    
+<!-- ======================== HERO ======================== -->
+<section id="hero">
+  <div class="hero-bg">
+    <img src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1800&q=80&fit=crop" alt="Contact Brainspark" loading="eager">
+  </div>
+  <div class="hero-content">
+    <div class="hero-badge">
+      <span></span>
+      Get In Touch
+    </div>
+    <h1 class="hero-title">
+      We'd love to<br>hear from <em>you.</em>
+    </h1>
+    <p class="hero-subtitle">
+      Questions about Brainspark? Payment issues? Ideas? Drop us a message and we'll get back to you within 24 hours.
+    </p>
+  </div>
+</section>
 
-    <!-- Email -->
-    <div class="contact-card email">
-      <div class="contact-icon">✉️</div>
-      <h2>Email</h2>
-      <a href="brainspark803@gmail.com" class="contact-link">brainspark803@gmail.com</a>
+<!-- ======================== CONTACT MAIN ======================== -->
+<section id="contact-main">
+  <div class="contact-wrap">
+
+    <div class="reveal">
+      <div class="section-eyebrow"><i class="fas fa-envelope-open-text"></i> Reach Out</div>
+      <div class="section-title">Contact Us</div>
     </div>
 
-  </div>
+    <div class="contact-grid">
 
-  <div class="hours">
-    <h3>Response Times</h3>
-    <p><strong>Email:</strong> Within 24 hours<br>
-       
+      <!-- ── Left: Info ── -->
+      <div class="contact-info reveal">
+
+        <div class="contact-detail">
+          <div class="contact-detail-icon"><i class="fas fa-envelope"></i></div>
+          <div class="contact-detail-body">
+            <h3>Email Us</h3>
+            <p>The fastest way to reach our team.<br>
+               <a href="mailto:brainspark803@gmail.com">brainspark803@gmail.com</a>
+            </p>
+          </div>
+        </div>
+
+        <div class="contact-detail">
+          <div class="contact-detail-icon"><i class="fas fa-bolt"></i></div>
+          <div class="contact-detail-body">
+            <h3>AI & Token Support</h3>
+            <p>Issues with Spark Tokens, quiz generation, or AI features? Use the form — we'll resolve it fast.</p>
+          </div>
+        </div>
+
+        <div class="contact-detail">
+          <div class="contact-detail-icon"><i class="fas fa-graduation-cap"></i></div>
+          <div class="contact-detail-body">
+            <h3>General Enquiries</h3>
+            <p>Partnerships, feedback, or anything else — we read every message personally.</p>
+          </div>
+        </div>
+
+        <div class="response-card">
+          <div class="response-tag"><i class="fas fa-clock"></i> Response Times</div>
+          <h3>We reply within 24 hours.</h3>
+          <p>Email responses typically arrive same day. Token and payment issues are prioritised and usually resolved within a few hours.</p>
+        </div>
+
+      </div>
+
+      <!-- ── Right: Form ── -->
+      <div class="contact-form-wrap reveal">
+        <div class="contact-form-title">
+          <i class="fas fa-paper-plane"></i> Send a Message
+        </div>
+
+        <label class="inp-label" for="sup-name">Your Name</label>
+        <input type="text" id="sup-name" class="inp" placeholder="e.g. Chidera Obi">
+
+        <label class="inp-label" for="sup-email">Email Address</label>
+        <input type="email" id="sup-email" class="inp" placeholder="your@email.com">
+
+        <label class="inp-label" for="sup-msg">Message</label>
+        <textarea id="sup-msg" class="inp" placeholder="Tell us what's on your mind — include any transaction references if relevant…"></textarea>
+
+        <button class="btn-submit" id="sup-btn" onclick="sendSupport()">
+          <i class="fas fa-paper-plane"></i> Send Message
+        </button>
+
+        <div id="form-result"></div>
+      </div>
+
+    </div>
   </div>
-</div>
+</section>
+
+<!-- ======================== FOOTER ======================== -->
+<footer>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <h3>Brainspark</h3>
+      <p>AI-powered study platform helping students learn smarter and ace their exams faster.</p>
+      <div class="footer-social">
+        <a href="#" title="Twitter"><i class="fab fa-twitter"></i></a>
+        <a href="#" title="Instagram"><i class="fab fa-instagram"></i></a>
+        <a href="#" title="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+      </div>
+    </div>
+    <div class="footer-col">
+      <h4>Platform</h4>
+      <ul>
+        <li><a href="/dashboard">Dashboard</a></li>
+        <li><a href="/tokens">Spark Tokens</a></li>
+        <li><a href="/login">Login</a></li>
+        <li><a href="/signup">Sign Up</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Support</h4>
+      <ul>
+        <li><a href="/contact">Contact</a></li>
+        <li><a href="/legal">Privacy Policy</a></li>
+        <li><a href="/legal">Terms of Service</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2025 Brainspark. All rights reserved.</p>
+    <div class="footer-bottom-links">
+      <a href="/legal">Privacy</a>
+      <a href="/legal">Terms</a>
+    </div>
+  </div>
+</footer>
+
+<!-- ======================== SCRIPTS ======================== -->
 <script>
+  // ── Loader ──
   (function() {
     document.body.classList.add('loading');
     const msgs = [
@@ -341,9 +585,97 @@ body.loading { overflow: hidden; }
       }, 400);
     }, 2000);
   })();
+
+  // ── Nav scroll ──
+  const nav = document.getElementById('main-nav');
+  window.addEventListener('scroll', () => {
+    nav.classList.toggle('scrolled', window.scrollY > 60);
+  });
+  // Immediately apply if already scrolled (page reload mid-page)
+  nav.classList.toggle('scrolled', window.scrollY > 60);
+
+  // ── Mobile menu ──
+  function openMenu()  { document.getElementById('mobile-menu').classList.add('open'); }
+  function closeMenu() { document.getElementById('mobile-menu').classList.remove('open'); }
+
+  // ── Theme toggle ──
+  let dark = false;
+  function toggleTheme() {
+    dark = !dark;
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    document.getElementById('theme-btn').innerHTML = dark ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+  }
+
+  // ── Toast ──
+  function toast(msg, type = 'success') {
+    const colors = { success: '#00c98d', error: '#ff4f30', warn: '#f5c842', info: '#3b6bff' };
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.style.background = colors[type] || colors.info;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 4000);
+  }
+
+  // ── Contact form ──
+  async function sendSupport() {
+    const name  = document.getElementById('sup-name').value.trim();
+    const email = document.getElementById('sup-email').value.trim();
+    const msg   = document.getElementById('sup-msg').value.trim();
+    const result = document.getElementById('form-result');
+
+    if (!name || !email || !msg) {
+      toast('Please fill in all fields.', 'warn');
+      return;
+    }
+
+    const btn = document.getElementById('sup-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending…';
+    result.className = '';
+    result.style.display = 'none';
+
+    try {
+      const res = await fetch('/send_email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, message: '[Contact Page]\n' + msg })
+      }).then(r => r.json());
+
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Message';
+
+      if (res.message && res.message.toLowerCase().includes('success')) {
+        result.textContent = '✓ Message sent! We\'ll reply within 24 hours.';
+        result.className = 'success';
+        toast('Message sent successfully!', 'success');
+        document.getElementById('sup-name').value  = '';
+        document.getElementById('sup-email').value = '';
+        document.getElementById('sup-msg').value   = '';
+      } else {
+        result.textContent = '✗ Something went wrong. Please email us directly.';
+        result.className = 'error';
+        toast('Failed to send. Try emailing us directly.', 'error');
+      }
+    } catch {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Message';
+      result.textContent = '✗ Network error. Please try again.';
+      result.className = 'error';
+      toast('Network error.', 'error');
+    }
+  }
+
+  // ── Scroll reveal ──
+  const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        revealObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
 </script>
-
-
-
 </body>
 </html>
