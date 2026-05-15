@@ -2114,7 +2114,9 @@ async function pollQuizEvents(){
         const ev=data.event;
         if(ev.id===_quizLastEventId)return;
         _quizLastEventId=ev.id;
-        if(ev.type==='question'){
+        if(ev.type==='quiz_start'){
+            openQuizLiveOverlay(ev.title||'AI Quiz',false);
+        }else if(ev.type==='question'){
             _quizCurrentIdx=ev.idx;
             _quizAnsweredThisQ=!!_quizMemberAnswers[ev.idx];
             // Rebuild questions array from server data for members who joined mid-quiz

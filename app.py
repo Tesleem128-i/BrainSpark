@@ -2384,11 +2384,14 @@ def brainstorm_quiz_state():
         return jsonify({'error': 'Not a member'}), 403
     try:
         # Get the most recent quiz_event message for this group
-        latest = GroupMessage.query.filter_by(
+        query = GroupMessage.query.filter_by(
             group_id=group_id,
             message_type='quiz_event',
             is_deleted=False
-        ).order_by(GroupMessage.created_at.desc()).first()
+        )
+        if session_id:
+            query = query.filter(GroupMessage.content.contains(session_id))
+        latest = query.order_by(GroupMessage.created_at.desc()).first()
 
         if not latest:
             return jsonify({'success': True, 'event': None})
