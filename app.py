@@ -4561,11 +4561,14 @@ def mastery_upload():
     file = request.files.get('file')
     if not file:
         return jsonify({'success': False, 'error': 'No file provided'}), 400
+    file_bytes = file.read()
+    if len(file_bytes) > 5 * 1024 * 1024:
+        return jsonify({'success': False, 'error': 'File too large. Max 5MB for Mastery Mode.'}), 400
+    file.seek(0)
     try:
         pdf_text = extract_pdf_text(file)
         if not pdf_text:
             return jsonify({'success': False, 'error': 'Could not extract text from PDF. Make sure it is not scanned/image-only.'})
-        # Limit to 12000 chars to keep AI prompt manageable
         return jsonify({'success': True, 'pdf_text': pdf_text[:12000]})
     except Exception as e:
         logger.error(f'mastery_upload error: {e}', exc_info=True)
