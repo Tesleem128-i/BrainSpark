@@ -263,14 +263,70 @@
         .theory-feedback.fail { background: rgba(255,79,48,0.06); border: 1px solid rgba(255,79,48,0.2); color: var(--accent); }
 
         /* MOBILE */
-        @media (max-width: 768px) {
+        @media (max-width: 900px) {
+            /* Sidebar */
             .sidebar { transform: translateX(-100%); width: 80vw; max-width: 280px; }
             .sidebar.open { transform: translateX(0); box-shadow: 8px 0 32px rgba(0,0,0,0.4); }
             .main { margin-left: 0 !important; padding: 1rem !important; }
+
+            /* Nav */
             nav { padding: 0 1rem !important; height: 60px; }
-            .hero-title { font-size: 1.5rem; }
+            .nav-logo { font-size: 1.1rem; }
+            .mastery-nav-badge { display: none; }
+            .nav-user-text { display: none; }
+
+            /* Hero */
+            .mastery-hero { padding: 1.5rem; min-height: 140px; }
+            .hero-title { font-size: 1.4rem; }
+            .hero-sub { font-size: 0.85rem; }
+            .hero-icon { display: none; }
+
+            /* Upload screen */
+            .upload-card { padding: 1.25rem; }
+            .upload-zone { padding: 1.75rem 1rem; }
+            .upload-zone h3 { font-size: 0.95rem; }
+            .upload-info-row { gap: 0.4rem; }
+
+            /* Roadmap */
+            .roadmap-header { flex-direction: column; gap: 0.75rem; }
+            .roadmap-stats { flex-wrap: wrap; gap: 0.5rem; }
+            .roadmap-stat { padding: 0.6rem 0.85rem; }
+            .roadmap-stat-val { font-size: 1.1rem; }
+            .section-card { padding: 1rem; gap: 0.85rem; }
+            .section-num { width: 36px; height: 36px; font-size: 0.875rem; }
+            .section-title { font-size: 0.875rem; }
+            .section-meta { flex-wrap: wrap; gap: 0.4rem; }
+            .overall-progress { padding: 1rem; gap: 0.75rem; }
+
+            /* Learning screen */
             .learn-layout { grid-template-columns: 1fr; }
-            .roadmap-stats { flex-wrap: wrap; }
+            .learn-panel-body { padding: 1rem; }
+            .learn-actions { padding: 1rem; gap: 0.5rem; }
+            .learn-actions .btn { font-size: 0.78rem; padding: 0.5rem 0.85rem; }
+
+            /* Quiz */
+            .quiz-card { padding: 1.25rem; }
+            .quiz-question { font-size: 1rem; }
+            .quiz-option { padding: 0.75rem 0.85rem; font-size: 0.85rem; }
+            .quiz-progress-chips { gap: 0.25rem; }
+            .quiz-chip { width: 20px; }
+
+            /* Score / result */
+            .score-card { padding: 1.75rem 1.25rem; }
+            .score-actions { flex-direction: column; align-items: center; }
+            .score-actions .btn { width: 100%; justify-content: center; }
+
+            /* Achievement popup */
+            .achievement-popup { padding: 2rem 1.25rem; margin: 1rem; }
+            .achievement-badge-icon { font-size: 3.5rem; }
+            .achievement-title { font-size: 1.2rem; }
+
+            /* Exam */
+            .exam-header { flex-direction: column; gap: 0.75rem; text-align: center; }
+            .exam-timer { font-size: 1.1rem; }
+
+            /* Analysis */
+            .analysis-card { padding: 2rem 1.25rem; }
         }
     </style>
 </head>
@@ -671,9 +727,13 @@ async function startMastery() {
 
     try {
         const res = await fetch('/mastery/upload', { method: 'POST', body: fd });
-        if (!res.ok) throw new Error('Upload failed');
         const data = await res.json();
-        if (!data.success) throw new Error(data.error || 'Unknown error');
+        if (!data.success) {
+            if (data.error === 'NO_TOKENS') {
+                throw new Error('You don\'t have enough Spark Tokens to use Mastery Mode. Visit the Tokens page to top up.');
+            }
+            throw new Error(data.error || 'Upload failed');
+        }
         masteryState.pdfText = data.pdf_text || '';
         showScreen('analysis');
         runAnalysis();
