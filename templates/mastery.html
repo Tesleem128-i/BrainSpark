@@ -289,8 +289,8 @@
                 <div class="name">{{ user.name }}</div>
                 <div class="level">{{ user.study_level }}</div>
             </div>
-            {% if user.profile_picture %}
-            <img src="{{ url_for('serve_profile_picture', filename=user.profile_picture) }}" class="nav-avatar" alt="avatar">
+            {% if user.profile_pic %}
+            <img src="{{ url_for('serve_profile_picture', filename=user.profile_pic) }}" class="nav-avatar" alt="avatar">
             {% else %}
             <div class="nav-avatar" style="display:flex;align-items:center;justify-content:center;background:var(--mastery3);font-weight:700;color:var(--mastery2);">{{ user.name[0] }}</div>
             {% endif %}
@@ -302,8 +302,6 @@
 <div class="sidebar" id="sidebar">
     <div class="sidebar-label">Main</div>
     <button class="sidebar-link" onclick="window.location.href='/dashboard'"><i class="fas fa-house"></i> Dashboard</button>
-    <div class="sidebar-label">Learn</div>
-    <button class="sidebar-link active"><i class="fas fa-brain"></i> Mastery Mode</button>
     <div class="sidebar-label">Learn</div>
     <button class="sidebar-link active"><i class="fas fa-brain"></i> Mastery Mode</button>
     <button class="sidebar-link" onclick="openAIModal ? openAIModal() : window.location.href='/dashboard#ai'"><i class="fas fa-robot"></i> Ask AI</button>
@@ -596,6 +594,40 @@ async function loadTokens() {
     } catch(e) {}
 }
 loadTokens();
+
+// ══ Load Saved Progress on Page Load ═══════════════════════════════════
+(async function checkSavedProgress() {
+    try {
+        const res  = await fetch('/mastery/load-progress');
+        const data = await res.json();
+        if (data.success && data.has_progress && data.sections && data.sections.length) {
+            masteryState.courseTitle = data.courseTitle || '';
+            masteryState.sections    = data.sections;
+            masteryState.xp          = data.xp || 0;
+            masteryState.pdfText     = data.pdfText || '';
+
+            // Show resume banner on upload screen
+            const card = document.querySelector('.upload-card');
+            const banner = document.createElement('div');
+            banner.style.cssText = 'background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);border-radius:12px;padding:1rem 1.25rem;margin-bottom:1.25rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;';
+            banner.innerHTML = `
+                <div>
+                    <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--mastery2);font-size:0.9rem;">📖 Resume: ${data.courseTitle || 'Your Course'}</div>
+                    <div style="font-size:0.78rem;color:var(--muted);margin-top:0.2rem;">${data.sections.filter(s=>s.status==='completed').length}/${data.sections.length} sections completed · ${data.xp} XP</div>
+                </div>
+                <div style="display:flex;gap:0.5rem;">
+                    <button class="btn btn-mastery btn-sm" onclick="resumeCourse()"><i class="fas fa-play"></i> Resume</button>
+                    <button class="btn btn-ghost btn-sm" onclick="this.closest('div[style]').remove()" style="font-size:0.75rem;">New</button>
+                </div>`;
+            card.insertBefore(banner, card.firstChild);
+        }
+    } catch(e) {}
+})();
+
+function resumeCourse() {
+    showScreen('roadmap');
+    renderRoadmap();
+}
 
 // ══ Upload ═════════════════════════════════════════════════════════════
 const uploadZone = document.getElementById('mastery-upload-zone');
@@ -1036,7 +1068,6 @@ async function showQuizResults() {
 async function saveSectionProgress(si, score) {
     masteryState.sections[si].status = 'completed';
     masteryState.sections[si].score = score;
-    // Unlock next
     if (si + 1 < masteryState.sections.length) {
         masteryState.sections[si + 1].status = 'unlocked';
     }
@@ -1044,7 +1075,12 @@ async function saveSectionProgress(si, score) {
         await fetch('/mastery/save-progress', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ section_index: si, score, xp: masteryState.xp })
+            body: JSON.stringify({
+                courseTitle: masteryState.courseTitle,
+                sections:    masteryState.sections,
+                xp:          masteryState.xp,
+                pdfText:     masteryState.pdfText
+            })
         });
     } catch(e) {}
 }

@@ -838,6 +838,7 @@ def dashboard_stats():
         return jsonify({
             'success': True,
             'user_id': user_id,
+            'spark_tokens': getattr(user, 'spark_tokens', 0) or 0,
             'stats': {'total_quizzes': total_quizzes, 'average_score': average_score, 'connection_count': connection_count},
             'recent_activity':  recent_activity,
             'performance_data': daily_scores
@@ -4748,9 +4749,25 @@ def mastery_videos():
 def mastery_save_progress():
     if 'user_id' not in session:
         return jsonify({'success': False, 'error': 'Not logged in'}), 401
-    # Progress is stored client-side in masteryState for now.
-    # Extend this later to persist to DB using a MasteryCourse model.
+    data = request.json or {}
+    # Save full mastery state to Flask session (persists across page reloads and logout/login)
+    session['mastery_state'] = {
+        'courseTitle':  data.get('courseTitle', ''),
+        'sections':     data.get('sections', []),
+        'xp':           data.get('xp', 0),
+        'pdfText':      data.get('pdfText', '')
+    }
+    session.modified = True
     return jsonify({'success': True})
+
+@app.route('/mastery/load-progress')
+def mastery_load_progress():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+    saved = session.get('mastery_state')
+    if saved and saved.get('sections'):
+        return jsonify({'success': True, 'has_progress': True, **saved})
+    return jsonify({'success': True, 'has_progress': False})
 
 
 if __name__ == '__main__':
