@@ -1503,8 +1503,39 @@ function renderGCMessage(container,msg,currentUserId){
     else if(msg.message_type==='pdf'&&msg.pdf_url){const pdfSrc=msg.pdf_url.startsWith('http')?msg.pdf_url:('/'+msg.pdf_url.replace(/^\/+/,''));contentHtml=`<a href="${pdfSrc}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(249,115,22,0.12);border:1px solid rgba(249,115,22,.3);border-radius:12px;text-decoration:none;color:inherit;"><i class="fas fa-file-pdf" style="font-size:1.4rem;color:#f97316;flex-shrink:0;"></i><div><div style="font-weight:600;font-size:.875rem;">${escHtml(msg.content||'Shared PDF')}</div><div style="font-size:.73rem;opacity:.65;">Tap to open PDF</div></div></a>`;}
     else if(msg.message_type==='voice'&&msg.voice_url){const voiceSrc=msg.voice_url.startsWith('http')?msg.voice_url:('/'+msg.voice_url.replace(/^\/+/,''));contentHtml=`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;min-width:200px;"><i class="fas fa-microphone-alt" style="color:var(--green);flex-shrink:0;"></i><audio controls src="${voiceSrc}" preload="none" style="flex:1;height:32px;min-width:160px;max-width:220px;"></audio></div>`;}
     else if(msg.message_type==='poll'&&msg.poll){const poll=msg.poll;const total=poll.total_votes||0;contentHtml=`<div style="min-width:220px;"><div style="font-size:.7rem;font-weight:700;color:var(--blue2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">📊 POLL</div><div style="font-weight:600;font-size:.875rem;margin-bottom:10px;">${escHtml(poll.question)}</div>${poll.options.map(opt=>{const pct=total>0?Math.round((opt.votes/total)*100):0;return`<button onclick="votePoll(${poll.id},${opt.id})" class="poll-opt ${opt.has_voted?'voted':''}" style="margin-bottom:6px;"><div style="display:flex;justify-content:space-between;"><span>${escHtml(opt.text)}</span><span style="font-size:.72rem;opacity:.7;">${opt.votes} (${pct}%)</span></div><div class="poll-bar"><div class="poll-bar-fill" style="width:${pct}%;"></div></div></button>`;}).join('')}<div style="font-size:.72rem;opacity:.6;margin-top:4px;">${total} votes</div></div>`;}
-    else if(msg.message_type==='ai'){contentHtml=`<div><div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;"><span style="font-size:.72rem;font-weight:700;background:rgba(168,85,247,.2);color:var(--spark);padding:2px 8px;border-radius:99px;">⚡ SPARKAI</span></div><div>${escHtml(msg.content||'').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>')}</div></div>`;}
-    else{let c=escHtml(msg.content||'');c=c.replace(/@(\w+)/g,'<span style="color:var(--spark);font-weight:700;">@$1</span>');contentHtml=`<div>${c}</div>`;}
+    else if(msg.message_type==='quiz_event'){
+        try {
+            const ev = JSON.parse(msg.content || '{}');
+            if (ev.type === 'quiz_init') {
+                contentHtml = `<div style="background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);border-radius:12px;padding:0.85rem 1rem;min-width:200px;">
+                    <div style="font-size:.7rem;font-weight:700;color:#818cf8;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">🧠 AI QUIZ</div>
+                    <div style="font-weight:600;font-size:.875rem;color:var(--ink);margin-bottom:4px;">${escHtml(ev.title||'Quiz Starting')}</div>
+                    <div style="font-size:.78rem;color:var(--muted);">${ev.q_count||0} questions · ${ev.time_per_q||30}s per question</div>
+                </div>`;
+            } else if (ev.type === 'quiz_start') {
+                contentHtml = `<div style="background:rgba(0,201,141,0.08);border:1px solid rgba(0,201,141,0.2);border-radius:12px;padding:0.85rem 1rem;">
+                    <div style="font-size:.7rem;font-weight:700;color:var(--green);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">✅ QUIZ STARTED</div>
+                    <div style="font-weight:600;font-size:.875rem;color:var(--ink);">${escHtml(ev.title||'🧠 AI Quiz Started!')}</div>
+                    <div style="font-size:.78rem;color:var(--muted);margin-top:3px;">${ev.q_count||0} questions · ${ev.time_per_q||30}s each</div>
+                </div>`;
+            } else if (ev.type === 'question') {
+                contentHtml = `<div style="background:rgba(59,107,255,0.08);border:1px solid rgba(59,107,255,0.2);border-radius:12px;padding:0.85rem 1rem;min-width:220px;">
+                    <div style="font-size:.7rem;font-weight:700;color:var(--blue2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">❓ Question ${(ev.idx||0)+1}</div>
+                    <div style="font-size:.875rem;color:var(--ink);font-weight:500;">${escHtml(ev.question||'')}</div>
+                </div>`;
+            } else if (ev.type === 'answer') {
+                contentHtml = `<div style="background:rgba(245,200,66,0.08);border:1px solid rgba(245,200,66,0.2);border-radius:12px;padding:0.85rem 1rem;min-width:220px;">
+                    <div style="font-size:.7rem;font-weight:700;color:var(--gold);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">✔️ Answer Revealed</div>
+                    <div style="font-size:.875rem;color:var(--ink);font-weight:600;margin-bottom:4px;">Correct: ${escHtml(ev.answer||'')}</div>
+                    ${ev.explanation ? `<div style="font-size:.78rem;color:var(--muted);">${escHtml(ev.explanation)}</div>` : ''}
+                </div>`;
+            } else {
+                contentHtml = `<div style="font-size:.78rem;color:var(--muted);font-style:italic;">🧠 Quiz event</div>`;
+            }
+        } catch(e) {
+            contentHtml = `<div style="font-size:.78rem;color:var(--muted);font-style:italic;">🧠 Quiz event</div>`;
+        }
+    }c=c.replace(/@(\w+)/g,'<span style="color:var(--spark);font-weight:700;">@$1</span>');contentHtml=`<div>${c}</div>`;}
     let reactHtml='';if(msg.reactions&&Object.keys(msg.reactions).length){reactHtml=`<div class="gc-reactions-row">${Object.entries(msg.reactions).map(([emoji,users])=>`<span class="gc-react-pill" onclick="addGCReaction(${msg.id},'${emoji}')">${emoji} ${users.length}</span>`).join('')}</div>`;}
     const isEdited=msg.is_edited?'<span style="font-size:.65rem;opacity:.5;margin-left:4px;">edited</span>':'';
     const bubbleClass=msg.message_type==='ai'?'gc-bubble ai-bubble':'gc-bubble';

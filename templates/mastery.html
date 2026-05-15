@@ -810,6 +810,8 @@ async function generateRoadmap() {
         score: 0,
         quiz: []
     }));
+    // Save immediately so roadmap is never lost
+    await saveProgress();
 }
 
 // ══ Roadmap Render ═════════════════════════════════════════════════════
@@ -878,6 +880,7 @@ function openSection(i) {
     masteryState.explanationMode = 'normal';
     showScreen('learn');
     loadSectionContent(i);
+    saveProgress(); // track which section they're on
 }
 
 // ══ Learning Screen ════════════════════════════════════════════════════
@@ -1131,25 +1134,29 @@ async function showQuizResults() {
     }
 }
 
+async function saveProgress() {
+    try {
+        await fetch('/mastery/save-progress', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                courseTitle:    masteryState.courseTitle,
+                sections:       masteryState.sections,
+                xp:             masteryState.xp,
+                pdfText:        masteryState.pdfText,
+                currentSection: masteryState.currentSection
+            })
+        });
+    } catch(e) { console.error('Save failed:', e); }
+}
+
 async function saveSectionProgress(si, score) {
     masteryState.sections[si].status = 'completed';
     masteryState.sections[si].score = score;
     if (si + 1 < masteryState.sections.length) {
         masteryState.sections[si + 1].status = 'unlocked';
     }
-    try {
-        await fetch('/mastery/save-progress', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-    courseTitle:    masteryState.courseTitle,
-    sections:       masteryState.sections,
-    xp:             masteryState.xp,
-    pdfText:        masteryState.pdfText,
-    currentSection: masteryState.currentSection
-})
-        });
-    } catch(e) {}
+    await saveProgress();
 }
 
 function completeSectionAndContinue() {
