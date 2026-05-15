@@ -632,7 +632,7 @@ body.loading { overflow: hidden; }
                         <div style="display:flex;gap:5px;flex-wrap:wrap;">
                             <button onclick="toggleGCInfo()" class="nav-icon-btn" title="Group Info" style="border-radius:8px;"><i class="fas fa-info-circle" style="font-size:13px;"></i></button>
                             <button onclick="showPollModal()" class="nav-icon-btn" style="background:rgba(59,107,255,0.12);color:var(--blue2);border-color:rgba(59,107,255,.25);" title="Poll"><i class="fas fa-poll" style="font-size:13px;"></i></button>
-                            <!-- BRAINSTORM ICON — admin only, shown dynamically -->
+                            
                             
                             <button onclick="copyGroupLink()" class="nav-icon-btn" title="Copy invite link"><i class="fas fa-link" style="font-size:13px;"></i></button>
                         </div>
@@ -665,6 +665,8 @@ body.loading { overflow: hidden; }
                         <button onclick="document.getElementById('gc-pdf-input').click()" class="wa-input-icon-btn" style="color:#f97316;" title="PDF"><i class="fas fa-file-pdf"></i></button>
                         <input type="file" id="gc-pdf-input" accept=".pdf" style="display:none;" onchange="handleGCFileSelect(event,'pdf')">
                         <button id="gc-voice-btn" onclick="toggleVoiceRecording()" class="wa-input-icon-btn" style="color:var(--green);" title="Voice note"><i class="fas fa-microphone"></i></button>
+                        <button id="gc-bs-icon-btn" onclick="showScheduleBrainstormModal()" class="wa-input-icon-btn" style="color:var(--spark);display:none;" title="Brainstorm Session"><i class="fas fa-brain"></i></button>
+                        <button onclick="showPollModal()" class="wa-input-icon-btn" style="color:var(--blue2);" title="Create Poll"><i class="fas fa-poll"></i></button>
 
                         <div class="wa-input-box-wrap" style="position:relative;">
                             <textarea id="gc-msg-input" class="wa-textarea" placeholder="Type a message… use @ to mention" rows="1" oninput="handleGCInput(this)" onkeydown="handleGCKeydown(event)"></textarea>
