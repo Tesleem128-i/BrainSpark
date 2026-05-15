@@ -1541,8 +1541,10 @@ function renderGCMessage(container,msg,currentUserId){
             contentHtml = `<div style="font-size:.78rem;color:var(--muted);font-style:italic;">🧠 Quiz event</div>`;
         }
     }
-    c=c.replace(/@(\w+)/g,'<span style="color:var(--spark);font-weight:700;">@$1</span>');
-    contentHtml=`<div>${c}</div>`;
+    else {
+        const c=(msg.content||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>').replace(/@(\w+)/g,'<span style="color:var(--spark);font-weight:700;">@$1</span>');
+        contentHtml=`<div>${c}</div>`;
+    }
     let reactHtml='';if(msg.reactions&&Object.keys(msg.reactions).length){reactHtml=`<div class="gc-reactions-row">${Object.entries(msg.reactions).map(([emoji,users])=>`<span class="gc-react-pill" onclick="addGCReaction(${msg.id},'${emoji}')">${emoji} ${users.length}</span>`).join('')}</div>`;}
     const isEdited=msg.is_edited?'<span style="font-size:.65rem;opacity:.5;margin-left:4px;">edited</span>':'';
     const bubbleClass=msg.message_type==='ai'?'gc-bubble ai-bubble':'gc-bubble';
