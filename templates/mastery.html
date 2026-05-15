@@ -176,6 +176,17 @@
         .typing-cursor { display: inline-block; width: 2px; height: 1em; background: var(--mastery2); margin-left: 2px; animation: cursor-blink 0.8s infinite; vertical-align: text-bottom; }
         @keyframes cursor-blink { 0%,100%{opacity:1} 50%{opacity:0} }
 
+        /* AUDIO PLAYER */
+        .audio-player-bar { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.2); border-radius: var(--radius-sm); margin-top: 1rem; }
+        .audio-play-btn { width: 34px; height: 34px; border-radius: 50%; background: var(--mastery); border: none; color: #fff; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: background 0.2s, transform 0.2s; }
+        .audio-play-btn:hover { background: var(--mastery2); transform: scale(1.08); }
+        .audio-progress-wrap { flex: 1; display: flex; flex-direction: column; gap: 0.3rem; }
+        .audio-progress-track { height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; cursor: pointer; position: relative; }
+        .audio-progress-fill { height: 100%; width: 0%; background: var(--mastery2); border-radius: 2px; transition: width 0.1s linear; pointer-events: none; }
+        .audio-time { font-size: 0.7rem; color: var(--muted); font-family: monospace; }
+        .audio-speed-btn { font-size: 0.7rem; font-weight: 700; color: var(--mastery2); background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.25); border-radius: 4px; padding: 0.2rem 0.45rem; cursor: pointer; flex-shrink: 0; transition: background 0.2s; }
+        .audio-speed-btn:hover { background: rgba(99,102,241,0.3); }
+
         /* VIDEO PANEL */
         .video-card { background: rgba(255,0,0,0.06); border: 1px solid rgba(255,0,0,0.15); border-radius: var(--radius-sm); padding: 0.85rem 1rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.75rem; cursor: pointer; transition: all 0.2s; }
         .video-card:hover { background: rgba(255,0,0,0.1); border-color: rgba(255,0,0,0.3); }
@@ -494,6 +505,19 @@
                     <div class="learn-panel-body">
                         <div class="ai-explanation" id="learn-explanation">
                             <p>Loading explanation…</p>
+                    
+                        </div>
+                    </div>
+                    <div id="audio-player-container" style="padding: 0 1.5rem; display:none;">
+                        <div class="audio-player-bar">
+                            <button class="audio-play-btn" id="audio-play-btn" onclick="toggleAudio()"><i class="fas fa-play" id="audio-play-icon"></i></button>
+                            <div class="audio-progress-wrap">
+                                <div class="audio-progress-track" id="audio-progress-track" onclick="seekAudio(event)">
+                                    <div class="audio-progress-fill" id="audio-progress-fill"></div>
+                                </div>
+                                <div class="audio-time" id="audio-time">0:00 / 0:00</div>
+                            </div>
+                            <button class="audio-speed-btn" id="audio-speed-btn" onclick="cycleAudioSpeed()">1×</button>
                         </div>
                     </div>
                     <div class="learn-actions">
@@ -925,6 +949,7 @@ async function streamExplanation(section, mode) {
         // Typewriter effect
         el.innerHTML = '';
         await typewriterHTML(el, data.explanation);
+        initAudioPlayer(el.innerText);
     } catch(e) {
         el.innerHTML = `<p style="color:var(--accent)">⚠️ Could not load explanation. ${e.message}</p>`;
     }
@@ -1311,6 +1336,98 @@ function downloadCertificate() {
 
 // ══ Utility ═══════════════════════════════════════════════════════════
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ══ Audio TTS ══════════════════════════════════════════════════════════
+let audioState = { utterance: null, synth: window.speechSynthesis, playing: false, speed: 1, text: '' };
+const audioSpeeds = [1, 1.25, 1.5, 1.75, 2];
+
+function initAudioPlayer(text) {
+    audioState.text = text;
+    audioState.playing = false;
+    if (audioState.synth.speaking) audioState.synth.cancel();
+    document.getElementById('audio-player-container').style.display = 'block';
+    document.getElementById('audio-play-icon').className = 'fas fa-play';
+    document.getElementById('audio-progress-fill').style.width = '0%';
+    document.getElementById('audio-time').textContent = '0:00 / 0:00';
+}
+
+function toggleAudio() {
+    const synth = audioState.synth;
+    if (synth.speaking && !synth.paused) {
+        synth.pause();
+        audioState.playing = false;
+        document.getElementById('audio-play-icon').className = 'fas fa-play';
+    } else if (synth.paused) {
+        synth.resume();
+        audioState.playing = true;
+        document.getElementById('audio-play-icon').className = 'fas fa-pause';
+    } else {
+        playAudioFromStart();
+    }
+}
+
+function playAudioFromStart() {
+    const synth = audioState.synth;
+    if (synth.speaking) synth.cancel();
+    const utter = new SpeechSynthesisUtterance(audioState.text);
+    utter.rate = audioState.speed;
+    utter.pitch = 1;
+    // Estimate duration for progress bar
+    const wordCount = audioState.text.split(' ').length;
+    const estimatedSecs = Math.round((wordCount / 150) * 60 / audioState.speed);
+    let elapsed = 0;
+    const progressInterval = setInterval(() => {
+        if (!synth.speaking || synth.paused) return;
+        elapsed++;
+        const pct = Math.min((elapsed / estimatedSecs) * 100, 99);
+        document.getElementById('audio-progress-fill').style.width = pct + '%';
+        document.getElementById('audio-time').textContent = formatAudioTime(elapsed) + ' / ' + formatAudioTime(estimatedSecs);
+    }, 1000);
+    utter.onend = () => {
+        clearInterval(progressInterval);
+        audioState.playing = false;
+        document.getElementById('audio-play-icon').className = 'fas fa-play';
+        document.getElementById('audio-progress-fill').style.width = '100%';
+    };
+    utter.onerror = () => clearInterval(progressInterval);
+    audioState.utterance = utter;
+    audioState.playing = true;
+    document.getElementById('audio-play-icon').className = 'fas fa-pause';
+    synth.speak(utter);
+}
+
+function seekAudio(e) {
+    const track = document.getElementById('audio-progress-track');
+    const pct = e.offsetX / track.offsetWidth;
+    // Restart with adjusted text (crude seek: restart from word offset)
+    const words = audioState.text.split(' ');
+    const startWord = Math.floor(pct * words.length);
+    const synth = audioState.synth;
+    if (synth.speaking) synth.cancel();
+    const utter = new SpeechSynthesisUtterance(words.slice(startWord).join(' '));
+    utter.rate = audioState.speed;
+    utter.onend = () => {
+        audioState.playing = false;
+        document.getElementById('audio-play-icon').className = 'fas fa-play';
+    };
+    audioState.utterance = utter;
+    audioState.playing = true;
+    document.getElementById('audio-play-icon').className = 'fas fa-pause';
+    document.getElementById('audio-progress-fill').style.width = (pct * 100) + '%';
+    synth.speak(utter);
+}
+
+function cycleAudioSpeed() {
+    const idx = audioSpeeds.indexOf(audioState.speed);
+    audioState.speed = audioSpeeds[(idx + 1) % audioSpeeds.length];
+    document.getElementById('audio-speed-btn').textContent = audioState.speed + '×';
+    if (audioState.synth.speaking) playAudioFromStart(); // restart at new speed
+}
+
+function formatAudioTime(secs) {
+    const m = Math.floor(secs / 60), s = secs % 60;
+    return m + ':' + String(s).padStart(2, '0');
+}
 </script>
 
 <!-- LOADER -->
