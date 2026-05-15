@@ -188,7 +188,7 @@
         .gc-main{flex:1;display:flex;flex-direction:column;min-width:0;}
         .gc-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:var(--surface);flex-shrink:0;}
         .gc-msgs{flex:1;overflow-y:scroll;padding:16px;display:flex;flex-direction:column;gap:4px;min-height:0;max-height:100%;}
-        .gc-input-bar{padding:10px 12px;border-top:1px solid var(--border);display:flex;align-items:flex-end;gap:8px;background:var(--surface);flex-shrink:0;position:relative;}
+        .gc-icon-toolbar { display: contents; }
         .gc-item{padding:10px 12px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background .15s;}
         .gc-item:hover{background:var(--surface2);}
         .gc-item.active{background:rgba(255,79,48,.1);border-left:2px solid var(--accent);}
@@ -323,9 +323,9 @@
   position: fixed; inset: 0; z-index: 99999;
   background: #080810;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 2rem; transition: opacity 0.8s ease, visibility 0.8s ease;
+  gap: 2rem; transition: opacity 0.4s ease;
 }
-#bs-loader.hide { opacity: 0; visibility: hidden; pointer-events: none; }
+#bs-loader.hide { opacity: 0; visibility: hidden; pointer-events: none; display: none !important; }
 body.loading { overflow: hidden; }
 
 .bsl-logo-wrap {
@@ -659,20 +659,25 @@ body.loading { overflow: hidden; }
                         </div>
                     </div>
                     <div id="gc-mention-dropdown" class="mention-dropdown" style="display:none;position:absolute;bottom:60px;left:16px;right:16px;z-index:50;"></div>
-                    <div class="gc-input-bar">
-                        <button onclick="document.getElementById('gc-image-input').click()" class="wa-input-icon-btn" title="Image"><i class="fas fa-image"></i></button>
-                        <input type="file" id="gc-image-input" accept="image/*" style="display:none;" onchange="handleGCFileSelect(event,'image')">
-                        <button onclick="document.getElementById('gc-pdf-input').click()" class="wa-input-icon-btn" style="color:#f97316;" title="PDF"><i class="fas fa-file-pdf"></i></button>
-                        <input type="file" id="gc-pdf-input" accept=".pdf" style="display:none;" onchange="handleGCFileSelect(event,'pdf')">
-                        <button id="gc-voice-btn" onclick="toggleVoiceRecording()" class="wa-input-icon-btn" style="color:var(--green);" title="Voice note"><i class="fas fa-microphone"></i></button>
-                        <button id="gc-bs-icon-btn" onclick="showScheduleBrainstormModal()" class="wa-input-icon-btn" style="color:var(--spark);display:none;" title="Brainstorm Session"><i class="fas fa-brain"></i></button>
-                        <button onclick="showPollModal()" class="wa-input-icon-btn" style="color:var(--blue2);" title="Create Poll"><i class="fas fa-poll"></i></button>
-
-                        <div class="wa-input-box-wrap" style="position:relative;">
-                            <textarea id="gc-msg-input" class="wa-textarea" placeholder="Type a message… use @ to mention" rows="1" oninput="handleGCInput(this)" onkeydown="handleGCKeydown(event)"></textarea>
-                            <button onclick="toggleEmojiPicker('gc-emoji-panel','gc-msg-input')" class="wa-emoji-btn"><i class="far fa-smile"></i></button>
+                    <div class="gc-input-bar" id="gc-input-bar">
+                        <!-- Top row: textarea + send (always full width) -->
+                        <div style="display:flex;align-items:flex-end;gap:8px;width:100%;">
+                            <div class="wa-input-box-wrap" style="position:relative;flex:1;">
+                                <textarea id="gc-msg-input" class="wa-textarea" placeholder="Type a message… use @ to mention" rows="1" oninput="handleGCInput(this)" onkeydown="handleGCKeydown(event)"></textarea>
+                                <button onclick="toggleEmojiPicker('gc-emoji-panel','gc-msg-input')" class="wa-emoji-btn"><i class="far fa-smile"></i></button>
+                            </div>
+                            <button onclick="sendGCMessage()" class="wa-send-btn"><i class="fas fa-paper-plane"></i></button>
                         </div>
-                        <button onclick="sendGCMessage()" class="wa-send-btn"><i class="fas fa-paper-plane"></i></button>
+                        <!-- Bottom row: action icons -->
+                        <div class="gc-icon-toolbar">
+                            <button onclick="document.getElementById('gc-image-input').click()" class="wa-input-icon-btn" title="Image"><i class="fas fa-image"></i></button>
+                            <input type="file" id="gc-image-input" accept="image/*" style="display:none;" onchange="handleGCFileSelect(event,'image')">
+                            <button onclick="document.getElementById('gc-pdf-input').click()" class="wa-input-icon-btn" style="color:#f97316;" title="PDF"><i class="fas fa-file-pdf"></i></button>
+                            <input type="file" id="gc-pdf-input" accept=".pdf" style="display:none;" onchange="handleGCFileSelect(event,'pdf')">
+                            <button id="gc-voice-btn" onclick="toggleVoiceRecording()" class="wa-input-icon-btn" style="color:var(--green);" title="Voice note"><i class="fas fa-microphone"></i></button>
+                            <button id="gc-bs-icon-btn" onclick="showScheduleBrainstormModal()" class="wa-input-icon-btn" style="color:var(--spark);display:none;" title="Brainstorm Session"><i class="fas fa-brain"></i></button>
+                            <button onclick="showPollModal()" class="wa-input-icon-btn" style="color:var(--blue2);" title="Create Poll"><i class="fas fa-poll"></i></button>
+                        </div>
                     </div>
                     <div id="gc-emoji-panel" style="display:none;padding:12px 16px;border-top:1px solid var(--border);background:var(--surface2);flex-wrap:wrap;gap:6px;"></div>
                 </div>
@@ -2812,12 +2817,20 @@ document.addEventListener('DOMContentLoaded',()=>{
     const bar    = document.getElementById('bsl-bar');
     const msg    = document.getElementById('bsl-msg');
     const loader = document.getElementById('bs-loader');
+
+    function hideLoader() {
+      loader.classList.add('hide');
+      loader.style.opacity = '0';
+      loader.style.visibility = 'hidden';
+      loader.style.pointerEvents = 'none';
+      loader.style.display = 'none';
+      document.body.style.overflow = '';
+    }
+
     const msgs = [
-      [0,   'Initialising…'],
-      [20,  'Loading AI engine…'],
-      [45,  'Preparing your workspace…'],
-      [70,  'Almost ready…'],
-      [90,  'Sparking up…'],
+      [20,  'Initialising…'],
+      [50,  'Loading workspace…'],
+      [80,  'Almost ready…'],
       [100, 'Welcome to Brainspark ✦'],
     ];
     let step = 0;
@@ -2825,34 +2838,17 @@ document.addEventListener('DOMContentLoaded',()=>{
       if (step >= msgs.length) return;
       const [pct, text] = msgs[step];
       bar.style.width = pct + '%';
-      msg.style.opacity = '0';
-      setTimeout(() => { msg.textContent = text; msg.style.opacity = '1'; }, 150);
+      msg.textContent = text;
       step++;
-      if (step < msgs.length) setTimeout(tick, 320);
+      if (step < msgs.length) setTimeout(tick, 300);
     }
-    setTimeout(tick, 100);
-    setTimeout(() => {
-      bar.style.width = '100%';
-      setTimeout(() => {
-        loader.classList.add('hide');
-        loader.style.opacity = '0';
-        loader.style.visibility = 'hidden';
-        loader.style.pointerEvents = 'none';
-        loader.style.display = 'none';
-        document.body.classList.remove('loading');
-        document.body.style.overflow = '';
-      }, 400);
-    }, 2200);
+    tick();
 
-    // Safety fallback — force hide after 4 seconds no matter what
-    setTimeout(() => {
-      loader.style.opacity = '0';
-      loader.style.visibility = 'hidden';
-      loader.style.pointerEvents = 'none';
-      loader.style.display = 'none';
-      document.body.classList.remove('loading');
-      document.body.style.overflow = '';
-    }, 4000);
+    // Hide after 1.5s
+    setTimeout(hideLoader, 1500);
+
+    // Hard fallback — 2.5s no matter what
+    setTimeout(hideLoader, 2500);
   })();
 // ═══════════════════════════════════════════════════════════
 //  CHAT BACKGROUNDS
@@ -3115,7 +3111,8 @@ document.addEventListener('DOMContentLoaded',()=>{
     .gc-header .nav-icon-btn { background: rgba(255,255,255,0.2); border-color: transparent; color: #fff; }
     .gc-msgs { padding: 10px 12px; overflow-y: auto; }
     .gc-bubble { max-width: 82%; font-size: 0.875rem; }
-    .gc-input-bar { padding: 8px 10px; background: var(--surface); }
+    .gc-input-bar { padding: 8px 10px; background: var(--surface); flex-direction: column !important; align-items: stretch !important; gap: 6px !important; }
+    .gc-icon-toolbar { display: flex; gap: 6px; align-items: center; padding-top: 2px; }
 
     /* Group info panel: fixed full screen */
     .group-info-panel { position: fixed !important; inset: 0 !important; z-index: 160 !important; width: 100% !important; border: none; overflow-y: auto; }
