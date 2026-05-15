@@ -4571,7 +4571,14 @@ def mastery_upload():
         logger.error(f'mastery_upload error: {e}', exc_info=True)
         return jsonify({'success': False, 'error': str(e)}), 500
 
-
+@app.route('/mastery')
+def mastery():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    user = User.query.get(session['user_id'])
+    if not user:
+        return redirect(url_for('login'))
+    return render_template('mastery.html', user=user)
 @app.route('/mastery/generate-roadmap', methods=['POST'])
 def mastery_generate_roadmap():
     if 'user_id' not in session:
