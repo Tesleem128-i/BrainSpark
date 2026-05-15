@@ -48,6 +48,7 @@ class User(UserMixin, db.Model):
     # Push notification subscription (JSON string of the Web Push subscription object)
     push_subscription = db.Column(db.Text, nullable=True)
     spark_tokens = db.Column(db.Integer, default=0)
+    token_pool   = db.Column(db.Integer, default=0)
     total_tokens_purchased = db.Column(db.Integer, default=0)
     total_spent = db.Column(db.Float, default=0.0)
 

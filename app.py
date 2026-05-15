@@ -4076,8 +4076,11 @@ def admin_fund_pool():
         return jsonify({'error': 'Amount must be positive'}), 400
     tokens_to_add = naira_to_tokens(amount_paid)
     admin = User.query.filter_by(username=ADMIN_USERNAME).first()
-    admin.token_pool = (getattr(admin, 'token_pool', 0) or 0) + tokens_to_add
+    current = admin.token_pool if admin.token_pool is not None else 0
+    admin.token_pool = current + tokens_to_add
+    db.session.flush()
     db.session.commit()
+    db.session.refresh(admin)
     return jsonify({
         'success': True,
         'tokens_added': tokens_to_add,
