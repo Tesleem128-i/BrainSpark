@@ -1337,7 +1337,18 @@ function buildDMBubble(msg,idx,myId){
     const isSent=msg.sender_id===(myId||_myUserId);const row=document.createElement('div');row.className=`wa-msg-row ${isSent?'sent':'received'}`;row.dataset.msgId=msg.id;
     const time=formatTime(msg.created_at);
     let replyHtml='';if(msg.reply_to_content)replyHtml=`<div class="wa-reply-block"><div class="rb-name">${escHtml(msg.reply_to_sender||'Message')}</div><div class="rb-text">${escHtml(msg.reply_to_content)}</div></div>`;
-    let contentHtml='';if(msg.image_url){const _src=msg.image_url;contentHtml+=`<img src="${_src}" class="wa-msg-img" onclick="openLightbox('${_src}')" alt="Image">`;}else if(msg.content&&msg.content!=='📷 Image'){contentHtml+=`<div>${escHtml(msg.content)}</div>`;}else if(msg.content){contentHtml+=`<div>${escHtml(msg.content)}</div>`;}
+    let contentHtml='';
+    if(msg.message_type==='voice'&&msg.voice_url){
+        const vs=msg.voice_url.startsWith('http')?msg.voice_url:('/'+msg.voice_url.replace(/^\/+/,''));
+        contentHtml=`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;min-width:200px;"><i class="fas fa-microphone-alt" style="color:var(--green);flex-shrink:0;"></i><audio controls src="${vs}" preload="none" style="flex:1;height:32px;min-width:160px;max-width:220px;"></audio></div>`;
+    } else if(msg.image_url){
+        const _src=msg.image_url;
+        contentHtml+=`<img src="${_src}" class="wa-msg-img" onclick="openLightbox('${_src}')" alt="Image">`;
+    } else if(msg.content&&msg.content!=='📷 Image'){
+        contentHtml+=`<div>${escHtml(msg.content)}</div>`;
+    } else if(msg.content){
+        contentHtml+=`<div>${escHtml(msg.content)}</div>`;
+    }
     const tick=isSent?`<span class="wa-read-tick ${msg.is_read?'read':''}"><i class="fas fa-check${msg.is_read?'-double':''}"></i></span>`:'';
 
     // DM reactions
