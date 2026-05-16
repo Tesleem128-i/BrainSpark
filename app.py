@@ -1205,7 +1205,7 @@ def send_dm_voice():
         voice_url = save_file_to_db(f, 'voice')
         msg       = Message(
             sender_id=sender_id, receiver_id=receiver_id,
-            content='🎙️ Voice note', image_path=voice_url
+            content='🎙️ Voice note', message_type='voice', voice_path=voice_url
         )
         db.session.add(msg)
         db.session.flush()
@@ -4394,8 +4394,22 @@ def generate_payment_ref():
     return jsonify({'success': True, 'reference': ref, 'transaction_id': txn.id})
 
 
-# ── /api/verify-payment-receipt  (UPDATED) ───────────────────────────────────
-# Now validates:  amount · reference code · destination account · date (today or yesterday)
+# ── /api/verify-payment-receipt ──────────────────────────────────────────────
+# Logic:
+#   • Receipt correct + within business hours (WAT 8am-8pm Mon-Sat) → auto-approved
+#   • Receipt correct but outside business hours                     → pending (admin reviews)
+#   • Receipt unreadable / AI error                                  → pending (admin reviews)
+#   • 6-min upload window expired                                    → rejected
+#   • Hard mismatch (wrong account/amount/reference)                 → pending (not rejected)
+
+def _is_business_hours_wat():
+    """Return True if current WAT time is Mon-Sat 08:00-20:00."""
+    from datetime import timezone, timedelta
+    WAT = timezone(timedelta(hours=1))
+    now_wat = datetime.now(WAT)
+    if now_wat.weekday() == 6:   # Sunday
+        return False
+    return 8 <= now_wat.hour < 20
 
 @app.route('/api/verify-payment-receipt', methods=['POST'])
 def verify_payment_receipt():
@@ -4411,12 +4425,12 @@ def verify_payment_receipt():
     if not txn:
         return jsonify({'success': False, 'error': 'Transaction not found or already processed.'}), 404
 
-    # Enforce 6-minute window
+    # Enforce 30-minute upload window (was 6 min — too tight)
     elapsed = (datetime.utcnow() - txn.created_at).total_seconds()
-    if elapsed > 360:
+    if elapsed > 1800:
         txn.status = 'rejected'
         db.session.commit()
-        return jsonify({'success': False, 'error': 'Payment window expired. Please start a new transaction.'}), 400
+        return jsonify({'success': False, 'error': 'Payment window expired (30 minutes). Please start a new transaction.'}), 400
 
     if not allowed_file(receipt.filename):
         return jsonify({'success': False, 'error': 'Invalid file type.'}), 400
@@ -4540,15 +4554,17 @@ def verify_payment_receipt():
             verified = False
             result = {'reason': 'AI verification unavailable — queued for manual review.'}
 
-        if verified:
-            txn.status = 'approved'
-            txn.verified_by = 0   # 0 = auto-verified
-            txn.verified_at = datetime.utcnow()
-            user.spark_tokens = (getattr(user, 'spark_tokens', 0) or 0) + txn.tokens_added
-            user.total_tokens_purchased = (getattr(user, 'total_tokens_purchased', 0) or 0) + txn.tokens_added
-            user.total_spent = (getattr(user, 'total_spent', 0) or 0) + txn.amount_paid
+        in_business_hours = _is_business_hours_wat()
 
-            # Deduct from admin pool
+        if verified and in_business_hours:
+            # ✅ Auto-approve: receipt is correct AND within business hours
+            txn.status     = 'approved'
+            txn.verified_by = 0
+            txn.verified_at = datetime.utcnow()
+            user.spark_tokens             = (getattr(user, 'spark_tokens', 0) or 0) + txn.tokens_added
+            user.total_tokens_purchased   = (getattr(user, 'total_tokens_purchased', 0) or 0) + txn.tokens_added
+            user.total_spent              = (getattr(user, 'total_spent', 0) or 0) + txn.amount_paid
+
             admin = User.query.filter_by(username=ADMIN_USERNAME).first()
             if admin and hasattr(admin, 'token_pool'):
                 admin.token_pool = max(0, (getattr(admin, 'token_pool', 0) or 0) - txn.tokens_added)
@@ -4559,7 +4575,6 @@ def verify_payment_receipt():
                                  f'✅ {txn.tokens_added:,} Spark Tokens added!',
                                  f'Your payment of ₦{txn.amount_paid:,.0f} was verified automatically.',
                                  'tokens', txn.id)
-
             admin2 = User.query.filter_by(username=ADMIN_USERNAME).first()
             if admin2:
                 _create_notification(admin2.id, 'payment',
@@ -4567,25 +4582,62 @@ def verify_payment_receipt():
                                      f'₦{txn.amount_paid:,.0f} — {txn.tokens_added} tokens added.',
                                      'admin', txn.id)
 
-            return jsonify({'success': True, 'tokens_added': txn.tokens_added,
-                            'message': f'{txn.tokens_added:,} Spark Tokens added to your account!'})
-        else:
-            db.session.commit()
-            reason = result.get('reason', 'Could not verify payment details.')
+            return jsonify({
+                'success': True,
+                'tokens_added': txn.tokens_added,
+                'message': f'{txn.tokens_added:,} Spark Tokens added to your account!'
+            })
 
+        elif verified and not in_business_hours:
+            # ⏳ Receipt is correct but outside business hours — queue for admin
+            txn.status = 'pending'
+            db.session.commit()
+
+            _create_notification(session['user_id'], 'payment',
+                                 '⏳ Payment received — pending approval',
+                                 f'Your receipt looks correct. It will be approved when business hours resume (Mon–Sat, 8am–8pm WAT).',
+                                 'tokens', txn.id)
             admin3 = User.query.filter_by(username=ADMIN_USERNAME).first()
             if admin3:
                 _create_notification(admin3.id, 'payment',
-                                     f'Manual review: {user.name}',
+                                     f'After-hours payment: {user.name}',
+                                     f'₦{txn.amount_paid:,.0f} — receipt verified, awaiting manual approval.',
+                                     'admin', txn.id)
+
+            return jsonify({
+                'success': False, 'queued': True,
+                'error': (
+                    '⏳ Your receipt looks correct but was submitted outside business hours '
+                    '(Mon–Sat, 8am–8pm WAT).\n\n'
+                    'Your payment is pending and will be approved by the admin. '
+                    'You will be notified once it is confirmed.'
+                )
+            })
+
+        else:
+            # ⏳ Receipt unreadable, wrong details, or AI error — queue for manual review
+            txn.status = 'pending'
+            db.session.commit()
+            reason = result.get('reason', 'Could not read payment details clearly.')
+
+            _create_notification(session['user_id'], 'payment',
+                                 '⏳ Payment under review',
+                                 f'Your receipt has been submitted and is being reviewed manually.',
+                                 'tokens', txn.id)
+            admin4 = User.query.filter_by(username=ADMIN_USERNAME).first()
+            if admin4:
+                _create_notification(admin4.id, 'payment',
+                                     f'Manual review needed: {user.name}',
                                      f'₦{txn.amount_paid:,.0f} — Reason: {reason[:80]}',
                                      'admin', txn.id)
 
             return jsonify({
                 'success': False, 'queued': True,
                 'error': (
-                    f'Verification failed: {reason}\n\n'
-                    'Your payment has been queued for manual review. '
-                    'You will be notified within 30 minutes.'
+                    f'⏳ We could not automatically verify your receipt.\n\n'
+                    f'Reason: {reason}\n\n'
+                    'Your payment has been submitted for manual review by the admin. '
+                    'You will be notified within 30 minutes during business hours.'
                 )
             })
 
