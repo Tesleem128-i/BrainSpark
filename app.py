@@ -4729,7 +4729,7 @@ def mastery_upload():
         if not pdf_text:
             return jsonify({'success': False, 'error': 'Could not extract text from PDF. Make sure it is not scanned/image-only.'})
         deduct_token(session['user_id'], 'mastery_upload', 1)
-        return jsonify({'success': True, 'pdf_text': pdf_text[:12000]})
+        return jsonify({'success': True, 'pdf_text': pdf_text[:40000]})
     except Exception as e:
         logger.error(f'mastery_upload error: {e}', exc_info=True)
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -4742,33 +4742,40 @@ def mastery_generate_roadmap():
     token_check = require_tokens('mastery_roadmap', 2)
     if token_check: return jsonify({'success': False, 'error': token_check['error']}), token_check['code']
     data = request.json or {}
-    pdf_text = (data.get('pdf_text') or '')[:12000]
+    pdf_text = (data.get('pdf_text') or '')[:40000]
     if not pdf_text:
         return jsonify({'success': False, 'error': 'No PDF text provided'}), 400
     try:
-        prompt = f"""You are an expert curriculum designer. Analyze the following educational text and create a structured learning roadmap.
+        prompt = f"""You are a world-class curriculum designer and university professor. Your job is to analyse educational content and build the most complete, thorough learning roadmap possible so that a student who studies every section will genuinely master the subject — leaving no stone unturned.
 
-TEXT:
+CONTENT TO ANALYSE:
 {pdf_text}
 
 Return ONLY valid JSON (no markdown, no extra text) in this exact format:
 {{
-  "course_title": "Clear title for this course based on the content",
+  "course_title": "Precise, descriptive title based on the actual content",
+  "estimated_hours": 3,
   "sections": [
     {{
       "title": "Section title",
-      "summary": "2-3 sentence summary of what this section covers",
-      "content": "Key concepts, definitions, and important points from this section (3-5 paragraphs)"
+      "summary": "3-4 sentence overview of what this section covers and why it matters",
+      "content": "Extremely detailed notes covering EVERY concept, definition, formula, process, and fact in this section. Include worked examples for any calculations. Quote key terms exactly as they appear in the source. This must be thorough enough that a student reading only this field can fully understand and pass an exam on it.",
+      "key_terms": ["term1", "term2"],
+      "has_calculations": false,
+      "image_search_query": "specific search query to find a diagram or image that helps explain this section (or empty string if not needed)"
     }}
   ]
 }}
 
-Rules:
-- Create 4 to 8 logical sections based on the content
-- Each section should be teachable in 10-15 minutes
-- Titles should be clear and student-friendly
-- Content should include key facts, definitions, examples from the text
-- Return ONLY the JSON object"""
+STRICT RULES:
+- Create as many sections as the depth of the content requires — minimum 8, up to 20 or more if the material is deep
+- NEVER skip or merge topics just to reduce section count — every distinct topic gets its own section
+- Each section content must be comprehensive: 5-10 paragraphs minimum, covering ALL sub-points
+- For any maths, science, finance, or technical content: include FULL worked examples with step-by-step calculations
+- has_calculations = true if the section involves any numbers, formulas, or equations
+- image_search_query should be a specific phrase like "human heart diagram anatomy" or "supply demand curve economics" — leave empty if no visual aid is needed
+- DO NOT add any information that is not in the source content — stay strictly within the PDF
+- Return ONLY the JSON object, nothing else"""
 
         response = model.generate_content(prompt)
         text = response.text.strip().replace('```json', '').replace('```', '').strip()
@@ -4800,22 +4807,25 @@ def mastery_explain():
     style = "Use very simple language, short sentences, real-world analogies, and step-by-step breakdowns. Imagine explaining to a 14-year-old." if mode == 'simple' else "Teach clearly and engagingly like a friendly university tutor. Use examples, highlight key terms, and structure the explanation logically."
 
     try:
-        prompt = f"""You are Brainspark AI, a friendly and encouraging AI tutor. Teach the following topic to a student.
+        prompt = f"""You are Brainspark AI — the best AI tutor in the world. Your goal is to make sure every student fully understands this topic and could pass any exam on it. Leave no stone unturned.
 
-Topic: {title}
-Summary: {summary}
-Content: {content}
+TOPIC: {title}
+SUMMARY: {summary}
+SOURCE CONTENT: {content}
 
-Teaching style: {style}
+TEACHING STYLE: {style}
 
-Write a clear, engaging explanation in HTML. Use these exact tags only:
-- <p> for paragraphs
-- <strong> for key terms (wrap in: <span class="highlight-box"><strong>Term:</strong> definition</span>)
-- <span class="example-box"> for examples (start with: <strong>Example:</strong>)
-- <code> for formulas or technical terms
-
-Keep it to 3-5 paragraphs. Be encouraging and student-friendly. End with a motivational sentence.
-Return ONLY the HTML, no surrounding tags, no markdown."""
+Write an exhaustive, deeply engaging explanation in HTML. Rules:
+- Cover EVERY concept, definition, formula, and sub-topic found in the source content above
+- NEVER add information not present in the source — stay within the content
+- Use <p> for each paragraph — write as many paragraphs as needed (minimum 6)
+- Wrap key terms like this: <span class="highlight-box"><strong>Term:</strong> clear definition here</span>
+- Wrap every example like this: <span class="example-box"><strong>Example:</strong> full worked example with every step shown</span>
+- For any formula or equation use: <code>formula here</code>
+- For calculations: show every step — don't skip any working. Format as numbered steps inside an example-box
+- After all concepts are explained, add a <span class="example-box"><strong>🔢 Practice Problem:</strong> pose a realistic problem the student should try, then show the full solution step by step</span>
+- End with a <p> that summarises the 3 most important takeaways from this section in a numbered list, then one encouraging sentence
+- Return ONLY valid HTML — no markdown, no surrounding tags, no backticks"""
 
         response = model.generate_content(prompt)
         explanation = response.text.strip().replace('```html', '').replace('```', '').strip()
@@ -4832,22 +4842,29 @@ def mastery_final_exam():
     if token_check: return jsonify({'success': False, 'error': token_check['error']}), token_check['code']
     data    = request.json or {}
     title   = data.get('course_title', '')
-    content = data.get('content', '')
+    content   = data.get('content', '')
+    n_sections = data.get('n_sections', 10)
+    # Scale question count and time with course depth
+    q_count   = min(max(30, n_sections * 3), 50)
+    exam_mins = min(max(60, q_count * 2), 120)
 
     try:
-        prompt = f"""You are a strict university-level exam setter creating a FINAL EXAM for a course called "{title}".
+        prompt = f"""You are a strict, world-class university examiner setting the FINAL EXAM for a course called "{title}".
+This exam has {q_count} questions and {exam_mins} minutes. Students need 70% to pass and earn their certificate.
+Make this exam genuinely challenging — students who only half-studied should fail. Students who mastered every section should pass.
 
-Course Content:
-{content[:6000]}
+FULL COURSE CONTENT:
+{content[:30000]}
 
-Generate exactly 30 challenging multiple-choice questions for the FINAL EXAM.
+Generate exactly {q_count} multiple-choice questions covering the ENTIRE course — every section must be represented.
 
 STRICT RULES:
-- 10% easy, 30% medium, 40% hard, 20% very hard (tricky, multi-step, requires deep understanding)
-- For any topic involving numbers, formulas, or calculations: write CALCULATION questions where the student must work out the answer — do NOT just ask for definitions
-- Use negatives e.g. "Which of the following is NOT correct..."
-- Include questions that require combining knowledge from multiple topics
-- All 4 options must be highly plausible — wrong answers should be common mistakes, not obviously wrong
+- Pull questions from EVERY section of the course — spread coverage evenly
+- Difficulty: 5% easy, 25% medium, 45% hard, 25% very hard
+- For any maths/science/finance/technical content: at least 40% must be full calculation questions (include all values, require working)
+- Use "Which is NOT...", scenario questions, multi-step calculations, concept application
+- Wrong options must be highly plausible — common mistakes, nearby values, partial truths
+- Include at least 5 questions that combine knowledge from TWO OR MORE sections
 - Never repeat similar questions
 - correct_index is 0-based (0=A, 1=B, 2=C, 3=D)
 
@@ -4855,12 +4872,14 @@ Return ONLY valid JSON (no markdown, no extra text):
 {{
   "questions": [
     {{
-      "question": "Full question text (include numbers/values for calculation questions)",
+      "question": "Full question text — include all values needed for calculations",
+      "image_hint": "short description of a diagram that helps (or empty string)",
       "options": ["Option A", "Option B", "Option C", "Option D"],
       "correct_index": 0,
-      "explanation": "Step-by-step explanation of why this is correct and others are wrong"
+      "explanation": "Full step-by-step working showing why this is correct and why each wrong option fails"
     }}
-  ]
+  ],
+  "exam_minutes": {exam_mins}
 }}"""
 
         response = model.generate_content(prompt)
@@ -4872,8 +4891,9 @@ Return ONLY valid JSON (no markdown, no extra text):
         questions = result.get('questions', [])
         if not questions:
             raise ValueError('No questions generated')
+        exam_minutes = result.get('exam_minutes', exam_mins)
         deduct_token(session['user_id'], 'mastery_quiz', 3)
-        return jsonify({'success': True, 'questions': questions})
+        return jsonify({'success': True, 'questions': questions, 'exam_minutes': exam_minutes})
     except Exception as e:
         logger.error(f'mastery_final_exam error: {e}', exc_info=True)
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -4936,10 +4956,10 @@ def mastery_generate_quiz():
     data    = request.json or {}
     title   = data.get('section_title', '')
     content = data.get('section_content', '')
-    count   = min(int(data.get('count', 5)), 20)
+    count   = min(int(data.get('count', 10)), 30)
 
     try:
-        prompt = f"""You are an expert quiz creator. Create {count} multiple-choice questions based on this content.
+        prompt = f"""You are a rigorous exam-setter and expert educator. Create {count} multiple-choice questions that THOROUGHLY test a student's understanding of this section.
 
 Topic: {title}
 Content: {content}
@@ -4948,19 +4968,23 @@ Return ONLY valid JSON (no markdown):
 {{
   "questions": [
     {{
-      "question": "Clear question text",
+      "question": "Full question text — for calculation questions include all values needed",
+      "image_hint": "optional: short description of a diagram or image that would help answer this (e.g. 'circuit diagram with resistor R1=10Ω') — leave empty string if not needed",
       "options": ["Option A", "Option B", "Option C", "Option D"],
       "correct_index": 0,
-      "explanation": "Brief explanation of why this answer is correct"
+      "explanation": "Step-by-step explanation of why this is correct AND why each wrong option is wrong"
     }}
   ]
 }}
 
-Rules:
-- Questions should test genuine understanding, not just memorization
-- All 4 options should be plausible
+STRICT RULES:
+- Every question must come STRICTLY from the content above — no outside knowledge
+- Difficulty mix: 20% easy (recall), 40% medium (understanding), 30% hard (application), 10% very hard (analysis/multi-step)
+- For any content involving numbers, formulas, or processes: at least 40% of questions must be calculation or application questions
+- All 4 options must be highly plausible — wrong options should be common mistakes or close values
+- Use question varieties: "Which of the following...", "What is the result of...", "Which is NOT...", scenario-based, calculation-based
+- Never repeat similar questions
 - correct_index is 0-based (0=A, 1=B, 2=C, 3=D)
-- Vary difficulty: 40% easy, 40% medium, 20% hard
 - Return ONLY the JSON"""
 
         response = model.generate_content(prompt)

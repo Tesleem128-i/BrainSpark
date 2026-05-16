@@ -1045,7 +1045,6 @@ function renderQuizQuestion() {
     const q = questions[qi];
     const letters = ['A','B','C','D'];
 
-    // Progress chips
     const chips = questions.map((_, idx) => {
         const ans = masteryState.currentQuizAnswers[idx];
         let cls = '';
@@ -1053,6 +1052,14 @@ function renderQuizQuestion() {
         else if (idx === qi) cls = 'answered';
         return `<div class="quiz-chip ${cls}"></div>`;
     }).join('');
+
+    // Image hint block — search Wikipedia/educational image if hint provided
+    const imageHint = q.image_hint || '';
+    const imageBlock = imageHint ? `
+        <div style="margin:10px 0 14px;padding:10px 12px;background:rgba(99,102,241,0.07);border:1px solid rgba(99,102,241,0.2);border-radius:10px;font-size:0.8rem;color:var(--muted);display:flex;align-items:center;gap:8px;">
+            <i class="fas fa-image" style="color:var(--blue2);flex-shrink:0;"></i>
+            <span><strong>Visual aid:</strong> ${imageHint}</span>
+        </div>` : '';
 
     container.innerHTML = `
         <div class="quiz-header">
@@ -1065,6 +1072,7 @@ function renderQuizQuestion() {
         <div class="quiz-card">
             <div class="quiz-q-num">Question ${qi + 1}</div>
             <div class="quiz-question">${q.question}</div>
+            ${imageBlock}
             <div class="quiz-options">
                 ${q.options.map((opt, oi) => `
                     <div class="quiz-option" onclick="selectOption(${oi})" id="opt-${oi}">
@@ -1266,10 +1274,14 @@ function startExamTimer() {
 function renderExam() {
     const container = document.getElementById('exam-container');
     const letters   = ['A','B','C','D'];
-    container.innerHTML = masteryState.examQuestions.map((q, qi) => `
+    container.innerHTML = masteryState.examQuestions.map((q, qi) => {
+        const hint = q.image_hint || '';
+        const hintHtml = hint ? `<div style="margin:8px 0 12px;padding:9px 12px;background:rgba(99,102,241,0.07);border:1px solid rgba(99,102,241,0.2);border-radius:10px;font-size:0.8rem;color:var(--muted);display:flex;align-items:center;gap:8px;"><i class="fas fa-image" style="color:var(--blue2);flex-shrink:0;"></i><span><strong>Visual aid:</strong> ${hint}</span></div>` : '';
+        return `
         <div class="quiz-card" style="margin-bottom:1rem;">
             <div class="quiz-q-num">Question ${qi + 1} of ${masteryState.examQuestions.length}</div>
             <div class="quiz-question">${q.question}</div>
+            ${hintHtml}
             <div class="quiz-options">
                 ${q.options.map((opt, oi) => `
                     <div class="quiz-option" onclick="selectExamOption(${qi},${oi})" id="exam-opt-${qi}-${oi}">
@@ -1277,7 +1289,8 @@ function renderExam() {
                         <div>${opt}</div>
                     </div>`).join('')}
             </div>
-        </div>`).join('') +
+        </div>`;
+    }).join('') +
         `<div style="text-align:center;padding:1.5rem;">
             <button class="btn btn-mastery" onclick="submitExam()"><i class="fas fa-flag-checkered"></i> Submit Exam</button>
         </div>`;
