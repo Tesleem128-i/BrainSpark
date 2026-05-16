@@ -4209,8 +4209,14 @@ def receipt_file(filename):
     user = User.query.get(session['user_id'])
     if not user or user.username != ADMIN_USERNAME:
         return jsonify({'error': 'Forbidden'}), 403
-    receipts_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads', 'receipts')
-    return send_from_directory(receipts_dir, os.path.basename(filename))
+    from models import GroupFile
+    from flask import Response
+    gf = GroupFile.query.filter_by(filename=os.path.basename(filename)).first()
+    if not gf:
+        return jsonify({'error': 'Receipt not found in database'}), 404
+    import base64 as _b64
+    raw = _b64.b64decode(gf.file_data)
+    return Response(raw, mimetype=gf.mime_type)
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  REVISED SPARK TOKEN ROUTES  (replace/add these in app.py)
@@ -4439,7 +4445,28 @@ def verify_payment_receipt():
             if s == -1 or e <= s:
                 raise ValueError('No JSON in AI response')
             result = json.loads(resp_text[s:e])
-            verified = result.get('verified', False)
+            ai_verified = result.get('verified', False)
+
+            # Hard server-side cross-check — never trust AI alone
+            found_acct = str(result.get('found_account', '')).replace(' ', '')
+            found_amt  = str(result.get('found_amount', '')).replace(',', '').replace('₦', '').replace(' ', '')
+            found_ref  = str(result.get('found_reference', '')).upper()
+
+            acct_ok = ACCOUNT_NUMBER in found_acct or found_acct in ACCOUNT_NUMBER
+            try:
+                amt_ok = abs(float(found_amt) - txn.amount_paid) <= 1
+            except Exception:
+                amt_ok = False
+            ref_ok = txn.reference_code.upper() in found_ref or found_ref in txn.reference_code.upper()
+
+            verified = ai_verified and acct_ok and amt_ok and ref_ok
+
+            if not verified:
+                mismatch = []
+                if not acct_ok: mismatch.append(f"account mismatch (found: {found_acct})")
+                if not amt_ok:  mismatch.append(f"amount mismatch (found: {found_amt})")
+                if not ref_ok:  mismatch.append(f"reference not found (found: {found_ref})")
+                result['reason'] = 'Verification failed: ' + ', '.join(mismatch) if mismatch else result.get('reason', 'Could not verify.')
 
         except Exception as ai_err:
             logger.error(f"AI verification error: {ai_err}", exc_info=True)
