@@ -568,7 +568,7 @@
                 <div style="font-size:0.82rem;color:var(--muted);margin-top:0.2rem;">Complete all questions to earn your Mastery Certificate</div>
             </div>
             <div style="text-align:right;">
-                <div class="exam-timer" id="exam-timer">45:00</div>
+                <div class="exam-timer" id="exam-timer">60:00</div>
                 <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">Time Remaining</div>
             </div>
         </div>
@@ -1225,21 +1225,21 @@ function updateSectionBadges(score) {
 async function startFinalExam() {
     showScreen('exam');
     const container = document.getElementById('exam-container');
-    container.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);"><i class="fas fa-spinner fa-spin fa-2x"></i><p style="margin-top:1rem;">Generating final exam…</p></div>';
+    container.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);"><i class="fas fa-spinner fa-spin fa-2x"></i><p style="margin-top:1rem;">Generating final exam — 30 questions, please wait…</p></div>';
 
     try {
         const allContent = masteryState.sections.map(s => s.content || s.summary || s.title).join('\n\n');
-        const res = await fetch('/mastery/generate-quiz', {
+        const res = await fetch('/mastery/final-exam', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ section_title: masteryState.courseTitle, section_content: allContent, count: 20 })
+            body: JSON.stringify({ course_title: masteryState.courseTitle, content: allContent })
         });
         const data = await res.json();
         if (!data.success) throw new Error(data.error);
 
         masteryState.examQuestions = data.questions;
         masteryState.examAnswers   = [];
-        masteryState.examTimeLeft  = 2700;
+        masteryState.examTimeLeft  = 3600; // 60 min for 30 questions
         startExamTimer();
         renderExam();
     } catch(e) {
@@ -1292,7 +1292,7 @@ function selectExamOption(qi, oi) {
     }
 }
 
-function submitExam() {
+async function submitExam() {
     if (masteryState.examTimerInterval) clearInterval(masteryState.examTimerInterval);
     const questions = masteryState.examQuestions;
     const answers   = masteryState.examAnswers;
@@ -1314,11 +1314,11 @@ function submitExam() {
     document.getElementById('result-pct').style.color = passed ? 'var(--green)' : 'var(--accent)';
     document.getElementById('result-title').textContent = passed ? '🎓 Course Mastered!' : '😅 Almost There!';
     document.getElementById('result-sub').textContent = passed
-        ? `You scored ${score}% on the final exam. You've earned your Mastery Certificate!`
-        : `You scored ${score}% on the final exam. A score of 70% or above is needed to pass.`;
+        ? `You scored ${score}% (${correct}/${questions.length}) — You've earned your Mastery Certificate!`
+        : `You scored ${score}% (${correct}/${questions.length}) — A score of 70% or above is needed to pass.`;
 
     document.getElementById('result-actions').innerHTML = passed
-        ? `<button class="btn btn-mastery" onclick="downloadCertificate()"><i class="fas fa-certificate"></i> Get Certificate</button>
+        ? `<button class="btn btn-mastery" id="cert-btn" onclick="downloadCertificate(${score})"><i class="fas fa-certificate"></i> Send Certificate to Email</button>
            <button class="btn btn-ghost" onclick="showScreen('roadmap')"><i class="fas fa-home"></i> Roadmap</button>`
         : `<button class="btn btn-ghost" onclick="startFinalExam()"><i class="fas fa-rotate-right"></i> Retry Exam</button>
            <button class="btn btn-mastery" onclick="showScreen('roadmap')"><i class="fas fa-book-open"></i> Review Sections</button>`;
@@ -1326,12 +1326,34 @@ function submitExam() {
     if (passed) {
         const xpGained = 200 + Math.round(score * 2);
         masteryState.xp += xpGained;
+        // Mark all sections completed in saved progress
+        masteryState.sections.forEach(s => { if (s.status !== 'completed') s.status = 'completed'; });
+        saveProgress();
         setTimeout(() => showAchievement('🎓', 'Course Mastered!', `Final Exam: ${score}% · Certificate Earned`, `+${xpGained} XP`), 800);
     }
 }
 
-function downloadCertificate() {
-    alert('🎓 Your Mastery Certificate is being generated! Check your email.');
+async function downloadCertificate(score) {
+    const btn = document.getElementById('cert-btn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending…'; }
+    try {
+        const res = await fetch('/mastery/send-certificate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ course_title: masteryState.courseTitle, score: score })
+        });
+        const data = await res.json();
+        if (data.success) {
+            if (btn) { btn.innerHTML = '<i class="fas fa-check"></i> Certificate Sent!'; }
+            alert('🎓 Your Mastery Certificate has been sent to your email! Check your inbox.');
+        } else {
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-certificate"></i> Send Certificate to Email'; }
+            alert('Could not send certificate: ' + (data.error || 'Unknown error'));
+        }
+    } catch(e) {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-certificate"></i> Send Certificate to Email'; }
+        alert('Network error. Please try again.');
+    }
 }
 
 // ══ Utility ═══════════════════════════════════════════════════════════

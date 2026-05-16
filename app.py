@@ -4705,7 +4705,108 @@ Return ONLY the HTML, no surrounding tags, no markdown."""
     except Exception as e:
         logger.error(f'mastery_explain error: {e}', exc_info=True)
         return jsonify({'success': False, 'error': str(e)}), 500
+@app.route('/mastery/final-exam', methods=['POST'])
+def mastery_final_exam():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+    token_check = require_tokens('mastery_quiz', 3)
+    if token_check: return jsonify({'success': False, 'error': token_check['error']}), token_check['code']
+    data    = request.json or {}
+    title   = data.get('course_title', '')
+    content = data.get('content', '')
 
+    try:
+        prompt = f"""You are a strict university-level exam setter creating a FINAL EXAM for a course called "{title}".
+
+Course Content:
+{content[:6000]}
+
+Generate exactly 30 challenging multiple-choice questions for the FINAL EXAM.
+
+STRICT RULES:
+- 10% easy, 30% medium, 40% hard, 20% very hard (tricky, multi-step, requires deep understanding)
+- For any topic involving numbers, formulas, or calculations: write CALCULATION questions where the student must work out the answer — do NOT just ask for definitions
+- Use negatives e.g. "Which of the following is NOT correct..."
+- Include questions that require combining knowledge from multiple topics
+- All 4 options must be highly plausible — wrong answers should be common mistakes, not obviously wrong
+- Never repeat similar questions
+- correct_index is 0-based (0=A, 1=B, 2=C, 3=D)
+
+Return ONLY valid JSON (no markdown, no extra text):
+{{
+  "questions": [
+    {{
+      "question": "Full question text (include numbers/values for calculation questions)",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correct_index": 0,
+      "explanation": "Step-by-step explanation of why this is correct and others are wrong"
+    }}
+  ]
+}}"""
+
+        response = model.generate_content(prompt)
+        text = response.text.strip().replace('```json', '').replace('```', '').strip()
+        s = text.find('{'); e = text.rfind('}') + 1
+        if s == -1 or e <= s:
+            raise ValueError('No JSON in AI response')
+        result = json.loads(text[s:e])
+        questions = result.get('questions', [])
+        if not questions:
+            raise ValueError('No questions generated')
+        deduct_token(session['user_id'], 'mastery_quiz', 3)
+        return jsonify({'success': True, 'questions': questions})
+    except Exception as e:
+        logger.error(f'mastery_final_exam error: {e}', exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/mastery/send-certificate', methods=['POST'])
+def mastery_send_certificate():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+    data       = request.json or {}
+    course     = data.get('course_title', 'Unknown Course')
+    score      = data.get('score', 0)
+    user       = User.query.get(session['user_id'])
+    if not user:
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+
+    # Mark course as completed in MasteryProgress
+    try:
+        prog = MasteryProgress.query.filter_by(user_id=user.id).first()
+        if prog:
+            prog.course_completed = True
+            prog.exam_score       = score
+            prog.updated_at       = datetime.utcnow()
+            db.session.commit()
+    except Exception as save_err:
+        logger.warning(f'Could not save completion flag: {save_err}')
+
+    # Send certificate email
+    try:
+        from datetime import date
+        cert_date = date.today().strftime('%B %d, %Y')
+        body = (
+            f"🎓 Congratulations {user.name}!\n\n"
+            f"You have successfully completed the Brainspark Mastery Course:\n\n"
+            f"    Course : {course}\n"
+            f"    Score  : {score}%\n"
+            f"    Date   : {cert_date}\n\n"
+            f"This certifies that you have demonstrated mastery of the above subject "
+            f"by passing the final examination with a score of {score}%.\n\n"
+            f"Well done! Keep learning and growing with Brainspark.\n\n"
+            f"— The Brainspark Team\n"
+            f"https://brainspark-l5re.onrender.com"
+        )
+        send_email_brevo(
+            user.email, user.name,
+            f'🎓 Your Mastery Certificate — {course}',
+            body
+        )
+        return jsonify({'success': True, 'message': f'Certificate sent to {user.email}!'})
+    except Exception as e:
+        logger.error(f'mastery_send_certificate error: {e}', exc_info=True)
+        return jsonify({'success': False, 'error': f'Could not send email: {str(e)[:200]}'}), 500
 
 @app.route('/mastery/generate-quiz', methods=['POST'])
 def mastery_generate_quiz():
