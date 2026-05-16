@@ -135,6 +135,8 @@ class UserTag(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     tag = db.Column(db.String(100), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    message_type = db.Column(db.String(20), default='text')
+    voice_path   = db.Column(db.String(255), nullable=True)
 
     __table_args__ = (db.UniqueConstraint('user_id', 'tag', name='unique_user_tag'),)
 
@@ -143,13 +145,15 @@ class UserTag(db.Model):
 
 
 class Message(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    content = db.Column(db.Text, nullable=False)
-    image_path = db.Column(db.String(500), nullable=True)
-    is_read = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    id           = db.Column(db.Integer, primary_key=True)
+    sender_id    = db.Column(db.Integer, db.ForeignKey('user.id'))
+    receiver_id  = db.Column(db.Integer, db.ForeignKey('user.id'))
+    content      = db.Column(db.Text)
+    image_path   = db.Column(db.String(255))
+    message_type = db.Column(db.String(20), default='text')
+    voice_path   = db.Column(db.String(255), nullable=True)
+    is_read      = db.Column(db.Boolean, default=False)
+    created_at   = db.Column(db.DateTime, default=datetime.utcnow)
 
     def __repr__(self):
         return f'<Message from {self.sender.username} to {self.receiver.username}>'
