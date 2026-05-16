@@ -4292,9 +4292,9 @@ def generate_payment_ref():
         'RIDGE','FROST','PRIME','DELTA','SIGMA','ALPHA','ZETA','ECHO','ZENITH',
         'VENOM','TIGER','OCEAN','NIGHT','LIGHT','EMBER','PRISM','QUARTZ'
     ]
-    words = random.sample(WORD_LIST, 3)
+    words = random.sample(WORD_LIST, 2)
     digits = ''.join(random.choices(_string.digits, k=5))
-    ref = '-'.join(words) + '-' + digits   # e.g. SPARK-NOVA-BOLT-38271
+    ref = '-'.join(words) + '-' + digits   # e.g. SPARK-NOVA-38271
 
     api_budget   = amount * (1 - PROFIT_PERCENT)
     profit_taken = amount * PROFIT_PERCENT
