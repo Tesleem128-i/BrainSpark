@@ -551,6 +551,13 @@ body.loading { overflow: hidden; }
                         <div style="flex:1;min-width:0;"><div id="wa-img-filename" style="font-size:.8rem;font-weight:600;color:var(--ink);"></div><div style="font-size:.73rem;color:var(--muted);">Image ready to send</div></div>
                         <button onclick="clearWAImage()" style="background:none;border:none;cursor:pointer;color:var(--accent);"><i class="fas fa-times-circle"></i></button>
                     </div>
+                    <div id="dm-voice-recorder-ui" style="display:none;padding:10px 16px;border-top:1px solid var(--border);background:var(--surface2);align-items:center;gap:12px;" class="voice-recorder-ui">
+                        <div class="voice-rec-dot"></div>
+                        <span class="voice-rec-time" id="dm-rec-time">0:00</span>
+                        <div class="voice-waveform" id="dm-waveform"></div>
+                        <button onclick="cancelDMVoice()" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:1.1rem;" title="Cancel"><i class="fas fa-times"></i></button>
+                        <button onclick="stopAndSendDMVoice()" class="btn btn-green btn-sm" style="border-radius:20px;padding:6px 14px;"><i class="fas fa-paper-plane"></i> Send</button>
+                    </div>
                     <div class="wa-input-bar">
                         <button onclick="document.getElementById('wa-file-input').click()" class="wa-input-icon-btn"><i class="fas fa-paperclip"></i></button>
                         <input type="file" id="wa-file-input" accept="image/*" style="display:none;" onchange="handleWAImageSelect(event)">
@@ -558,6 +565,7 @@ body.loading { overflow: hidden; }
                             <textarea id="message-input" class="wa-textarea" placeholder="Type a message…" rows="1" oninput="autoResizeTA(this)" onkeydown="handleDMKeydown(event)"></textarea>
                             <button onclick="toggleEmojiPicker('dm-emoji-panel','message-input')" class="wa-emoji-btn"><i class="far fa-smile"></i></button>
                         </div>
+                        <button id="dm-voice-btn" onclick="toggleDMVoice()" class="wa-input-icon-btn" style="color:var(--green);" title="Voice note"><i class="fas fa-microphone"></i></button>
                         <button onclick="sendMessage()" class="wa-send-btn"><i class="fas fa-paper-plane"></i></button>
                     </div>
                     <div id="dm-emoji-panel" style="display:none;padding:12px 16px;border-top:1px solid var(--border);background:var(--surface2);flex-wrap:wrap;gap:6px;"></div>
