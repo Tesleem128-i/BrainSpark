@@ -3012,36 +3012,120 @@ function showStarredMessages(){
 }
 
 // ═══════════════════════════════════════════════════════════
-//  TYPING INDICATOR (DM)
+//  TYPING INDICATOR (DM) — real server-side
 // ═══════════════════════════════════════════════════════════
-let _typingTimer=null;
+let _typingTimer=null, _typingPollInterval=null;
+
+function _showTypingBubble(){
+    const area=document.getElementById('chat-messages');
+    if(area.querySelector('.typing-indicator')) return;
+    const indicator=document.createElement('div');
+    indicator.className='wa-msg-row received typing-indicator';
+    indicator.innerHTML=`<div class="wa-bubble" style="padding:8px 14px;"><div style="display:flex;gap:4px;align-items:center;"><span style="width:7px;height:7px;border-radius:50%;background:var(--muted);animation:typeDot .8s ease-in-out infinite;"></span><span style="width:7px;height:7px;border-radius:50%;background:var(--muted);animation:typeDot .8s .15s ease-in-out infinite;"></span><span style="width:7px;height:7px;border-radius:50%;background:var(--muted);animation:typeDot .8s .3s ease-in-out infinite;"></span></div></div>`;
+    area.appendChild(indicator);
+    scrollToBottom('chat-messages');
+}
+function _hideTypingBubble(){
+    document.getElementById('chat-messages')?.querySelector('.typing-indicator')?.remove();
+}
+function _startTypingPoll(){
+    if(_typingPollInterval) return;
+    _typingPollInterval=setInterval(async()=>{
+        if(!waCurrentUserId) return;
+        try{
+            const res=await fetch(`/api/typing/${waCurrentUserId}`);
+            const data=await res.json();
+            if(data.typing) _showTypingBubble(); else _hideTypingBubble();
+        }catch{}
+    },2000);
+}
+function _stopTypingPoll(){
+    clearInterval(_typingPollInterval);
+    _typingPollInterval=null;
+    _hideTypingBubble();
+}
+
 document.addEventListener('DOMContentLoaded',()=>{
     const dmInput=document.getElementById('message-input');
     if(dmInput){
         dmInput.addEventListener('input',()=>{
-            // Show local typing bubble (visual only — no server call needed)
-            const area=document.getElementById('chat-messages');
-            let indicator=area.querySelector('.typing-indicator');
-            if(!indicator){indicator=document.createElement('div');indicator.className='wa-msg-row received typing-indicator';indicator.innerHTML=`<div class="wa-bubble" style="padding:8px 14px;"><div style="display:flex;gap:4px;align-items:center;"><span style="width:7px;height:7px;border-radius:50%;background:var(--muted);animation:typeDot .8s ease-in-out infinite;"></span><span style="width:7px;height:7px;border-radius:50%;background:var(--muted);animation:typeDot .8s .15s ease-in-out infinite;"></span><span style="width:7px;height:7px;border-radius:50%;background:var(--muted);animation:typeDot .8s .3s ease-in-out infinite;"></span></div></div>`;area.appendChild(indicator);scrollToBottom('chat-messages');}
-            clearTimeout(_typingTimer);
-            _typingTimer=setTimeout(()=>{indicator?.remove();},1500);
+            // Tell server YOU are typing (the other person will poll this)
+            if(waCurrentUserId){
+                fetch('/api/typing',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({receiver_id:waCurrentUserId})}).catch(()=>{});
+            }
         });
     }
     // Load backgrounds on DM open
     const origOpenDMChat=openDMChat;
     window.openDMChat=async function(userId,name,pic,username){
+        _stopTypingPoll();
         await origOpenDMChat(userId,name,pic,username);
         _bgTarget='dm';
         _loadSavedBg();
+        _startTypingPoll();   // start polling if the OTHER person is typing
     };
     // Patch selectGCGroup to load group pic and bg
     const origSelectGCGroup=selectGCGroup;
     window.selectGCGroup=async function(groupId,groupName,isAdmin,creatorId,desc,element){
+        _stopTypingPoll();
         await origSelectGCGroup(groupId,groupName,isAdmin,creatorId,desc,element);
         _loadGroupPic();
         _loadGCBg();
     };
 });
+
+// ═══════════════════════════════════════════════════════════
+//  DM VOICE NOTES
+// ═══════════════════════════════════════════════════════════
+let _dmMediaRecorder=null,_dmAudioChunks=[],_dmRecTimer=null,_dmRecSeconds=0;
+
+async function toggleDMVoice(){
+    if(_dmMediaRecorder&&_dmMediaRecorder.state==='recording'){stopAndSendDMVoice();return;}
+    try{
+        const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+        _dmAudioChunks=[];_dmRecSeconds=0;
+        _dmMediaRecorder=new MediaRecorder(stream);
+        _dmMediaRecorder.ondataavailable=e=>_dmAudioChunks.push(e.data);
+        _dmMediaRecorder.start();
+        document.getElementById('dm-voice-recorder-ui').style.display='flex';
+        document.getElementById('dm-voice-btn').style.color='#e03030';
+        const wf=document.getElementById('dm-waveform');
+        wf.innerHTML='';
+        for(let i=0;i<18;i++){const b=document.createElement('div');b.className='voice-bar';b.style.animationDelay=(i*0.05)+'s';b.style.animationDuration=(0.3+Math.random()*0.4)+'s';wf.appendChild(b);}
+        _dmRecTimer=setInterval(()=>{_dmRecSeconds++;const mn=Math.floor(_dmRecSeconds/60),s=_dmRecSeconds%60;document.getElementById('dm-rec-time').textContent=`${mn}:${s<10?'0':''}${s}`;},1000);
+    }catch{showToast('Microphone access denied','error');}
+}
+
+async function stopAndSendDMVoice(){
+    if(!_dmMediaRecorder)return;
+    clearInterval(_dmRecTimer);
+    _dmMediaRecorder.stop();
+    _dmMediaRecorder.onstop=async()=>{
+        const blob=new Blob(_dmAudioChunks,{type:'audio/webm'});
+        const fd=new FormData();
+        fd.append('receiver_id',waCurrentUserId);
+        fd.append('voice',blob,'dm_voice.webm');
+        try{
+            const data=await fetch('/api/send-dm-voice',{method:'POST',body:fd}).then(r=>r.json());
+            if(data.success){loadDMMessages(waCurrentUserId);}
+            else showToast('❌ Voice send failed','error');
+        }catch{showToast('❌ Network error','error');}
+        _dmMediaRecorder.stream.getTracks().forEach(t=>t.stop());
+        _dmMediaRecorder=null;
+    };
+    document.getElementById('dm-voice-recorder-ui').style.display='none';
+    document.getElementById('dm-voice-btn').style.color='var(--green)';
+}
+
+function cancelDMVoice(){
+    if(!_dmMediaRecorder)return;
+    clearInterval(_dmRecTimer);
+    _dmMediaRecorder.stop();
+    _dmMediaRecorder.stream.getTracks().forEach(t=>t.stop());
+    _dmMediaRecorder=null;
+    document.getElementById('dm-voice-recorder-ui').style.display='none';
+    document.getElementById('dm-voice-btn').style.color='var(--green)';
+}
 
 </script>
 <style>

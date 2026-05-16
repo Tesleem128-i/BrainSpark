@@ -1158,6 +1158,67 @@ def send_message_api():
         return jsonify({'error': str(e)}), 500
 
 
+# ── Typing indicator ─────────────────────────────────────────────────────
+_typing_status = {}   # {(sender_id, receiver_id): timestamp}
+
+@app.route('/api/typing', methods=['POST'])
+def set_typing():
+    if 'user_id' not in session:
+        return jsonify({'ok': False}), 401
+    data        = request.json or {}
+    receiver_id = int(data.get('receiver_id', 0))
+    import time
+    _typing_status[(session['user_id'], receiver_id)] = time.time()
+    return jsonify({'ok': True})
+
+@app.route('/api/typing/<int:buddy_id>')
+def get_typing(buddy_id):
+    if 'user_id' not in session:
+        return jsonify({'typing': False}), 401
+    import time
+    key = (buddy_id, session['user_id'])
+    ts  = _typing_status.get(key, 0)
+    typing = (time.time() - ts) < 3   # typing if pinged within last 3 seconds
+    return jsonify({'typing': typing})
+
+
+# ── DM voice note ────────────────────────────────────────────────────────
+@app.route('/api/send-dm-voice', methods=['POST'])
+def send_dm_voice():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    sender_id   = session['user_id']
+    receiver_id = request.form.get('receiver_id')
+    if not receiver_id:
+        return jsonify({'error': 'Missing receiver'}), 400
+    receiver_id = int(receiver_id)
+    is_connected = Connection.query.filter(
+        ((Connection.user_id == sender_id) & (Connection.connected_user_id == receiver_id)) |
+        ((Connection.user_id == receiver_id) & (Connection.connected_user_id == sender_id))
+    ).first()
+    if not is_connected:
+        return jsonify({'error': 'Not connected'}), 403
+    if 'voice' not in request.files:
+        return jsonify({'error': 'No audio file'}), 400
+    try:
+        f         = request.files['voice']
+        voice_url = save_file_to_db(f, 'voice')
+        msg       = Message(
+            sender_id=sender_id, receiver_id=receiver_id,
+            content='🎙️ Voice note', image_path=voice_url
+        )
+        db.session.add(msg)
+        db.session.flush()
+        sender = User.query.get(sender_id)
+        _create_notification(receiver_id, 'message', f'Voice note from {sender.name}',
+                             '🎙️ Voice note', 'dm', sender_id)
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/get-messages/<int:buddy_id>')
 def get_messages(buddy_id):
     if 'user_id' not in session:
@@ -1172,10 +1233,16 @@ def get_messages(buddy_id):
     ).update({Message.is_read: True})
     db.session.commit()
     return jsonify({'success': True, 'current_user_id': user_id, 'messages': [{
-        'id': m.id, 'sender_id': m.sender_id, 'sender_name': m.sender.name,
-        'receiver_id': m.receiver_id, 'content': m.content,
-        'image_url': f'/api/file/{m.image_path}' if getattr(m, 'image_path', None) else None,
-        'is_read': m.is_read, 'created_at': m.created_at.isoformat()
+        'id':           m.id,
+        'sender_id':    m.sender_id,
+        'sender_name':  m.sender.name,
+        'receiver_id':  m.receiver_id,
+        'content':      m.content,
+        'message_type': getattr(m, 'message_type', 'text') or 'text',
+        'image_url':    f'/api/file/{m.image_path}' if getattr(m, 'image_path', None) else None,
+        'voice_url':    f'/api/file/{m.voice_path}' if getattr(m, 'voice_path', None) else None,
+        'is_read':      m.is_read,
+        'created_at':   m.created_at.isoformat()
     } for m in messages]})
 
 
