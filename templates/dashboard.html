@@ -493,10 +493,10 @@
     <button class="sidebar-link active" onclick="scrollTo('top')" title="Go to your dashboard overview"><i class="fas fa-house"></i> Dashboard</button>
 
     <div class="sidebar-label">Study Tools</div>
-    <button class="sidebar-link" onclick="window.location.href='/mastery'" title="Work through your notes section by section and earn a certificate" style="background:rgba(99,102,241,0.08);color:#818cf8;border:1px solid rgba(99,102,241,0.2);border-radius:8px;margin-bottom:4px;">
+    <button class="sidebar-link" onclick="window.location.href='/mastery'" title="Work through your notes section by section and earn a certificate">
         <i class="fas fa-brain"></i>
         <span style="flex:1;">Deep Learning</span>
-        <span style="font-size:0.65rem;background:rgba(99,102,241,0.2);color:#818cf8;padding:0.15rem 0.45rem;border-radius:50px;font-weight:700;">NEW</span>
+        <span style="font-size:0.65rem;background:rgba(255,79,48,0.15);color:var(--accent);padding:0.15rem 0.45rem;border-radius:50px;font-weight:700;">NEW</span>
     </button>
     <button class="sidebar-link" onclick="openAIModal()" title="Chat with your AI tutor — ask questions, get explanations, upload files"><i class="fas fa-robot"></i> AI Tutor</button>
     <button class="sidebar-link" onclick="window.location.href='/similar-questions'" title="Upload a past exam PDF and get a brand-new paper in the same style"><i class="fas fa-wand-magic-sparkles"></i> Exam Generator</button>
@@ -505,17 +505,17 @@
     <button class="sidebar-link" onclick="findStudyBuddies()" title="Find students at your school or in your country to study with"><i class="fas fa-users"></i> Network</button>
 
     <div class="sidebar-label">Credits</div>
-    <button class="sidebar-link" onclick="window.location.href='/tokens'" title="Spark Tokens power AI features — view your balance or top up" style="background:rgba(168,85,247,0.08);color:#c084fc;border:1px solid rgba(168,85,247,0.2);border-radius:8px;margin-bottom:4px;">
+    <button class="sidebar-link" onclick="window.location.href='/tokens'" title="Spark Tokens power AI features — view your balance or top up">
         <i class="fas fa-bolt"></i>
         <span style="flex:1;">Spark Tokens</span>
-        <span id="token-count" style="font-family:'Syne',sans-serif;font-weight:700;font-size:.8rem;color:#a855f7;">—</span>
+        <span id="token-count" style="font-family:'Syne',sans-serif;font-weight:700;font-size:.8rem;color:var(--accent);">—</span>
     </button>
     <div id="admin-sidebar-item" style="display:none;">
         <div class="sidebar-label">Admin</div>
-        <button class="sidebar-link" onclick="window.location.href='/admin'" style="color:var(--accent);"><i class="fas fa-shield-alt"></i> Admin Panel</button>
+        <button class="sidebar-link" onclick="window.location.href='/admin'"><i class="fas fa-shield-alt"></i> Admin Panel</button>
     </div>
     <div id="maintenance-sidebar-section" style="display:none;">
-    <div style="background:rgba(255,79,48,0.1);border:1px solid rgba(255,79,48,0.3);border-radius:10px;padding:1rem;margin:0.5rem 0;">
+    <div style="background:rgba(255,79,48,0.08);border:1px solid rgba(255,79,48,0.2);border-radius:10px;padding:1rem;margin:0.5rem 0;">
         <div style="font-size:0.78rem;font-weight:700;color:var(--accent);margin-bottom:0.6rem;">🔧 Maintenance Mode</div>
         <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;">
             <input type="checkbox" id="maintenanceToggle" onchange="toggleMaintenance(this.checked)"
@@ -527,7 +527,7 @@
     <div style="flex:1"></div>
     <div class="sidebar-label">Account</div>
     <button class="sidebar-link" onclick="window.location.href='/settings'" title="Update your profile, password and preferences"><i class="fas fa-gear"></i> Settings</button>
-    <button class="sidebar-link" onclick="logout()" style="color:#ff4f30" title="Sign out of your account"><i class="fas fa-sign-out-alt"></i> Sign Out</button>
+    <button class="sidebar-link" onclick="logout()" title="Sign out of your account"><i class="fas fa-sign-out-alt"></i> Sign Out</button>
 
 </div>
 
