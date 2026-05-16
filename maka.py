@@ -9,35 +9,23 @@ db_url = os.getenv('DATABASE_URL') or os.getenv('DATABASE_UR')
 if db_url.startswith('postgres://'):
     db_url = db_url.replace('postgres://', 'postgresql://', 1)
 
-if '?' in db_url:
-    db_url = db_url.split('?')[0]
-
-conn = psycopg2.connect(db_url, sslmode='require')
+conn = psycopg2.connect(db_url)
+conn.autocommit = True
 cur = conn.cursor()
 
-# Check token_transaction columns
-cur.execute("""
-    SELECT column_name, data_type 
-    FROM information_schema.columns 
-    WHERE table_name = 'token_transaction' 
-    ORDER BY ordinal_position
-""")
-rows = cur.fetchall()
-print("=== token_transaction columns ===")
-for row in rows:
-    print(f"  {row[0]:30s} {row[1]}")
+migrations = [
+    "ALTER TABLE message ADD COLUMN IF NOT EXISTS message_type VARCHAR(20) DEFAULT 'text'",
+    "ALTER TABLE message ADD COLUMN IF NOT EXISTS voice_path VARCHAR(255)",
+    "ALTER TABLE message ADD COLUMN IF NOT EXISTS pdf_path VARCHAR(255)",
+]
 
-# Check group_file table exists
-cur.execute("""
-    SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_name = 'group_file'
-    )
-""")
-print(f"\ngroup_file table exists: {cur.fetchone()[0]}")
-
-# Check uploads/receipts folder path
-print(f"\nuploads/receipts exists on disk: {os.path.exists('uploads/receipts')}")
+for sql in migrations:
+    try:
+        cur.execute(sql)
+        print(f"✅ Done: {sql[:70]}...")
+    except Exception as e:
+        print(f"⚠️ Skipped: {e}")
 
 cur.close()
 conn.close()
+print("\n✅ All done!")

@@ -1216,6 +1216,7 @@ def send_dm_voice():
         return jsonify({'success': True})
     except Exception as e:
         db.session.rollback()
+        logger.error(f'send_dm_voice error: {e}', exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 
@@ -4823,7 +4824,7 @@ Write an exhaustive, deeply engaging explanation in HTML. Rules:
 - Wrap every example like this: <span class="example-box"><strong>Example:</strong> full worked example with every step shown</span>
 - For any formula or equation use: <code>formula here</code>
 - For calculations: show every step — don't skip any working. Format as numbered steps inside an example-box
-- After all concepts are explained, add a <span class="example-box"><strong>🔢 Practice Problem:</strong> pose a realistic problem the student should try, then show the full solution step by step</span>
+- After all concepts are explained, add a <span class="example-box"><strong>Practice Problem:</strong> pose a realistic problem the student should try, then show the full solution step by step</span>
 - End with a <p> that summarises the 3 most important takeaways from this section in a numbered list, then one encouraging sentence
 - Return ONLY valid HTML — no markdown, no surrounding tags, no backticks"""
 

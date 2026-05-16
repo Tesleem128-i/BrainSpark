@@ -3114,10 +3114,11 @@ async function stopAndSendDMVoice(){
         fd.append('receiver_id',waCurrentUserId);
         fd.append('voice',blob,'dm_voice.webm');
         try{
-            const data=await fetch('/api/send-dm-voice',{method:'POST',body:fd}).then(r=>r.json());
+            const raw=await fetch('/api/send-dm-voice',{method:'POST',body:fd});
+            const data=await raw.json();
             if(data.success){loadDMMessages(waCurrentUserId);}
-            else showToast('❌ Voice send failed','error');
-        }catch{showToast('❌ Network error','error');}
+            else showToast('❌ ' + (data.error||'Voice send failed'), 'error');
+        }catch(err){showToast('❌ Network error: '+err.message,'error');}
         _dmMediaRecorder.stream.getTracks().forEach(t=>t.stop());
         _dmMediaRecorder=null;
     };
