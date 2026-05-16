@@ -83,12 +83,24 @@ function toggleTheme() {
     fetch('/toggle_mode', { method: 'POST' });
 }
 
+function getModelAnswer(q) {
+    // Try every field name the backend might use
+    return q.model_answer || q.explanation || q.correct_answer || q.answer || null;
+}
+
 async function loadTheory() {
     try {
         const res = await fetch('/api/get-quiz-questions');
         const data = await res.json();
         if (!data.success || !data.questions || !data.questions.length) {
-            showError(data.error || 'No questions found.');
+            showError(data.error || 'No questions found. Please go back and generate a Written / Theory quiz first.');
+            return;
+        }
+        // Check this is actually theory data — if questions have A/B/C/D options it's the wrong type
+        const firstQ = data.questions[0];
+        const isObjective = Array.isArray(firstQ.options) && firstQ.options.length > 0;
+        if (isObjective) {
+            showError('These questions are Multiple Choice, not Written / Theory. Please go back to the dashboard and select the "Written / Theory" tab before uploading.');
             return;
         }
         renderQuestions(data.questions);
@@ -103,7 +115,7 @@ function showError(msg) {
             <div style="font-size:2rem;margin-bottom:1rem;">⚠️</div>
             <div style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;margin-bottom:.5rem;">Could not load questions</div>
             <div style="font-size:.85rem;color:var(--muted);margin-bottom:1.5rem;">${msg}</div>
-            <a href="/dashboard" class="btn btn-ghost">← Back to Dashboard</a>
+            <a href="/dashboard" class="btn btn-ghost" style="margin-top:.5rem;">← Back to Dashboard</a>
         </div>`;
 }
 
@@ -111,32 +123,56 @@ function renderQuestions(questions) {
     const wrap = document.getElementById('main-wrap');
     let html = `
         <div class="panel">
-            <div style="font-size:.7rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:.5rem;">Theory Paper</div>
+            <div style="font-size:.7rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:.5rem;">Written / Theory Paper</div>
             <div class="panel-title">Answer the Questions Below</div>
-            <div class="panel-sub">Write your answer in each box, then reveal the model answer to check yourself.</div>
+            <div class="panel-sub">${questions.length} question${questions.length !== 1 ? 's' : ''} · Write your answer in each box, then reveal the model answer to check yourself.</div>
             <div class="progress-bar"><div class="progress-fill" style="width:100%"></div></div>
         </div>`;
+
     questions.forEach((q, i) => {
         const marks = q.marks || 5;
+        const modelAnswer = getModelAnswer(q);
         html += `
         <div class="q-card">
             <div class="q-number">Question ${i + 1} of ${questions.length}</div>
             <div class="q-text">${q.question}</div>
-            <div class="q-marks">[${marks} marks]</div>
-            <textarea class="answer-area" placeholder="Write your answer here…"></textarea>
-            <button class="reveal-btn" onclick="toggleModelAnswer(this)">
-                <i class="fas fa-eye"></i> Reveal Model Answer
-            </button>
+            <div class="q-marks">[${marks} mark${marks !== 1 ? 's' : ''}]</div>
+            <div style="font-size:.75rem;color:var(--muted);margin-bottom:.5rem;font-weight:500;">Your Answer</div>
+            <textarea class="answer-area" placeholder="Write your answer here…" id="answer-${i}"></textarea>
+            <div style="display:flex;gap:.75rem;margin-top:.75rem;flex-wrap:wrap;align-items:center;">
+                <button class="reveal-btn" onclick="toggleModelAnswer(this)">
+                    <i class="fas fa-eye"></i> Reveal Model Answer
+                </button>
+                <button class="reveal-btn" onclick="clearAnswer(${i})" style="border-color:rgba(255,59,92,0.3);color:var(--muted);">
+                    <i class="fas fa-rotate-left"></i> Clear
+                </button>
+            </div>
             <div class="model-answer">
                 <div class="model-answer-label"><i class="fas fa-check-circle"></i> Model Answer</div>
-                ${q.model_answer || q.explanation || 'No model answer provided.'}
+                <div style="white-space:pre-wrap;">${modelAnswer || 'No model answer available for this question.'}</div>
             </div>
         </div>`;
     });
+
     html += `<div class="btn-row">
         <a href="/dashboard" class="btn btn-primary"><i class="fas fa-house"></i> Back to Dashboard</a>
+        <button class="btn btn-ghost" onclick="revealAll()"><i class="fas fa-eye"></i> Reveal All Answers</button>
     </div>`;
     wrap.innerHTML = html;
+}
+
+function clearAnswer(index) {
+    const ta = document.getElementById('answer-' + index);
+    if (ta) ta.value = '';
+}
+
+function revealAll() {
+    document.querySelectorAll('.model-answer').forEach(ma => ma.classList.add('open'));
+    document.querySelectorAll('.reveal-btn').forEach(btn => {
+        if (btn.innerHTML.includes('Reveal Model')) {
+            btn.innerHTML = '<i class="fas fa-eye-slash"></i> Hide Model Answer';
+        }
+    });
 }
 
 function toggleModelAnswer(btn) {
