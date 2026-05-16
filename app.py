@@ -644,6 +644,15 @@ def quiz():
     return render_template('quiz.html', theme=theme)
 
 
+@app.route('/theory')
+def theory():
+    if 'user_id' not in session:
+        flash('Please login first')
+        return redirect(url_for('index'))
+    theme = session.get('theme', 'light')
+    return render_template('theory.html', theme=theme)
+
+
 @app.route('/study-buddies')
 def study_buddies():
     if 'user_id' not in session:
@@ -724,7 +733,21 @@ def generate_questions():
         existing_rows = GeneratedQuestion.query.filter_by(user_id=session['user_id'], source_hash=pdf_source_hash).all()
         existing_question_texts = {str(r.question_text).strip().lower() for r in existing_rows if r.question_text}
 
-        if selected_topics == 'all' or not selected_topics:
+        if question_type == 'theory':
+            if selected_topics == 'all' or not selected_topics:
+                prompt = f"""Generate UNIQUE theory/essay questions for this text:
+{pdf_text[:3000]}
+**OUTPUT ONLY VALID JSON**:
+{{"questions": [{{"question": "...", "model_answer": "A detailed model answer here...", "marks": 5, "topic": "Topic name"}}]}}
+Rules: Generate EXACTLY {question_count} open-ended questions. Each must have a thorough model_answer. Difficulty: {hardness}. All unique."""
+            else:
+                topics_str = ', '.join(selected_topics) if isinstance(selected_topics, list) else str(selected_topics)
+                prompt = f"""Generate UNIQUE theory/essay questions from this text, focusing ONLY on: {topics_str}
+Text: {pdf_text[:3000]}
+**OUTPUT ONLY VALID JSON**:
+{{"questions": [{{"question": "...", "model_answer": "A detailed model answer here...", "marks": 5, "topic": "Topic name"}}]}}
+Rules: Generate EXACTLY {question_count} open-ended questions. Focus ONLY on: {topics_str}. Difficulty: {hardness}. All unique."""
+        elif selected_topics == 'all' or not selected_topics:
             prompt = f"""Generate UNIQUE questions for this text:
 {pdf_text[:3000]}
 **OUTPUT ONLY VALID JSON**:
@@ -768,7 +791,7 @@ Rules: Generate EXACTLY {question_count} questions. Focus ONLY on: {topics_str}.
 
         unique_new = unique_new[:question_count]
 
-        if len(unique_new) < 5:
+        if len(unique_new) < 1:
             return jsonify({'success': False, 'error': f'Could only generate {len(unique_new)} unique questions.'}), 400
 
         for q in unique_new:
@@ -777,8 +800,8 @@ Rules: Generate EXACTLY {question_count} questions. Focus ONLY on: {topics_str}.
                     user_id=session['user_id'],
                     question_text=q.get('question', ''),
                     options=json.dumps(q.get('options', [])),
-                    correct_answer=str(q.get('answer', '')),
-                    explanation=q.get('explanation', ''),
+                    correct_answer=str(q.get('answer', q.get('model_answer', ''))),
+                    explanation=q.get('explanation', q.get('model_answer', '')),
                     source_hash=pdf_source_hash,
                     difficulty=hardness,
                     question_type=question_type
@@ -787,10 +810,10 @@ Rules: Generate EXACTLY {question_count} questions. Focus ONLY on: {topics_str}.
                 continue
         db.session.commit()
 
-        session['quiz_questions'] = json.dumps({"questions": unique_new})
+        session['quiz_questions'] = json.dumps({"questions": unique_new, "question_type": question_type})
         session.modified = True
         deduct_token(session['user_id'], 'quiz_generation', 1)
-        return jsonify({'success': True, 'count': len(unique_new)})
+        return jsonify({'success': True, 'count': len(unique_new), 'question_type': question_type})
 
     except Exception as e:
         logger.error(f"Generate questions error: {str(e)}", exc_info=True)

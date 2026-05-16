@@ -367,24 +367,24 @@
 
 <!-- SIDEBAR -->
 <div class="sidebar" id="sidebar">
-    <div class="sidebar-label">Main</div>
-    <button class="sidebar-link" onclick="window.location.href='/dashboard'"><i class="fas fa-house"></i> Dashboard</button>
-    <div class="sidebar-label">Learn</div>
-    <button class="sidebar-link active"><i class="fas fa-brain"></i> Mastery Mode</button>
-    <button class="sidebar-link" onclick="openAIModal ? openAIModal() : window.location.href='/dashboard#ai'"><i class="fas fa-robot"></i> Ask AI</button>
-    <button class="sidebar-link" onclick="window.location.href='/similar-questions'"><i class="fas fa-copy"></i> Similar Questions</button>
-    <div class="sidebar-label">Connect</div>
-    <button class="sidebar-link" onclick="window.location.href='/study-buddies'"><i class="fas fa-users"></i> Study Buddies</button>
-    <div class="sidebar-label">Tokens</div>
-    <button class="sidebar-link" onclick="window.location.href='/tokens'" style="background:rgba(168,85,247,0.08);color:#c084fc;border:1px solid rgba(168,85,247,0.2);border-radius:8px;margin-bottom:4px;">
+    <div class="sidebar-label">Home</div>
+    <button class="sidebar-link" onclick="window.location.href='/dashboard'" title="Back to your main dashboard"><i class="fas fa-house"></i> Dashboard</button>
+    <div class="sidebar-label">Study Tools</div>
+    <button class="sidebar-link active" title="You are here — study section by section and earn a certificate"><i class="fas fa-brain"></i> Deep Learning</button>
+    <button class="sidebar-link" onclick="openAIModal ? openAIModal() : window.location.href='/dashboard#ai'" title="Ask your AI tutor anything"><i class="fas fa-robot"></i> AI Tutor</button>
+    <button class="sidebar-link" onclick="window.location.href='/similar-questions'" title="Upload a past exam and get a new paper in the same style"><i class="fas fa-wand-magic-sparkles"></i> Exam Generator</button>
+    <div class="sidebar-label">Community</div>
+    <button class="sidebar-link" onclick="window.location.href='/study-buddies'" title="Find students at your school or in your country"><i class="fas fa-users"></i> Network</button>
+    <div class="sidebar-label">Credits</div>
+    <button class="sidebar-link" onclick="window.location.href='/tokens'" title="Spark Tokens power AI features — view or top up" style="background:rgba(168,85,247,0.08);color:#c084fc;border:1px solid rgba(168,85,247,0.2);border-radius:8px;margin-bottom:4px;">
         <i class="fas fa-bolt"></i>
         <span style="flex:1;">Spark Tokens</span>
         <span id="token-count" style="font-family:'Syne',sans-serif;font-weight:700;font-size:.8rem;color:#a855f7;">—</span>
     </button>
     <div style="flex:1"></div>
     <div class="sidebar-label">Account</div>
-    <button class="sidebar-link" onclick="window.location.href='/settings'"><i class="fas fa-gear"></i> Settings</button>
-    <button class="sidebar-link" onclick="logout()" style="color:#ff4f30"><i class="fas fa-sign-out-alt"></i> Logout</button>
+    <button class="sidebar-link" onclick="window.location.href='/settings'" title="Update your profile and preferences"><i class="fas fa-gear"></i> Settings</button>
+    <button class="sidebar-link" onclick="logout()" style="color:#ff4f30" title="Sign out of your account"><i class="fas fa-sign-out-alt"></i> Sign Out</button>
 </div>
 
 <div class="page-wrap">

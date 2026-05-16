@@ -288,14 +288,16 @@ body.loading { overflow: hidden; }
 
 <!-- SIDEBAR -->
 <div class="sidebar">
-    <div class="sidebar-label">Navigate</div>
-    <button class="sidebar-link" onclick="window.location.href='/dashboard'"><i class="fas fa-house"></i> Dashboard</button>
-    <button class="sidebar-link active"><i class="fas fa-copy"></i> Similar Questions</button>
-    
-    <button class="sidebar-link" onclick="window.location.href='/study-buddies'"><i class="fas fa-users"></i> Study Buddies</button>
+    <div class="sidebar-label">Home</div>
+    <button class="sidebar-link" onclick="window.location.href='/dashboard'" title="Back to your main dashboard"><i class="fas fa-house"></i> Dashboard</button>
+    <div class="sidebar-label">Study Tools</div>
+    <button class="sidebar-link active" title="You are here — generate a new exam paper from your past papers"><i class="fas fa-wand-magic-sparkles"></i> Exam Generator</button>
+    <button class="sidebar-link" onclick="window.location.href='/mastery'" title="Study your notes section by section and earn a certificate"><i class="fas fa-brain"></i> Deep Learning</button>
+    <div class="sidebar-label">Community</div>
+    <button class="sidebar-link" onclick="window.location.href='/study-buddies'" title="Find students at your school or in your country to study with"><i class="fas fa-users"></i> Network</button>
     <div style="flex:1"></div>
     <div class="sidebar-label">Account</div>
-    <button class="sidebar-link" onclick="window.location.href='/settings'"><i class="fas fa-gear"></i> Settings</button>
+    <button class="sidebar-link" onclick="window.location.href='/settings'" title="Update your profile and preferences"><i class="fas fa-gear"></i> Settings</button>
 </div>
 
 <!-- MAIN -->

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theory – Brainspark</title>
+    <link rel="icon" type="image/png" href="/static/image/KNOWITNOW.png">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <style>
+        :root{--ink:#f0efe8;--ink2:#c8c6bc;--surface:#0a0a14;--surface2:#0d0d1a;--surface3:#13131f;--card:rgba(255,255,255,0.04);--card-border:rgba(255,255,255,0.08);--muted:#5a5a70;--accent:#ff4f30;--accent2:#ff8c5a;--gold:#f5c842;--blue:#3b6bff;--green:#00c98d;--red:#ff3b5c;--radius:16px;--radius-sm:10px;--transition:0.4s cubic-bezier(0.16,1,0.3,1);}
+        [data-theme="light"]{--ink:#0a0a14;--ink2:#1c1c2e;--surface:#f0efe8;--surface2:#fff;--surface3:#e8e7e0;--card:rgba(0,0,0,0.03);--card-border:rgba(0,0,0,0.07);--muted:#7a7a8c;}
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+        body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink);min-height:100vh;overflow-x:hidden;transition:background .4s,color .4s;}
+        a{text-decoration:none;color:inherit;}
+        nav{position:fixed;top:0;left:0;right:0;z-index:100;height:64px;padding:0 2.5rem;display:flex;align-items:center;justify-content:space-between;background:rgba(10,10,20,0.8);backdrop-filter:blur(20px);border-bottom:1px solid var(--card-border);}
+        [data-theme="light"] nav{background:rgba(240,239,232,0.88);}
+        .nav-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.35rem;background:linear-gradient(135deg,#ff4f30,#ff8c5a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+        .nav-right{display:flex;align-items:center;gap:0.75rem;}
+        .icon-btn{width:36px;height:36px;border-radius:9px;border:1px solid var(--card-border);background:var(--card);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);font-size:0.875rem;transition:all .2s;}
+        .icon-btn:hover{border-color:var(--accent);color:var(--accent);}
+        .exit-btn{padding:.45rem 1.15rem;border-radius:50px;border:1.5px solid var(--card-border);background:transparent;color:var(--ink);font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:500;cursor:pointer;transition:all .2s;}
+        .exit-btn:hover{border-color:var(--accent);color:var(--accent);}
+        .page{padding-top:64px;min-height:100vh;}
+        .wrap{max-width:780px;margin:0 auto;padding:2.5rem 1.5rem;}
+        .panel{background:var(--card);border:1px solid var(--card-border);border-radius:24px;padding:2.5rem;backdrop-filter:blur(10px);position:relative;overflow:hidden;margin-bottom:1.5rem;}
+        .panel::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,79,48,0.4),transparent);}
+        .panel-title{font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:800;letter-spacing:-.02em;margin-bottom:.4rem;}
+        .panel-sub{font-size:.9rem;color:var(--muted);margin-bottom:1.5rem;}
+        .q-card{background:var(--card);border:1px solid var(--card-border);border-radius:var(--radius);padding:1.75rem;margin-bottom:1.25rem;}
+        .q-number{font-size:.72rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:.6rem;}
+        .q-text{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;line-height:1.5;margin-bottom:1rem;}
+        .q-marks{font-size:.78rem;color:var(--gold);font-weight:600;margin-bottom:1rem;}
+        .answer-area{width:100%;min-height:120px;padding:0.9rem 1rem;border-radius:var(--radius-sm);border:1.5px solid var(--card-border);background:rgba(255,255,255,0.02);color:var(--ink);font-family:'DM Sans',sans-serif;font-size:.9rem;resize:vertical;outline:none;transition:border-color .2s;}
+        .answer-area:focus{border-color:var(--accent);}
+        .reveal-btn{margin-top:.75rem;padding:.55rem 1.2rem;border-radius:50px;border:1.5px solid var(--card-border);background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .2s;}
+        .reveal-btn:hover{border-color:var(--blue);color:var(--blue);}
+        .model-answer{display:none;margin-top:1rem;padding:1rem;border-radius:var(--radius-sm);background:rgba(0,201,141,0.06);border:1px solid rgba(0,201,141,0.2);font-size:.88rem;line-height:1.6;color:var(--ink);}
+        .model-answer.open{display:block;}
+        .model-answer-label{font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--green);margin-bottom:.5rem;}
+        .btn{display:inline-flex;align-items:center;gap:.5rem;padding:.75rem 1.75rem;border-radius:50px;border:none;font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:600;cursor:pointer;transition:all var(--transition);}
+        .btn-primary{background:var(--accent);color:#fff;box-shadow:0 4px 20px rgba(255,79,48,.35);}
+        .btn-primary:hover{background:var(--accent2);transform:translateY(-1px);}
+        .btn-ghost{background:var(--card);color:var(--ink);border:1px solid var(--card-border);}
+        .btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
+        .btn-row{display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;margin-top:2rem;}
+        .spinner{width:56px;height:56px;border-radius:50%;border:3px solid rgba(255,79,48,.15);border-top-color:var(--accent);animation:spin .9s linear infinite;margin:0 auto 1.5rem;}
+        @keyframes spin{to{transform:rotate(360deg);}}
+        .empty{text-align:center;padding:4rem 2rem;}
+        .progress-bar{width:100%;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;margin-bottom:2rem;}
+        .progress-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .4s ease;}
+    </style>
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Brainspark</a>
+    <div class="nav-right">
+        <button class="icon-btn" onclick="toggleTheme()"><i class="fas fa-moon" id="theme-icon"></i></button>
+        <button class="exit-btn" onclick="if(confirm('Exit?')) window.location.href='/dashboard'"><i class="fas fa-arrow-left"></i> Exit</button>
+    </div>
+</nav>
+<div class="page"><div class="wrap" id="main-wrap">
+    <div class="empty" id="loading-state">
+        <div class="spinner"></div>
+        <div style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;">Loading theory questions…</div>
+    </div>
+</div></div>
+
+<script>
+(function(){
+    const saved = localStorage.getItem('theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', saved);
+    const icon = document.getElementById('theme-icon');
+    if (icon) icon.className = saved === 'dark' ? 'fas fa-moon' : 'fas fa-sun';
+})();
+function toggleTheme() {
+    const cur = document.documentElement.getAttribute('data-theme');
+    const next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    document.getElementById('theme-icon').className = next === 'dark' ? 'fas fa-moon' : 'fas fa-sun';
+    localStorage.setItem('theme', next);
+    fetch('/toggle_mode', { method: 'POST' });
+}
+
+async function loadTheory() {
+    try {
+        const res = await fetch('/api/get-quiz-questions');
+        const data = await res.json();
+        if (!data.success || !data.questions || !data.questions.length) {
+            showError(data.error || 'No questions found.');
+            return;
+        }
+        renderQuestions(data.questions);
+    } catch (e) {
+        showError(e.message);
+    }
+}
+
+function showError(msg) {
+    document.getElementById('main-wrap').innerHTML = `
+        <div class="empty">
+            <div style="font-size:2rem;margin-bottom:1rem;">⚠️</div>
+            <div style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;margin-bottom:.5rem;">Could not load questions</div>
+            <div style="font-size:.85rem;color:var(--muted);margin-bottom:1.5rem;">${msg}</div>
+            <a href="/dashboard" class="btn btn-ghost">← Back to Dashboard</a>
+        </div>`;
+}
+
+function renderQuestions(questions) {
+    const wrap = document.getElementById('main-wrap');
+    let html = `
+        <div class="panel">
+            <div style="font-size:.7rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:.5rem;">Theory Paper</div>
+            <div class="panel-title">Answer the Questions Below</div>
+            <div class="panel-sub">Write your answer in each box, then reveal the model answer to check yourself.</div>
+            <div class="progress-bar"><div class="progress-fill" style="width:100%"></div></div>
+        </div>`;
+    questions.forEach((q, i) => {
+        const marks = q.marks || 5;
+        html += `
+        <div class="q-card">
+            <div class="q-number">Question ${i + 1} of ${questions.length}</div>
+            <div class="q-text">${q.question}</div>
+            <div class="q-marks">[${marks} marks]</div>
+            <textarea class="answer-area" placeholder="Write your answer here…"></textarea>
+            <button class="reveal-btn" onclick="toggleModelAnswer(this)">
+                <i class="fas fa-eye"></i> Reveal Model Answer
+            </button>
+            <div class="model-answer">
+                <div class="model-answer-label"><i class="fas fa-check-circle"></i> Model Answer</div>
+                ${q.model_answer || q.explanation || 'No model answer provided.'}
+            </div>
+        </div>`;
+    });
+    html += `<div class="btn-row">
+        <a href="/dashboard" class="btn btn-primary"><i class="fas fa-house"></i> Back to Dashboard</a>
+    </div>`;
+    wrap.innerHTML = html;
+}
+
+function toggleModelAnswer(btn) {
+    const card = btn.closest('.q-card');
+    const ma = card.querySelector('.model-answer');
+    ma.classList.toggle('open');
+    btn.innerHTML = ma.classList.contains('open')
+        ? '<i class="fas fa-eye-slash"></i> Hide Model Answer'
+        : '<i class="fas fa-eye"></i> Reveal Model Answer';
+}
+
+window.addEventListener('load', loadTheory);
+</script>
+</body>
+</html>
