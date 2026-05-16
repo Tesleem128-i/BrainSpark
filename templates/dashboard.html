@@ -557,20 +557,20 @@
             <div class="panel-header"><div><div class="panel-eyebrow">AI Quiz Builder</div><div class="panel-title">Upload Your Notes to Generate a Quiz</div></div></div>
             <div class="panel-body">
                 <div class="tab-bar">
-                    <button class="tab-btn active" data-tab="objective" onclick="setTab(this,'objective')">📋 Objective</button>
-                    <button class="tab-btn" data-tab="theory" onclick="setTab(this,'theory')">✍️ Theory</button>
+                    <button class="tab-btn active" data-tab="objective" onclick="setTab(this,'objective')" title="Multiple choice questions with A/B/C/D options">📋 Multiple Choice</button>
+                    <button class="tab-btn" data-tab="theory" onclick="setTab(this,'theory')" title="Open-ended written questions with model answers">✍️ Written / Theory</button>
                 </div>
                 <div class="upload-zone" id="upload-zone" onclick="document.getElementById('pdf-input').click()">
                     <div class="upload-zone-icon"><i class="fas fa-cloud-upload-alt"></i></div>
-                    <p>Drag & drop your PDF here</p>
-                    <span>or click to browse · Max 10MB</span>
+                    <p>Drag & drop your notes PDF here</p>
+                    <span>or click to browse · Max 10MB · Text-based PDFs only</span>
                     <input type="file" id="pdf-input" accept=".pdf" style="display:none">
                 </div>
                 <div class="settings-row">
                     <div><div class="field-label">Difficulty Level</div><select id="hardness" class="field-select"><option value="easy">🟢 Easy</option><option value="medium" selected>🟡 Medium</option><option value="hard">🔴 Hard</option></select></div>
                     <div><div class="field-label">Number of Questions</div><input type="number" id="question-count-upload" min="5" max="100" value="10" class="field-input"></div>
                 </div>
-                <button class="btn btn-primary btn-full" onclick="uploadNotes()" id="upload-btn"><i class="fas fa-rocket"></i> Generate Questions from PDF</button>
+                <button class="btn btn-primary btn-full" onclick="uploadNotes()" id="upload-btn"><i class="fas fa-rocket"></i> Generate Quiz from PDF</button>
                 <div class="generating-bar" id="upload-progress" style="display:none"><div class="generating-bar-fill" id="upload-progress-fill"></div></div>
             </div>
         </div>
@@ -846,7 +846,7 @@ async function uploadNotes() {
         alert('❌ ' + e.message);
     } finally {
         btn.disabled=false;
-        btn.innerHTML='<i class="fas fa-rocket"></i> Generate Questions from PDF';
+        btn.innerHTML='<i class="fas fa-rocket"></i> Generate Quiz from PDF';
         document.getElementById('upload-progress').style.display='none';
     }
 }
