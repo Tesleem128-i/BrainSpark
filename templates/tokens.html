@@ -868,11 +868,12 @@ async function goToStep4() {
 
     // Generate reference
     try {
-        const res = await fetch('/api/generate-payment-ref', {
+        const _raw = await fetch('/api/generate-payment-ref', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ amount: selectedAmt, user_bank: bank, user_account: acct })
-        }).then(r => r.json());
+        });
+        const res = await _raw.json();
         if (!res.success) { toast(res.error || 'Could not generate reference', 'error'); return; }
         refCode = res.reference;
         txnId = res.transaction_id;
@@ -880,7 +881,8 @@ async function goToStep4() {
         document.getElementById('display-amount').textContent = `₦${selectedAmt.toLocaleString()}`;
         showStep(4);
         startTimer();
-    } catch {
+    } catch (err) {
+        console.error('goToStep4 error:', err);
         toast('Network error. Please try again.', 'error');
     }
 }
