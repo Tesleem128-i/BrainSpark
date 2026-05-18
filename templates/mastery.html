@@ -527,6 +527,29 @@
                     </div>
                 </div>
 
+                <!-- Ask AI Panel -->
+                <div class="learn-panel" style="margin-bottom:1.25rem;" id="ask-ai-panel">
+                    <div class="learn-panel-header">
+                        <div>
+                            <div class="learn-eyebrow">Got a question?</div>
+                            <div class="learn-panel-title">Ask the AI Tutor</div>
+                        </div>
+                        <button class="btn btn-ghost btn-sm" onclick="toggleAskPanel()" id="ask-toggle-btn"><i class="fas fa-chevron-down"></i></button>
+                    </div>
+                    <div id="ask-panel-body">
+                        <div id="ask-chat-log" style="max-height:280px;overflow-y:auto;padding:1rem 1.5rem;display:flex;flex-direction:column;gap:0.75rem;"></div>
+                        <div style="padding:0.75rem 1.5rem 1.25rem;display:flex;gap:0.5rem;align-items:flex-end;">
+                            <textarea id="ask-input" rows="2" placeholder="e.g. Can you explain the example again? What does this term mean?…"
+                                style="flex:1;background:rgba(255,255,255,0.04);border:1px solid var(--card-border);border-radius:10px;padding:0.65rem 0.9rem;color:var(--ink);font-family:'DM Sans',sans-serif;font-size:0.875rem;resize:none;outline:none;transition:border 0.2s;"
+                                onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAskQuestion();}"
+                                onfocus="this.style.borderColor='var(--mastery)'" onblur="this.style.borderColor='var(--card-border)'"></textarea>
+                            <button class="btn btn-mastery btn-sm" onclick="sendAskQuestion()" id="ask-send-btn" style="padding:0.65rem 1rem;border-radius:10px;flex-shrink:0;">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Quiz area (shown after "I Understand") -->
                 <div id="section-quiz-area" style="display:none;">
                     <div id="quiz-container"></div>
@@ -738,6 +761,17 @@ async function startMastery() {
     if (!pdfInput.files[0]) return;
     const file = pdfInput.files[0];
     if (file.size > 5 * 1024 * 1024) { alert('File too large. Max 5MB.'); return; }
+
+    // Guard: warn before overwriting an existing in-progress course
+    if (masteryState.sections && masteryState.sections.length > 0) {
+        const completed = masteryState.sections.filter(s => s.status === 'completed').length;
+        const confirmed = confirm(
+            `⚠️ You have an ongoing course "${masteryState.courseTitle || 'Your Course'}" ` +
+            `(${completed}/${masteryState.sections.length} sections done).\n\n` +
+            `Starting a new PDF will replace it. Are you sure?`
+        );
+        if (!confirmed) return;
+    }
 
     const btn = document.getElementById('mastery-upload-btn');
     btn.disabled = true;
@@ -958,6 +992,68 @@ async function streamExplanation(section, mode) {
 async function typewriterHTML(el, html) {
     // Strip tags for typing, then set full HTML
     el.innerHTML = html;
+}
+
+// ══ Ask AI Tutor ═══════════════════════════════════════════════════════
+let askPanelOpen = true;
+function toggleAskPanel() {
+    askPanelOpen = !askPanelOpen;
+    document.getElementById('ask-panel-body').style.display = askPanelOpen ? 'block' : 'none';
+    document.getElementById('ask-toggle-btn').innerHTML = askPanelOpen
+        ? '<i class="fas fa-chevron-up"></i>'
+        : '<i class="fas fa-chevron-down"></i>';
+}
+
+function appendAskMessage(role, text) {
+    const log = document.getElementById('ask-chat-log');
+    const isUser = role === 'user';
+    const div = document.createElement('div');
+    div.style.cssText = `display:flex;justify-content:${isUser ? 'flex-end' : 'flex-start'};`;
+    div.innerHTML = `<div style="max-width:85%;padding:0.6rem 0.9rem;border-radius:${isUser ? '14px 14px 4px 14px' : '14px 14px 14px 4px'};
+        background:${isUser ? 'var(--mastery)' : 'rgba(255,255,255,0.05)'};
+        border:${isUser ? 'none' : '1px solid var(--card-border)'};
+        color:${isUser ? '#fff' : 'var(--ink)'};font-size:0.875rem;line-height:1.6;">
+        ${text.replace(/\n/g,'<br>')}
+    </div>`;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+    return div.querySelector('div');
+}
+
+async function sendAskQuestion() {
+    const input = document.getElementById('ask-input');
+    const question = input.value.trim();
+    if (!question) return;
+
+    const sendBtn = document.getElementById('ask-send-btn');
+    sendBtn.disabled = true;
+    input.value = '';
+    input.disabled = true;
+
+    appendAskMessage('user', question);
+    const aiMsgEl = appendAskMessage('ai', '<i class="fas fa-spinner fa-spin"></i> Thinking…');
+
+    const s = masteryState.sections[masteryState.currentSection];
+    try {
+        const res = await fetch('/mastery/ask', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                section_title:   s.title,
+                section_content: s.content || s.summary || '',
+                question:        question
+            })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'No response');
+        aiMsgEl.innerHTML = data.answer.replace(/\n/g, '<br>');
+    } catch(e) {
+        aiMsgEl.innerHTML = `<span style="color:var(--accent)">⚠️ ${e.message}</span>`;
+    } finally {
+        sendBtn.disabled = false;
+        input.disabled = false;
+        input.focus();
+    }
 }
 
 async function explainAgain() {

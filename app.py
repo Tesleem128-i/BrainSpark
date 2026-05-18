@@ -5025,7 +5025,31 @@ STRICT RULES:
     except Exception as e:
         logger.error(f'mastery_generate_quiz error: {e}', exc_info=True)
         return jsonify({'success': False, 'error': str(e)}), 500
+@app.route('/mastery/ask', methods=['POST'])
+def mastery_ask():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+    data = request.json or {}
+    section_title   = data.get('section_title', '')
+    section_content = data.get('section_content', '')
+    question        = data.get('question', '')
+    if not question:
+        return jsonify({'success': False, 'error': 'No question provided'}), 400
+    try:
+        prompt = f"""You are a helpful AI tutor. A student is studying the following section and has a question.
 
+Section: {section_title}
+Content: {section_content[:3000]}
+
+Student's question: {question}
+
+Answer clearly and concisely, using simple language. If helpful, give a short example. Stay focused on the section content."""
+        response = model.generate_content(prompt)
+        answer = response.text.strip()
+        return jsonify({'success': True, 'answer': answer})
+    except Exception as e:
+        logger.error(f'mastery_ask error: {e}', exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/mastery/videos', methods=['POST'])
 def mastery_videos():
