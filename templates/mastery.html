@@ -273,6 +273,206 @@
         .theory-feedback.pass { background: rgba(0,201,141,0.08); border: 1px solid rgba(0,201,141,0.2); color: var(--green); }
         .theory-feedback.fail { background: rgba(255,79,48,0.06); border: 1px solid rgba(255,79,48,0.2); color: var(--accent); }
 
+        /* ══ VOICE CHAT OVERLAY ══════════════════════════════════════════ */
+        .voice-chat-overlay {
+            position: fixed; inset: 0; z-index: 10000;
+            background: rgba(5, 5, 15, 0.92);
+            backdrop-filter: blur(24px);
+            display: none; align-items: center; justify-content: center;
+            animation: vcFadeIn 0.3s ease;
+        }
+        .voice-chat-overlay.show { display: flex; }
+        @keyframes vcFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .voice-chat-modal {
+            width: 100%; max-width: 520px;
+            background: linear-gradient(145deg, #0f0f22, #13132a);
+            border: 1px solid rgba(99,102,241,0.35);
+            border-radius: 28px;
+            padding: 2rem;
+            display: flex; flex-direction: column; gap: 1.5rem;
+            box-shadow: 0 40px 100px rgba(0,0,0,0.6), 0 0 80px rgba(99,102,241,0.1);
+            animation: vcSlideUp 0.4s cubic-bezier(0.16,1,0.3,1);
+            position: relative;
+            max-height: 90vh; overflow: hidden;
+        }
+        @keyframes vcSlideUp { from { opacity: 0; transform: translateY(40px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+        .vc-close-btn {
+            position: absolute; top: 1.25rem; right: 1.25rem;
+            width: 36px; height: 36px; border-radius: 50%;
+            background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.5); font-size: 1rem;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .vc-close-btn:hover { background: rgba(255,79,48,0.2); color: var(--accent); border-color: rgba(255,79,48,0.3); }
+
+        .vc-header { text-align: center; }
+        .vc-header-badge {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            padding: 0.3rem 0.85rem; border-radius: 50px;
+            background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.3);
+            color: var(--mastery2); font-size: 0.72rem; font-weight: 600;
+            letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 0.6rem;
+        }
+        .vc-header-title {
+            font-family: 'Syne', sans-serif; font-size: 1.2rem; font-weight: 800;
+            color: #fff; margin-bottom: 0.25rem;
+        }
+        .vc-header-topic {
+            font-size: 0.8rem; color: rgba(255,255,255,0.4); font-style: italic;
+        }
+
+        /* Orb */
+        .vc-orb-wrap {
+            display: flex; align-items: center; justify-content: center;
+            height: 160px; position: relative;
+        }
+        .vc-orb {
+            width: 110px; height: 110px; border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, #818cf8, #6366f1, #4338ca);
+            box-shadow: 0 0 30px rgba(99,102,241,0.4), 0 0 60px rgba(99,102,241,0.15);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;
+            position: relative; z-index: 2;
+        }
+        .vc-orb:hover { transform: scale(1.04); }
+        .vc-orb i { font-size: 2.2rem; color: #fff; pointer-events: none; }
+        .vc-orb.listening {
+            animation: vcOrbPulse 1.2s ease-in-out infinite;
+            box-shadow: 0 0 0 0 rgba(99,102,241,0.7), 0 0 40px rgba(99,102,241,0.4);
+        }
+        .vc-orb.speaking {
+            animation: vcOrbSpeak 0.6s ease-in-out infinite alternate;
+            background: radial-gradient(circle at 35% 35%, #34d399, #059669, #065f46);
+            box-shadow: 0 0 30px rgba(52,211,153,0.5), 0 0 60px rgba(52,211,153,0.2);
+        }
+        @keyframes vcOrbPulse {
+            0%   { box-shadow: 0 0 0 0 rgba(99,102,241,0.7), 0 0 40px rgba(99,102,241,0.4); transform: scale(1); }
+            50%  { box-shadow: 0 0 0 22px rgba(99,102,241,0), 0 0 50px rgba(99,102,241,0.6); transform: scale(1.06); }
+            100% { box-shadow: 0 0 0 0 rgba(99,102,241,0), 0 0 40px rgba(99,102,241,0.4); transform: scale(1); }
+        }
+        @keyframes vcOrbSpeak {
+            from { transform: scale(1); }
+            to   { transform: scale(1.07); }
+        }
+        /* Sound wave rings */
+        .vc-ring {
+            position: absolute; border-radius: 50%; border: 2px solid rgba(99,102,241,0.25);
+            pointer-events: none; opacity: 0;
+        }
+        .vc-ring-1 { width: 140px; height: 140px; }
+        .vc-ring-2 { width: 170px; height: 170px; }
+        .vc-ring-3 { width: 200px; height: 200px; }
+        .vc-orb.listening ~ .vc-ring-1 { animation: vcRingPulse 1.6s 0.0s ease-out infinite; }
+        .vc-orb.listening ~ .vc-ring-2 { animation: vcRingPulse 1.6s 0.4s ease-out infinite; }
+        .vc-orb.listening ~ .vc-ring-3 { animation: vcRingPulse 1.6s 0.8s ease-out infinite; }
+        @keyframes vcRingPulse {
+            0%   { opacity: 0.8; transform: scale(0.9); }
+            100% { opacity: 0; transform: scale(1.3); }
+        }
+
+        .vc-status-text {
+            text-align: center; font-size: 0.875rem; font-weight: 600;
+            color: rgba(255,255,255,0.55); letter-spacing: 0.04em;
+            min-height: 1.4em; transition: color 0.3s;
+        }
+        .vc-status-text.listening { color: var(--mastery2); }
+        .vc-status-text.speaking  { color: var(--green); }
+
+        /* Chat transcript */
+        .vc-transcript {
+            flex: 1; max-height: 200px; overflow-y: auto;
+            display: flex; flex-direction: column; gap: 0.6rem;
+            padding: 0.25rem 0;
+            scrollbar-width: thin; scrollbar-color: rgba(99,102,241,0.3) transparent;
+        }
+        .vc-transcript::-webkit-scrollbar { width: 4px; }
+        .vc-transcript::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.3); border-radius: 2px; }
+
+        .vc-msg {
+            display: flex; gap: 0.6rem;
+            animation: vcMsgIn 0.3s cubic-bezier(0.16,1,0.3,1);
+        }
+        @keyframes vcMsgIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .vc-msg.user { justify-content: flex-end; }
+        .vc-msg-bubble {
+            max-width: 80%; padding: 0.6rem 0.9rem;
+            border-radius: 16px; font-size: 0.85rem; line-height: 1.5;
+        }
+        .vc-msg.ai .vc-msg-bubble {
+            background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.2);
+            color: rgba(255,255,255,0.85); border-radius: 4px 16px 16px 16px;
+        }
+        .vc-msg.user .vc-msg-bubble {
+            background: var(--mastery); color: #fff;
+            border-radius: 16px 16px 4px 16px;
+        }
+        .vc-msg-avatar {
+            width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center; font-size: 0.75rem;
+            background: rgba(99,102,241,0.2); color: var(--mastery2);
+            align-self: flex-end;
+        }
+
+        /* Bottom controls */
+        .vc-controls {
+            display: flex; align-items: center; justify-content: center; gap: 1rem;
+        }
+        .vc-ctrl-btn {
+            width: 44px; height: 44px; border-radius: 50%;
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.4); font-size: 1rem;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .vc-ctrl-btn:hover { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); }
+        .vc-ctrl-btn.active { background: rgba(255,79,48,0.15); border-color: rgba(255,79,48,0.3); color: var(--accent); }
+
+        .vc-mic-main {
+            width: 64px; height: 64px; border-radius: 50%;
+            background: var(--mastery); border: none;
+            color: #fff; font-size: 1.4rem;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.2s;
+            box-shadow: 0 6px 24px rgba(99,102,241,0.4);
+        }
+        .vc-mic-main:hover { background: var(--mastery2); transform: scale(1.06); }
+        .vc-mic-main.recording {
+            background: var(--accent);
+            box-shadow: 0 6px 24px rgba(255,79,48,0.5);
+            animation: vcMicPulse 1s ease-in-out infinite;
+        }
+        @keyframes vcMicPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+
+        .vc-no-support {
+            text-align: center; padding: 1rem;
+            font-size: 0.82rem; color: var(--accent);
+            background: rgba(255,79,48,0.06); border: 1px solid rgba(255,79,48,0.2);
+            border-radius: 10px;
+        }
+
+        /* ══ Voice button in the Learn panel ══ */
+        .voice-path-btn {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            padding: 0.6rem 1.2rem; border-radius: 50px;
+            background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(129,140,248,0.1));
+            border: 1px solid rgba(99,102,241,0.4); color: var(--mastery2);
+            font-size: 0.82rem; font-weight: 700; cursor: pointer;
+            transition: all 0.25s; font-family: 'DM Sans', sans-serif;
+            letter-spacing: 0.02em;
+        }
+        .voice-path-btn:hover {
+            background: linear-gradient(135deg, rgba(99,102,241,0.35), rgba(129,140,248,0.2));
+            border-color: var(--mastery2); transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(99,102,241,0.3);
+        }
+        .voice-path-btn .vp-dot {
+            width: 7px; height: 7px; border-radius: 50%; background: var(--green);
+            animation: blink 1.5s infinite; flex-shrink: 0;
+        }
+
         /* MOBILE */
         @media (max-width: 900px) {
             /* Sidebar */
@@ -536,6 +736,15 @@
                         </div>
                         <button class="btn btn-ghost btn-sm" onclick="toggleAskPanel()" id="ask-toggle-btn"><i class="fas fa-chevron-down"></i></button>
                     </div>
+                    <!-- VOICE PATH ENTRY BANNER -->
+                    <div style="padding:0.75rem 1.5rem 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
+                        <div style="font-size:0.78rem;color:var(--muted);">Prefer to talk? Discuss this topic with the AI tutor.</div>
+                        <button class="voice-path-btn" onclick="openVoiceChat()">
+                            <span class="vp-dot"></span>
+                            <i class="fas fa-microphone-lines"></i>
+                            Voice Path
+                        </button>
+                    </div>
                     <div id="ask-panel-body">
                         <div id="ask-chat-log" style="max-height:280px;overflow-y:auto;padding:1rem 1.5rem;display:flex;flex-direction:column;gap:0.75rem;"></div>
                         <div style="padding:0.75rem 1.5rem 1.25rem;display:flex;gap:0.5rem;align-items:flex-end;">
@@ -619,6 +828,64 @@
     </div>
 
 </div>
+</div>
+
+<!-- ══ VOICE CHAT OVERLAY ══ -->
+<div class="voice-chat-overlay" id="voice-chat-overlay">
+    <div class="voice-chat-modal" id="voice-chat-modal">
+
+        <button class="vc-close-btn" onclick="closeVoiceChat()" title="End conversation">
+            <i class="fas fa-times"></i>
+        </button>
+
+        <!-- Header -->
+        <div class="vc-header">
+            <div class="vc-header-badge">
+                <span class="vp-dot" style="width:6px;height:6px;background:var(--green);border-radius:50%;animation:blink 1.5s infinite;display:inline-block;"></span>
+                Live Voice Session
+            </div>
+            <div class="vc-header-title">AI Tutor — Voice Path</div>
+            <div class="vc-header-topic" id="vc-topic-label">Topic: —</div>
+        </div>
+
+        <!-- Orb visualiser -->
+        <div class="vc-orb-wrap">
+            <div class="vc-orb" id="vc-orb" onclick="toggleVoiceListening()" title="Tap to speak">
+                <i class="fas fa-microphone" id="vc-orb-icon"></i>
+            </div>
+            <div class="vc-ring vc-ring-1"></div>
+            <div class="vc-ring vc-ring-2"></div>
+            <div class="vc-ring vc-ring-3"></div>
+        </div>
+
+        <div class="vc-status-text" id="vc-status">Tap the orb to start speaking</div>
+
+        <!-- Transcript -->
+        <div class="vc-transcript" id="vc-transcript"></div>
+
+        <!-- No-support warning (hidden by default) -->
+        <div class="vc-no-support" id="vc-no-support" style="display:none;">
+            <i class="fas fa-exclamation-triangle"></i>
+            Your browser doesn't support the Web Speech API. Try Chrome or Edge for voice features.
+        </div>
+
+        <!-- Controls -->
+        <div class="vc-controls">
+            <button class="vc-ctrl-btn" id="vc-mute-btn" onclick="toggleVCMute()" title="Mute/unmute AI voice">
+                <i class="fas fa-volume-high" id="vc-mute-icon"></i>
+            </button>
+            <button class="vc-mic-main" id="vc-mic-btn" onclick="toggleVoiceListening()" title="Hold to speak">
+                <i class="fas fa-microphone" id="vc-mic-icon"></i>
+            </button>
+            <button class="vc-ctrl-btn" id="vc-end-btn" onclick="closeVoiceChat()" title="End session">
+                <i class="fas fa-phone-slash"></i>
+            </button>
+        </div>
+
+        <div style="text-align:center;font-size:0.72rem;color:rgba(255,255,255,0.2);margin-top:-0.5rem;">
+            Conversation stays focused on the current section topic
+        </div>
+    </div>
 </div>
 
 <!-- ACHIEVEMENT POPUP -->
@@ -1465,8 +1732,309 @@ async function downloadCertificate(score) {
     }
 }
 
-// ══ Utility ═══════════════════════════════════════════════════════════
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+// ══ Voice Chat (Voice Path) ════════════════════════════════════════════
+const vcState = {
+    open: false,
+    listening: false,
+    speaking: false,
+    muted: false,
+    recognition: null,
+    synth: window.speechSynthesis,
+    history: [],          // [{role:'user'|'ai', text}]
+    sectionTitle: '',
+    sectionContent: '',
+    interimEl: null,
+};
+
+// Check Speech API support
+const SPEECH_SUPPORTED = ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+function openVoiceChat() {
+    const si = masteryState.currentSection;
+    const s  = masteryState.sections[si];
+    if (!s) return;
+
+    vcState.sectionTitle   = s.title || 'this section';
+    vcState.sectionContent = (s.content || s.summary || '').slice(0, 3000);
+    vcState.history        = [];
+    vcState.open           = true;
+
+    document.getElementById('vc-topic-label').textContent = 'Topic: ' + vcState.sectionTitle;
+    document.getElementById('voice-chat-overlay').classList.add('show');
+    document.getElementById('vc-transcript').innerHTML = '';
+    document.body.style.overflow = 'hidden';
+
+    if (!SPEECH_SUPPORTED) {
+        document.getElementById('vc-no-support').style.display = 'block';
+        document.getElementById('vc-mic-btn').disabled = true;
+        document.getElementById('vc-orb').style.cursor = 'default';
+    }
+
+    // Greet the user
+    const greeting = `Hi! I'm your AI tutor. Let's talk about "${vcState.sectionTitle}". What would you like to know or discuss?`;
+    vcAppendMessage('ai', greeting);
+    vcSpeak(greeting);
+}
+
+function closeVoiceChat() {
+    vcStopListening();
+    if (vcState.synth.speaking) vcState.synth.cancel();
+    vcState.open = false;
+    vcState.listening = false;
+    vcState.speaking  = false;
+    document.getElementById('voice-chat-overlay').classList.remove('show');
+    document.body.style.overflow = '';
+    vcSetOrbState('idle');
+    vcSetStatus('Tap the orb to start speaking');
+}
+
+// ── Orb & status helpers ──────────────────────────────────────────────
+function vcSetOrbState(state) {
+    const orb  = document.getElementById('vc-orb');
+    const icon = document.getElementById('vc-orb-icon');
+    const mic  = document.getElementById('vc-mic-btn');
+    const mici = document.getElementById('vc-mic-icon');
+    orb.classList.remove('listening', 'speaking');
+
+    if (state === 'listening') {
+        orb.classList.add('listening');
+        icon.className   = 'fas fa-microphone';
+        mic.classList.add('recording');
+        mici.className   = 'fas fa-stop';
+        document.getElementById('vc-status').className = 'vc-status-text listening';
+    } else if (state === 'speaking') {
+        orb.classList.add('speaking');
+        icon.className   = 'fas fa-volume-high';
+        mic.classList.remove('recording');
+        mici.className   = 'fas fa-microphone';
+        document.getElementById('vc-status').className = 'vc-status-text speaking';
+    } else {
+        icon.className   = 'fas fa-microphone';
+        mic.classList.remove('recording');
+        mici.className   = 'fas fa-microphone';
+        document.getElementById('vc-status').className = 'vc-status-text';
+    }
+}
+
+function vcSetStatus(text) {
+    document.getElementById('vc-status').textContent = text;
+}
+
+// ── Transcript ────────────────────────────────────────────────────────
+function vcAppendMessage(role, text) {
+    const wrap = document.getElementById('vc-transcript');
+    const isAI = role === 'ai';
+    const div  = document.createElement('div');
+    div.className = 'vc-msg ' + role;
+    div.innerHTML = isAI
+        ? `<div class="vc-msg-avatar"><i class="fas fa-robot"></i></div>
+           <div class="vc-msg-bubble">${text.replace(/\n/g,'<br>')}</div>`
+        : `<div class="vc-msg-bubble">${text.replace(/\n/g,'<br>')}</div>
+           <div class="vc-msg-avatar" style="background:rgba(255,255,255,0.06);color:var(--ink2);"><i class="fas fa-user"></i></div>`;
+    wrap.appendChild(div);
+    wrap.scrollTop = wrap.scrollHeight;
+    vcState.history.push({ role, text });
+}
+
+function vcShowTyping() {
+    const wrap = document.getElementById('vc-transcript');
+    const div  = document.createElement('div');
+    div.className = 'vc-msg ai';
+    div.id = 'vc-typing';
+    div.innerHTML = `<div class="vc-msg-avatar"><i class="fas fa-robot"></i></div>
+        <div class="vc-msg-bubble" style="color:var(--muted);">
+            <span style="display:inline-flex;gap:4px;align-items:center;">
+                <span style="animation:blink 0.8s 0.0s infinite;display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--mastery2);"></span>
+                <span style="animation:blink 0.8s 0.2s infinite;display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--mastery2);"></span>
+                <span style="animation:blink 0.8s 0.4s infinite;display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--mastery2);"></span>
+            </span>
+        </div>`;
+    wrap.appendChild(div);
+    wrap.scrollTop = wrap.scrollHeight;
+}
+
+function vcRemoveTyping() {
+    const el = document.getElementById('vc-typing');
+    if (el) el.remove();
+}
+
+// ── Speech Recognition ────────────────────────────────────────────────
+function toggleVoiceListening() {
+    if (!SPEECH_SUPPORTED) return;
+    if (vcState.listening) {
+        vcStopListening();
+    } else {
+        vcStartListening();
+    }
+}
+
+function vcStartListening() {
+    if (vcState.speaking) { vcState.synth.cancel(); }
+    vcState.listening = true;
+    vcSetOrbState('listening');
+    vcSetStatus('Listening… speak now');
+
+    const rec = new SpeechRecognition();
+    rec.continuous      = false;
+    rec.interimResults  = true;
+    rec.lang            = 'en-US';
+    vcState.recognition = rec;
+
+    // Show interim results
+    let interimDiv = null;
+
+    rec.onresult = (e) => {
+        let interim = '', final = '';
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+            if (e.results[i].isFinal) final += e.results[i][0].transcript;
+            else interim += e.results[i][0].transcript;
+        }
+        if (interim) {
+            vcSetStatus('You: ' + interim + '…');
+        }
+        if (final) {
+            vcSetStatus('Processing…');
+            vcHandleUserSpeech(final.trim());
+        }
+    };
+
+    rec.onerror = (e) => {
+        if (e.error === 'no-speech') {
+            vcSetStatus('No speech detected. Tap orb to try again.');
+        } else {
+            vcSetStatus('Microphone error: ' + e.error);
+        }
+        vcSetOrbState('idle');
+        vcState.listening = false;
+    };
+
+    rec.onend = () => {
+        vcState.listening = false;
+        if (!vcState.speaking) {
+            vcSetOrbState('idle');
+        }
+    };
+
+    try { rec.start(); } catch(e) {}
+}
+
+function vcStopListening() {
+    vcState.listening = false;
+    if (vcState.recognition) {
+        try { vcState.recognition.stop(); } catch(e) {}
+        vcState.recognition = null;
+    }
+    if (!vcState.speaking) vcSetOrbState('idle');
+}
+
+// ── AI response ───────────────────────────────────────────────────────
+async function vcHandleUserSpeech(text) {
+    if (!text) return;
+    vcAppendMessage('user', text);
+    vcSetOrbState('idle');
+    vcSetStatus('AI is thinking…');
+    vcShowTyping();
+
+    try {
+        const res = await fetch('/mastery/ask', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                section_title:   vcState.sectionTitle,
+                section_content: vcState.sectionContent,
+                question: text,
+                voice_mode: true
+            })
+        });
+        const data = await res.json();
+        vcRemoveTyping();
+
+        const answer = data.success ? data.answer : 'Sorry, I had trouble responding. Please try again.';
+        // Strip markdown for speech
+        const speakText = answer.replace(/\*\*(.+?)\*\*/g, '$1')
+                                .replace(/\*(.+?)\*/g, '$1')
+                                .replace(/#+\s/g, '')
+                                .replace(/`(.+?)`/g, '$1');
+
+        vcAppendMessage('ai', answer);
+        vcSpeak(speakText);
+    } catch(e) {
+        vcRemoveTyping();
+        const errMsg = 'Sorry, I couldn\'t connect to the server. Please check your connection.';
+        vcAppendMessage('ai', errMsg);
+        vcSpeak(errMsg);
+    }
+}
+
+// ── Text-to-Speech ────────────────────────────────────────────────────
+function vcSpeak(text) {
+    if (vcState.muted) return;
+    const synth = vcState.synth;
+    if (synth.speaking) synth.cancel();
+
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.rate  = 1.05;
+    utter.pitch = 1;
+
+    // Prefer a natural-sounding voice if available
+    const voices = synth.getVoices();
+    const preferred = voices.find(v =>
+        /google|natural|neural|samantha|alex|daniel|karen/i.test(v.name) &&
+        v.lang.startsWith('en')
+    ) || voices.find(v => v.lang.startsWith('en'));
+    if (preferred) utter.voice = preferred;
+
+    utter.onstart = () => {
+        vcState.speaking = true;
+        vcSetOrbState('speaking');
+        vcSetStatus('AI is speaking…');
+    };
+    utter.onend = utter.onerror = () => {
+        vcState.speaking = false;
+        vcSetOrbState('idle');
+        vcSetStatus('Tap the orb to respond');
+    };
+
+    synth.speak(utter);
+}
+
+// Reload voices after they load asynchronously
+if (window.speechSynthesis) {
+    window.speechSynthesis.onvoiceschanged = () => {}; // preload
+}
+
+// ── Mute toggle ───────────────────────────────────────────────────────
+function toggleVCMute() {
+    vcState.muted = !vcState.muted;
+    const btn  = document.getElementById('vc-mute-btn');
+    const icon = document.getElementById('vc-mute-icon');
+    if (vcState.muted) {
+        btn.classList.add('active');
+        icon.className = 'fas fa-volume-xmark';
+        if (vcState.synth.speaking) vcState.synth.cancel();
+    } else {
+        btn.classList.remove('active');
+        icon.className = 'fas fa-volume-high';
+    }
+}
+
+// Close overlay when clicking outside modal
+document.getElementById('voice-chat-overlay').addEventListener('click', function(e) {
+    if (e.target === this) closeVoiceChat();
+});
+
+// Keyboard: Escape closes, Space toggles mic
+document.addEventListener('keydown', (e) => {
+    if (!vcState.open) return;
+    if (e.key === 'Escape') closeVoiceChat();
+    if (e.key === ' ' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'INPUT') {
+        e.preventDefault();
+        toggleVoiceListening();
+    }
+});
+
+
 
 // ══ Audio TTS ══════════════════════════════════════════════════════════
 let audioState = { utterance: null, synth: window.speechSynthesis, playing: false, speed: 1, text: '' };
