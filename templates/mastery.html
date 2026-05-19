@@ -703,6 +703,39 @@
     <button class="sidebar-link" onclick="logout()" style="color:#ff4f30" title="Sign out of your account"><i class="fas fa-sign-out-alt"></i> Sign Out</button>
 </div>
 
+<!-- Mobile sidebar backdrop -->
+<div id="sidebar-backdrop" onclick="document.getElementById('sidebar').classList.remove('open');this.style.display='none';" style="display:none;position:fixed;inset:0;z-index:49;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);"></div>
+
+<!-- Mobile back-to-dashboard FAB -->
+<a href="/dashboard" id="mobile-dashboard-fab" title="Back to Dashboard">
+    <i class="fas fa-house"></i>
+</a>
+
+<style>
+#mobile-dashboard-fab {
+    display: none;
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    z-index: 200;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    box-shadow: 0 6px 24px rgba(255,79,48,0.45);
+    transition: transform 0.2s, box-shadow 0.2s;
+    text-decoration: none;
+}
+#mobile-dashboard-fab:hover { transform: scale(1.08); }
+@media (max-width: 900px) {
+    #mobile-dashboard-fab { display: flex; }
+}
+</style>
+
 <div class="page-wrap">
 <div class="main">
 
@@ -1089,8 +1122,19 @@ function toggleTheme() {
     document.getElementById('theme-icon').className = isDark ? 'fas fa-moon' : 'fas fa-sun';
 })();
 
-function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
-if (window.innerWidth < 769) document.getElementById('sidebar-toggle').style.display = 'flex';
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const backdrop = document.getElementById('sidebar-backdrop');
+    const isOpen = sidebar.classList.toggle('open');
+    backdrop.style.display = isOpen ? 'block' : 'none';
+}
+
+function updateMobileNav() {
+    const isMobile = window.innerWidth <= 900;
+    document.getElementById('sidebar-toggle').style.display = isMobile ? 'flex' : 'none';
+}
+updateMobileNav();
+window.addEventListener('resize', updateMobileNav);
 
 async function logout() {
     if (!confirm('Logout?')) return;
